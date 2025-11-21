@@ -4,7 +4,7 @@
 #include "components/ec_manager.h"
 #include "core/core.h"
 #include "core/stl/unique_ptr.h"
-#include "math/math_helper.h"
+#include "math/math.h"
 #include "physics/physics_engine.h"
 #include "render/camera.h"
 #include "render/render_compat.h"
@@ -13,7 +13,7 @@
 namespace Sapfire {
 
 	struct ObjectConstants {
-		DirectX::XMFLOAT4X4 World = Sapfire::math::Identity4x4();
+		sf::math::mat4 World = sf::math::mat4::identity();
 	};
 
 	namespace physics {
@@ -42,7 +42,7 @@ namespace Sapfire {
 		stl::string material_path;
 	};
 
-	constexpr f32 CAMERA_FOV = TO_RADIANS(45);
+	constexpr f32 CAMERA_FOV = sf::math::to_radians(45.0f);
 	class SFAPI GameContext {
 	public:
 		GameContext(const GameContextCreationDesc& desc);

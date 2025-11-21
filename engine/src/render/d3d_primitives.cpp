@@ -1,11 +1,9 @@
 #include "engpch.h"
 
-#include <DirectXCollision.h>
+#include "math/math.h"
 #include "render/d3d_primitives.h"
 
 namespace Sapfire::d3d::primitives {
-
-	using namespace DirectX;
 	void subdivide(MeshData&);
 	Vertex mid_point(const Vertex&, const Vertex&);
 
@@ -58,8 +56,7 @@ namespace Sapfire::d3d::primitives {
 			meshData.tangentus.push_back(vertex.tangentu);
 			meshData.texcs.push_back(vertex.texc);
 		}
-		DirectX::BoundingBox::CreateFromPoints(meshData.aabb, meshData.positions.size(), meshData.positions.data(),
-											   sizeof(DirectX::XMFLOAT3));
+		meshData.aabb = sf::math::aabb::create_from_points(meshData.positions.data(), meshData.positions.size());
 		//
 		// Create the indices.
 		//
@@ -191,25 +188,25 @@ namespace Sapfire::d3d::primitives {
 	}
 
 	Vertex mid_point(const Vertex& v0, const Vertex& v1) {
-		const XMVECTOR p0 = XMLoadFloat3(&v0.position);
-		const XMVECTOR p1 = XMLoadFloat3(&v1.position);
-		const XMVECTOR n0 = XMLoadFloat3(&v0.normal);
-		const XMVECTOR n1 = XMLoadFloat3(&v1.normal);
-		const XMVECTOR tan0 = XMLoadFloat3(&v0.tangentu);
-		const XMVECTOR tan1 = XMLoadFloat3(&v1.tangentu);
-		const XMVECTOR tex0 = XMLoadFloat2(&v0.texc);
-		const XMVECTOR tex1 = XMLoadFloat2(&v1.texc);
+		const sf::math::vec3& p0 = v0.position;
+		const sf::math::vec3& p1 = v1.position;
+		const sf::math::vec3& n0 = v0.normal;
+		const sf::math::vec3& n1 = v1.normal;
+		const sf::math::vec3& tan0 = v0.tangentu;
+		const sf::math::vec3& tan1 = v1.tangentu;
+		const sf::math::vec2& tex0 = v0.texc;
+		const sf::math::vec2& tex1 = v1.texc;
 		// Compute the midpoints of all the attributes.  Vectors need to be
 		// normalized since linear interpolating can make them not unit length.
-		const XMVECTOR pos = 0.5f * (p0 + p1);
-		const XMVECTOR normal = XMVector3Normalize(0.5f * (n0 + n1));
-		const XMVECTOR tangent = XMVector3Normalize(0.5f * (tan0 + tan1));
-		const XMVECTOR tex = 0.5f * (tex0 + tex1);
+		const sf::math::vec3 pos = (p0 + p1) * 0.5f;
+		const sf::math::vec3 normal = ((n0 + n1) * 0.5f).normalized();
+		const sf::math::vec3 tangent = ((tan0 + tan1) * 0.5f).normalized();
+		const sf::math::vec2 tex = (tex0 + tex1) * 0.5f;
 		Vertex v;
-		XMStoreFloat3(&v.position, pos);
-		XMStoreFloat3(&v.normal, normal);
-		XMStoreFloat3(&v.tangentu, tangent);
-		XMStoreFloat2(&v.texc, tex);
+		v.position = pos;
+		v.normal = normal;
+		v.tangentu = tangent;
+		v.texc = tex;
 		return v;
 	}
 } // namespace Sapfire::d3d::primitives

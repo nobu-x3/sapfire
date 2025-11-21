@@ -1,10 +1,9 @@
 #pragma once
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "components/component.h"
 #include "core/rtti.h"
 
 namespace Sapfire::components {
-	using namespace DirectX;
 
 	class SFAPI Transform {
 		RTTI;
@@ -19,35 +18,35 @@ namespace Sapfire::components {
 		Transform& operator=(const Transform&);
 		Transform& operator=(Transform&&) noexcept;
 		void update(stl::vector<Transform>& transforms);
-		inline XMMATRIX transform() const { return m_Transform; }
-		inline XMVECTOR position() const { return m_Position; }
-		inline XMVECTOR rotation() const { return m_Rotation; }
-		inline XMVECTOR euler_rotation() const { return m_EulerAngles; }
-		inline XMVECTOR scale() const { return m_Scale; }
-		inline XMVECTOR forward() const { return m_Forward; }
-		inline XMVECTOR up() const { return m_Up; }
-		inline XMVECTOR right() const { return m_Right; }
-		inline XMMATRIX rotation_matrix() const { return m_RotationMatrix; }
+		inline sf::math::mat4 transform() const { return m_Transform; }
+		inline sf::math::vec4 position() const { return m_Position; }
+		inline sf::math::quat rotation() const { return m_Rotation; }
+		inline sf::math::vec3 euler_rotation() const { return m_EulerAngles; }
+		inline sf::math::vec4 scale() const { return m_Scale; }
+		inline sf::math::vec3 forward() const { return m_Forward; }
+		inline sf::math::vec3 up() const { return m_Up; }
+		inline sf::math::vec3 right() const { return m_Right; }
+		inline sf::math::mat4 rotation_matrix() const { return m_RotationMatrix; }
 		inline s32 parent() const { return m_ParentIndex; }
 		inline void parent(s32 parent_index) {
 			m_ParentIndex = parent_index;
 			m_Dirty = true;
 		}
-		Transform& position(XMVECTOR position);
-		Transform& rotation(XMVECTOR rotation);
-		Transform& euler_rotation(XMVECTOR euler_rotation);
-		Transform& scale(XMVECTOR scale);
+		Transform& position(const sf::math::vec4& position);
+		Transform& rotation(const sf::math::quat& rotation);
+		Transform& euler_rotation(const sf::math::vec3& euler_rotation);
+		Transform& scale(const sf::math::vec4& scale);
 
 	private:
-		XMMATRIX m_Transform{XMMatrixIdentity()};
-		XMVECTOR m_Rotation{XMQuaternionIdentity()};
-		XMVECTOR m_Position{0.0f, 0.0f, 0.0f, 0.0f};
-		XMVECTOR m_Scale{1.f, 1.f, 1.f, 1.f};
-		XMVECTOR m_Right{1.0f, 0.0f, 0.0f};
-		XMVECTOR m_Forward{0.0f, 0.0f, 1.0f};
-		XMVECTOR m_Up{0.0f, 1.0f, 0.0f};
-		XMVECTOR m_EulerAngles{0.0f, 0.0f, 0.0f};
-		XMMATRIX m_RotationMatrix{XMMatrixIdentity()};
+		sf::math::mat4 m_Transform{sf::math::mat4::identity()};
+		sf::math::quat m_Rotation{sf::math::quat::identity()};
+		sf::math::vec4 m_Position{0.0f, 0.0f, 0.0f, 0.0f};
+		sf::math::vec4 m_Scale{1.f, 1.f, 1.f, 1.f};
+		sf::math::vec3 m_Right{1.0f, 0.0f, 0.0f};
+		sf::math::vec3 m_Forward{0.0f, 0.0f, 1.0f};
+		sf::math::vec3 m_Up{0.0f, 1.0f, 0.0f};
+		sf::math::vec3 m_EulerAngles{0.0f, 0.0f, 0.0f};
+		sf::math::mat4 m_RotationMatrix{sf::math::mat4::identity()};
 		s32 m_ParentIndex{-1};
 		bool m_Dirty{true};
 	};

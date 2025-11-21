@@ -4,21 +4,21 @@
 #include "core/game_context.h"
 
 struct PassConstants {
-	DirectX::XMFLOAT4X4 view = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT4X4 inv_view = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT4X4 proj = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT4X4 inv_proj = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT4X4 view_proj = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT4X4 inv_view_proj = Sapfire::math::Identity4x4();
-	DirectX::XMFLOAT3 EyePosW = {0.0f, 0.0f, 0.0f};
+	sf::math::mat4 view = sf::math::mat4::identity();
+	sf::math::mat4 inv_view = sf::math::mat4::identity();
+	sf::math::mat4 proj = sf::math::mat4::identity();
+	sf::math::mat4 inv_proj = sf::math::mat4::identity();
+	sf::math::mat4 view_proj = sf::math::mat4::identity();
+	sf::math::mat4 inv_view_proj = sf::math::mat4::identity();
+	sf::math::vec3 EyePosW = {0.0f, 0.0f, 0.0f};
 	float cbPerObjectPad1 = 0.0f;
-	DirectX::XMFLOAT2 render_target_size = {0.0f, 0.0f};
-	DirectX::XMFLOAT2 inv_render_target_size = {0.0f, 0.0f};
+	sf::math::vec2 render_target_size = {0.0f, 0.0f};
+	sf::math::vec2 inv_render_target_size = {0.0f, 0.0f};
 	float near_z = 0.0f;
 	float far_z = 0.0f;
 	float total_time = 0.0f;
 	float delta_time = 0.0f;
-	DirectX::XMFLOAT4 ambient_light = {0.0f, 0.0f, 0.0f, 1.0f};
+	sf::math::vec4 ambient_light = {0.0f, 0.0f, 0.0f, 1.0f};
 	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
 	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)

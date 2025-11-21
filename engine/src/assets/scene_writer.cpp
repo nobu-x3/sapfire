@@ -1,7 +1,7 @@
 #include "engpch.h"
 
 #include "core/logger.h"
-#include <DirectXMath.h>
+#include "math/math.h"
 #include <cstring>
 #include "core/game_context.h"
 #include "assets/asset_manager.h"
@@ -12,8 +12,6 @@
 #include "components/render_component.h"
 #include "components/transform.h"
 #include "nlohmann/json.hpp"
-
-using namespace DirectX;
 
 namespace Sapfire::assets {
 
@@ -32,27 +30,23 @@ namespace Sapfire::assets {
 			assert(m_ECManager.has_engine_component<components::NameComponent>(entity));
 			nlohmann::json j_eng_comps{};
 			auto& transform = m_ECManager.engine_component<components::Transform>(entity);
+			auto pos = transform.position();
+			auto rot = transform.euler_rotation();
+			auto scale = transform.scale();
 			j_eng_comps["transform"] = {
-				{"position",
-				 stl::array<f32, 3>{XMVectorGetX(transform.position()), XMVectorGetY(transform.position()),
-									XMVectorGetZ(transform.position())}},
-				{"rotation",
-				 stl::array<f32, 3>{XMVectorGetX(transform.euler_rotation()), XMVectorGetY(transform.euler_rotation()),
-									XMVectorGetZ(transform.euler_rotation())}},
-				{"scale",
-				 stl::array<f32, 3>{XMVectorGetX(transform.scale()), XMVectorGetY(transform.scale()), XMVectorGetZ(transform.scale())}},
+				{"position", stl::array<f32, 3>{pos.x, pos.y, pos.z}},
+				{"rotation", stl::array<f32, 3>{rot.x, rot.y, rot.z}},
+				{"scale", stl::array<f32, 3>{scale.x, scale.y, scale.z}},
 				{"parent", transform.parent()},
 			};
 			j_eng_comps["name"] = m_ECManager.engine_component<components::NameComponent>(entity).name();
 			if (m_ECManager.has_engine_component<components::MovementComponent>(entity)) {
 				auto& movement_comp = m_ECManager.engine_component<components::MovementComponent>(entity);
+				auto accel = movement_comp.acceleration();
+				auto vel = movement_comp.velocity();
 				j_eng_comps["movement"] = {
-					{"acceleration",
-					 stl::array<f32, 3>{XMVectorGetX(movement_comp.acceleration()), XMVectorGetY(movement_comp.acceleration()),
-										XMVectorGetZ(movement_comp.acceleration())}},
-					{"velocity",
-					 stl::array<f32, 3>{XMVectorGetX(movement_comp.velocity()), XMVectorGetY(movement_comp.velocity()),
-										XMVectorGetZ(movement_comp.velocity())}},
+					{"acceleration", stl::array<f32, 3>{accel.x, accel.y, accel.z}},
+					{"velocity", stl::array<f32, 3>{vel.x, vel.y, vel.z}},
 				};
 			}
 			if (m_ECManager.has_engine_component<components::RenderComponent>(entity)) {
@@ -154,9 +148,9 @@ namespace Sapfire::assets {
 			stl::array<f32, 3> position = entity["components"]["transform"]["position"];
 			stl::array<f32, 3> rotation = entity["components"]["transform"]["rotation"];
 			stl::array<f32, 3> scale = entity["components"]["transform"]["scale"];
-			transform.position(DirectX::XMVECTOR{position[0], position[1], position[2]});
-			transform.scale(DirectX::XMVECTOR{scale[0], scale[1], scale[2]});
-			transform.euler_rotation(DirectX::XMVECTOR{rotation[0], rotation[1], rotation[2]});
+			transform.position(sf::math::vec4{position[0], position[1], position[2], 0.0f});
+			transform.scale(sf::math::vec4{scale[0], scale[1], scale[2], 0.0f});
+			transform.euler_rotation(sf::math::vec3{rotation[0], rotation[1], rotation[2]});
 			transform.parent(entity["components"]["transform"]["parent"]);
 			auto& name = m_ECManager.engine_component<components::NameComponent>(created_entity);
 			name.name(entity["components"]["name"]);
@@ -177,8 +171,8 @@ namespace Sapfire::assets {
 					stl::array<f32, 3> velocity = movement_json["velocity"];
 					stl::array<f32, 3> acceleration = movement_json["acceleration"];
 					components::MovementComponent movement_comp{};
-					movement_comp.acceleration(DirectX::XMVECTOR{acceleration[0], acceleration[1], acceleration[2]});
-					movement_comp.velocity(DirectX::XMVECTOR{velocity[0], velocity[1], velocity[2]});
+					movement_comp.acceleration(sf::math::vec3{acceleration[0], acceleration[1], acceleration[2]});
+					movement_comp.velocity(sf::math::vec3{velocity[0], velocity[1], velocity[2]});
 					m_ECManager.add_engine_component<components::MovementComponent>(created_entity, movement_comp);
 				}
 			}

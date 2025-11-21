@@ -1,6 +1,6 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "core/rtti.h"
 
 #pragma warning(disable : 4244)
@@ -93,11 +93,11 @@ namespace Sapfire::rtti {
 				*string = stl::string{data};
 				break;
 			}
-		case rtti_type::XMVECTOR:
+		case rtti_type::VEC3:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
 				auto& data = *static_cast<stl::array<f32, 3>*>(value);
-				*reinterpret_cast<DirectX::XMVECTOR*>(ptr) = DirectX::XMVectorSet(data[0], data[1], data[2], 0.0f);
+				*reinterpret_cast<sf::math::vec3*>(ptr) = sf::math::vec3{data[0], data[1], data[2]};
 				break;
 			}
 		case rtti_type::REFERENCE:

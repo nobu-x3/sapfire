@@ -31,8 +31,8 @@ namespace Sapfire::anim {
 					m_FinalTransformsCache[entity.uuid()][comp.current_clip()] = {{}};
 				}
 			} else {
-				stl::unordered_map<f32, stl::vector<DirectX::XMFLOAT4X4>> time_pos_transform_map{{comp.current_clip(), {}}};
-				stl::unordered_map<UUID, stl::unordered_map<f32, stl::vector<DirectX::XMFLOAT4X4>>> clip_time_map{
+				stl::unordered_map<f32, stl::vector<sf::math::mat4>> time_pos_transform_map{{comp.current_clip(), {}}};
+				stl::unordered_map<UUID, stl::unordered_map<f32, stl::vector<sf::math::mat4>>> clip_time_map{
 					{time_pos, std::move(time_pos_transform_map)}};
 				m_FinalTransformsCache[entity.uuid()] = std::move(clip_time_map);
 			}
@@ -41,7 +41,7 @@ namespace Sapfire::anim {
 		}
 	}
 
-	const Sapfire::stl::vector<DirectX::XMFLOAT4X4>& AnimationManager::final_transforms_for_current_clip(Entity entity) const {
+	const Sapfire::stl::vector<sf::math::mat4>& AnimationManager::final_transforms_for_current_clip(Entity entity) const {
 		return m_EntityTransformsMap[entity.uuid()];
 	}
 

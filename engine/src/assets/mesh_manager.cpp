@@ -102,8 +102,8 @@ namespace Sapfire::assets {
 		return m_UUIDToPathMap.at(uuid);
 	}
 
-	stl::vector<DirectX::XMFLOAT3> MeshRegistry::all_positions() const {
-		stl::vector<DirectX::XMFLOAT3> positions{};
+	stl::vector<sf::math::vec3> MeshRegistry::all_positions() const {
+		stl::vector<sf::math::vec3> positions{};
 		for (auto&& [path, asset] : m_PathToMeshAssetMap) {
 			if (!asset.data.has_value())
 				continue;
@@ -114,8 +114,8 @@ namespace Sapfire::assets {
 		return positions;
 	}
 
-	stl::vector<DirectX::XMFLOAT3> MeshRegistry::all_normals() const {
-		stl::vector<DirectX::XMFLOAT3> normals{};
+	stl::vector<sf::math::vec3> MeshRegistry::all_normals() const {
+		stl::vector<sf::math::vec3> normals{};
 		for (auto&& [path, asset] : m_PathToMeshAssetMap) {
 			if (!asset.data.has_value())
 				continue;
@@ -126,8 +126,8 @@ namespace Sapfire::assets {
 		return normals;
 	}
 
-	stl::vector<DirectX::XMFLOAT3> MeshRegistry::all_tangents() const {
-		stl::vector<DirectX::XMFLOAT3> tangents{};
+	stl::vector<sf::math::vec3> MeshRegistry::all_tangents() const {
+		stl::vector<sf::math::vec3> tangents{};
 		for (auto&& [path, asset] : m_PathToMeshAssetMap) {
 			if (!asset.data.has_value())
 				continue;
@@ -138,8 +138,8 @@ namespace Sapfire::assets {
 		return tangents;
 	}
 
-	stl::vector<DirectX::XMFLOAT2> MeshRegistry::all_texture_coordinates() const {
-		stl::vector<DirectX::XMFLOAT2> uvs{};
+	stl::vector<sf::math::vec2> MeshRegistry::all_texture_coordinates() const {
+		stl::vector<sf::math::vec2> uvs{};
 		for (auto&& [path, asset] : m_PathToMeshAssetMap) {
 			if (!asset.data.has_value())
 				continue;

@@ -9,6 +9,8 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/core/uuid.cpp
         engine/src/core/rtti.cpp
         engine/src/core/memory.cpp
+        engine/src/math/quat.cpp
+        engine/src/math/mat4.cpp
         engine/src/assets/mesh_manager.cpp
         engine/src/assets/texture_manager.cpp
         engine/src/assets/material_manager.cpp
@@ -23,22 +25,21 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/components/movement_component.cpp
         engine/src/components/render_component.cpp
         engine/src/components/anim_component.cpp
-        engine/src/tools/shader_compiler.cpp
         engine/src/tools/texture_loader.cpp
         engine/src/tools/obj_loader.cpp
         engine/src/render/camera.cpp
-        engine/src/render/command_queue.cpp
-        engine/src/render/compute_context.cpp
-        engine/src/render/context.cpp
-        engine/src/render/copy_context.cpp
         engine/src/render/d3d_primitives.cpp
-        engine/src/render/d3d_util.cpp
-        engine/src/render/descriptor_heap.cpp
-        engine/src/render/resources.cpp
-        engine/src/render/graphics_context.cpp
-        engine/src/render/graphics_device.cpp
-        engine/src/render/memory_allocator.cpp
-        engine/src/render/pipeline_state.cpp
+        engine/src/render/frame_data.cpp
+        engine/src/render/render_backend.cpp
+        engine/src/render/render_compat.cpp
+        engine/src/render/resource_types.cpp
+        engine/src/render/dx12/dx12_command_queue.cpp
+        engine/src/render/dx12/dx12_context.cpp
+        engine/src/render/dx12/dx12_descriptor_heap.cpp
+        engine/src/render/dx12/dx12_graphics_device.cpp
+        engine/src/render/dx12/dx12_memory_allocator.cpp
+        engine/src/render/dx12/dx12_pipeline_state.cpp
+        engine/src/render/dx12/dx12_shader_compiler.cpp
         engine/src/physics/physics_engine.cpp
         engine/src/render/window.cpp
         engine/src/animation/skinned_data.cpp

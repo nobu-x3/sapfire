@@ -8,12 +8,12 @@ void draw_rtti(Sapfire::stl::shared_ptr<Sapfire::components::IComponent> custom_
 		void* value = nullptr;
 		rtti::get_rtti_field_value(&type_info, &field, &value);
 		switch (field.type) {
-		case rtti::rtti_type::XMVECTOR:
+		case rtti::rtti_type::VEC3:
 			{
 				void* value = nullptr;
 				rtti::get_rtti_field_value(&type_info, &field, &value);
-				auto data = *static_cast<DirectX::XMVECTOR*>(value);
-				stl::array<f32, 3> vec = {DirectX::XMVectorGetX(data), DirectX::XMVectorGetY(data), DirectX::XMVectorGetZ(data)};
+				auto data = *static_cast<sf::math::vec3*>(value);
+				stl::array<f32, 3> vec = {data.x, data.y, data.z};
 				if (ImGui::InputFloat3(name.c_str(), vec.data())) {
 					rtti::set_rtti_field_value(&type_info, &field, static_cast<void*>(vec.data()));
 				}

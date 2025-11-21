@@ -1,5 +1,5 @@
 #pragma once
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "components/movement_component.h"
 #include "core/input.h"
 #include "components/transform.h"
@@ -10,8 +10,8 @@ namespace Sapfire {
 		Camera(f32 fov, f32 aspect, f32 near_plane, f32 far_plane);
 		void update(f32);
 		components::Transform transform{};
-		DirectX::XMMATRIX projection{DirectX::XMMatrixIdentity()};
-		DirectX::XMMATRIX view() const;
+		sf::math::mat4 projection{sf::math::mat4::identity()};
+		sf::math::mat4 view() const;
         components::MovementComponent movement_component;
 		input::InputComponent input;
 		f32 fov{};

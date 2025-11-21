@@ -1,14 +1,12 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
 #include <cfloat>
 #include "core/logger.h"
+#include "math/math.h"
 #include "tiny_obj_loader.h"
 #include "tools/obj_loader.h"
 
 namespace Sapfire::tools {
-
-    using namespace DirectX;
 
 	stl::optional<d3d::primitives::MeshData> OBJLoader::load_mesh(const stl::string& full_path) {
 		tinyobj::attrib_t attrib;
@@ -23,10 +21,8 @@ namespace Sapfire::tools {
 			return {};
 		}
 		d3d::primitives::MeshData mesh_data{};
-		const DirectX::XMFLOAT3 v_min_f3{+FLT_MAX, +FLT_MAX, +FLT_MAX};
-		const DirectX::XMFLOAT3 v_max_f3{-FLT_MAX, -FLT_MAX, -FLT_MAX};
-		DirectX::XMVECTOR v_min = DirectX::XMLoadFloat3(&v_min_f3);
-		DirectX::XMVECTOR v_max = DirectX::XMLoadFloat3(&v_max_f3);
+		sf::math::vec3 v_min{+FLT_MAX, +FLT_MAX, +FLT_MAX};
+		sf::math::vec3 v_max{-FLT_MAX, -FLT_MAX, -FLT_MAX};
 		// Loop over shapes
 		for (size_t s = 0; s < shapes.size(); s++) {
 			// Loop over faces(polygon)
@@ -54,17 +50,21 @@ namespace Sapfire::tools {
 					mesh_data.normals.emplace_back(nx, ny, nz);
 					mesh_data.texcs.emplace_back(ux, uy);
 					mesh_data.indices32.emplace_back(index_offset + v);
-					const DirectX::XMVECTOR positions{vx, vy, vz};
-					v_min = DirectX::XMVectorMin(v_min, positions);
-					v_max = DirectX::XMVectorMax(v_max, positions);
+					// Update AABB bounds
+					v_min.x = v_min.x < vx ? v_min.x : vx;
+					v_min.y = v_min.y < vy ? v_min.y : vy;
+					v_min.z = v_min.z < vz ? v_min.z : vz;
+					v_max.x = v_max.x > vx ? v_max.x : vx;
+					v_max.y = v_max.y > vy ? v_max.y : vy;
+					v_max.z = v_max.z > vz ? v_max.z : vz;
 				}
 				index_offset += fv;
 			}
 		}
-		//DirectX::XMStoreFloat3(&mesh_data.aabb.Center, 0.5f * (v_min + v_max));
-		//DirectX::XMStoreFloat3(&mesh_data.aabb.Extents, 0.5f * (v_max - v_min));
-		DirectX::BoundingBox::CreateFromPoints(mesh_data.aabb, mesh_data.positions.size(), mesh_data.positions.data(),
-											   sizeof(DirectX::XMFLOAT3));
+		// Create AABB from min/max bounds
+		const sf::math::vec3 center = (v_min + v_max) * 0.5f;
+		const sf::math::vec3 extents = (v_max - v_min) * 0.5f;
+		mesh_data.aabb = sf::math::aabb(center, extents);
 		return mesh_data;
 	}
 } // namespace Sapfire::tools

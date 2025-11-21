@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/base.h"
+#include "core/core.h"
 #include "resource_types.h"
 
 namespace sf::render {

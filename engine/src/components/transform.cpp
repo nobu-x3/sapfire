@@ -1,7 +1,7 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
 #include "components/transform.h"
+#include "math/math.h"
 #include "core/rtti.h"
 #include "tools/profiling.h"
 
@@ -73,59 +73,58 @@ namespace Sapfire::components {
 
 	void Transform::register_rtti() {
 		BEGIN_RTTI()
-		ADD_RTTI_FIELD(rtti ::rtti_type ::XMVECTOR, "Position", &m_Position, [this]() { m_Dirty = true; })
-		ADD_RTTI_FIELD(rtti ::rtti_type ::XMVECTOR, "Scale", &m_Scale, [this]() { m_Dirty = true; })
-		ADD_RTTI_FIELD(rtti ::rtti_type ::XMVECTOR, "Euler Rotation", &m_EulerAngles, [this]() { this->euler_rotation(m_EulerAngles); })
+		ADD_RTTI_FIELD(rtti ::rtti_type ::VEC3, "Position", &m_Position, [this]() { m_Dirty = true; })
+		ADD_RTTI_FIELD(rtti ::rtti_type ::VEC3, "Scale", &m_Scale, [this]() { m_Dirty = true; })
+		ADD_RTTI_FIELD(rtti ::rtti_type ::VEC3, "Euler Rotation", &m_EulerAngles, [this]() { this->euler_rotation(m_EulerAngles); })
 		END_RTTI()
 	}
 
 	void Transform::update(stl::vector<Transform>& transforms) {
 		PROFILE_FUNCTION();
-		/* auto scale = XMMatrixScalingFromVector(m_Scale); */
-		/* m_RotationMatrix = XMMatrixRotationQuaternion(m_Rotation); */
-		/* auto transl = XMMatrixTranslationFromVector(m_Position); */
-		m_Transform = XMMatrixAffineTransformation(m_Scale, m_Position, m_Rotation, m_Position);
-		/* m_Transform = scale * m_RotationMatrix * transl; */
+		m_Transform = sf::math::mat4::affine_transformation(
+			sf::math::vec3(m_Scale.x, m_Scale.y, m_Scale.z),
+			sf::math::vec3(m_Position.x, m_Position.y, m_Position.z),
+			m_Rotation,
+			sf::math::vec3(m_Position.x, m_Position.y, m_Position.z)
+		);
 		if (m_ParentIndex >= 0) {
 			m_Transform = transforms[m_ParentIndex].m_Transform * m_Transform;
 		}
 	}
 
-	Transform& Transform::position(XMVECTOR position) {
+	Transform& Transform::position(const sf::math::vec4& position) {
 		PROFILE_FUNCTION();
 		m_Position = position;
 		m_Dirty = true;
 		return *this;
 	}
 
-	Transform& Transform::rotation(XMVECTOR rotation) {
+	Transform& Transform::rotation(const sf::math::quat& rotation) {
 		PROFILE_FUNCTION();
 		m_Rotation = rotation;
-		m_RotationMatrix = XMMatrixRotationQuaternion(rotation);
-		m_Forward = XMVector3Rotate(XMVECTOR{0, 0, 1, 0}, m_Rotation);
-		m_Right = XMVector3Rotate(XMVECTOR{1, 0, 0, 0}, m_Rotation);
-		m_Up = XMVector3Normalize(XMVector3Cross(m_Right, m_Forward));
+		m_RotationMatrix = sf::math::mat4::from_quaternion(rotation);
+		m_Forward = m_Rotation.rotate(sf::math::vec3{0, 0, 1});
+		m_Right = m_Rotation.rotate(sf::math::vec3{1, 0, 0});
+		m_Up = sf::math::vec3::cross(m_Right, m_Forward).normalized();
 		m_Dirty = true;
 		return *this;
 	}
 
-	Transform& Transform::euler_rotation(XMVECTOR euler_rotation) {
+	Transform& Transform::euler_rotation(const sf::math::vec3& euler_rotation) {
 		PROFILE_FUNCTION();
 		m_EulerAngles = euler_rotation;
-		m_Rotation = XMQuaternionRotationRollPitchYawFromVector(m_EulerAngles);
-		m_RotationMatrix = XMMatrixRotationQuaternion(m_Rotation);
-		m_Forward = XMVectorSet(0, 0, 1, 0);
-		m_Forward = XMVector4Transform(m_Forward, m_RotationMatrix);
-		m_Right = XMVectorSet(1, 0, 0, 0);
-		m_Right = XMVector4Transform(m_Right, m_RotationMatrix);
-		/* m_Forward = XMVector4Rotate(XMVectorSet(0,0,1,0), m_Rotation); */
-		/* m_Right = XMVector3Rotate(XMVectorSet(1,0,0,0), m_Rotation); */
-		m_Up = XMVector3Normalize(XMVector3Cross(m_Right, m_Forward));
+		m_Rotation = sf::math::quat::from_euler(m_EulerAngles);
+		m_RotationMatrix = sf::math::mat4::from_quaternion(m_Rotation);
+		m_Forward = sf::math::vec3{0, 0, 1};
+		m_Forward = m_RotationMatrix.transform_vector(m_Forward);
+		m_Right = sf::math::vec3{1, 0, 0};
+		m_Right = m_RotationMatrix.transform_vector(m_Right);
+		m_Up = sf::math::vec3::cross(m_Right, m_Forward).normalized();
 		m_Dirty = true;
 		return *this;
 	}
 
-	Transform& Transform::scale(XMVECTOR scale) {
+	Transform& Transform::scale(const sf::math::vec4& scale) {
 		PROFILE_FUNCTION();
 		m_Scale = scale;
 		return *this;

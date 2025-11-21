@@ -1,6 +1,5 @@
 #include "sandbox_game_context.h"
-#include <DirectXCollision.h>
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "components/movement_component.h"
 #include "components/render_component.h"
 #include "components/test_custom_component.h"
@@ -32,7 +31,7 @@ void SandboxGameContext::load_contents() {
 		.usage = d3d::TextureUsage::DepthStencil,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.format = DXGI_FORMAT_D32_FLOAT,
+		.format = sf::render::Format::D32_FLOAT,
 		.name = L"Depth Texture",
 	});
 	assets::SceneWriter writer{&m_ECManager, &m_AssetManager};
@@ -55,24 +54,22 @@ void SandboxGameContext::update(f32 delta_time) {
 
 void SandboxGameContext::update_pass_cb(f32 delta_time) {
 	m_PassConstants = PassConstants{};
-	auto view = m_MainCamera.view();
-	auto proj = m_MainCamera.projection;
-	auto viewProj = XMMatrixMultiply(view, proj);
-	auto view_determinant = XMMatrixDeterminant(view);
-	auto invView = XMMatrixInverse(&view_determinant, view);
-	auto proj_determinant = XMMatrixDeterminant(proj);
-	auto invProj = XMMatrixInverse(&proj_determinant, proj);
-	auto view_proj_determinant = XMMatrixDeterminant(viewProj);
-	auto invViewProj = XMMatrixInverse(&view_proj_determinant, viewProj);
-	XMStoreFloat4x4(&m_PassConstants.view, XMMatrixTranspose(view));
-	XMStoreFloat4x4(&m_PassConstants.inv_view, XMMatrixTranspose(invView));
-	XMStoreFloat4x4(&m_PassConstants.proj, XMMatrixTranspose(proj));
-	XMStoreFloat4x4(&m_PassConstants.inv_proj, XMMatrixTranspose(invProj));
-	XMStoreFloat4x4(&m_PassConstants.view_proj, XMMatrixTranspose(viewProj));
-	XMStoreFloat4x4(&m_PassConstants.inv_view_proj, XMMatrixTranspose(invViewProj));
-	XMStoreFloat3(&m_PassConstants.EyePosW, m_MainCamera.transform.position());
-	m_PassConstants.render_target_size = DirectX::XMFLOAT2((float)m_ClientExtent->width, (float)m_ClientExtent->height);
-	m_PassConstants.inv_render_target_size = DirectX::XMFLOAT2(1.0f / m_ClientExtent->width, 1.0f / m_ClientExtent->height);
+	sf::math::mat4 view = m_MainCamera.view();
+	sf::math::mat4 proj = m_MainCamera.projection;
+	sf::math::mat4 viewProj = view * proj;
+	sf::math::mat4 invView = view.inversed();
+	sf::math::mat4 invProj = proj.inversed();
+	sf::math::mat4 invViewProj = viewProj.inversed();
+	m_PassConstants.view = view.transposed();
+	m_PassConstants.inv_view = invView.transposed();
+	m_PassConstants.proj = proj.transposed();
+	m_PassConstants.inv_proj = invProj.transposed();
+	m_PassConstants.view_proj = viewProj.transposed();
+	m_PassConstants.inv_view_proj = invViewProj.transposed();
+	sf::math::vec4 eye_pos = m_MainCamera.transform.position();
+	m_PassConstants.EyePosW = sf::math::vec3(eye_pos.x, eye_pos.y, eye_pos.z);
+	m_PassConstants.render_target_size = sf::math::vec2((float)m_ClientExtent->width, (float)m_ClientExtent->height);
+	m_PassConstants.inv_render_target_size = sf::math::vec2(1.0f / m_ClientExtent->width, 1.0f / m_ClientExtent->height);
 	m_PassConstants.near_z = 1.0f;
 	m_PassConstants.far_z = 1000.0f;
 	m_PassConstants.total_time = delta_time;
@@ -104,9 +101,9 @@ void SandboxGameContext::update_materials(f32 delta_time) {
 void SandboxGameContext::udpate_transform_buffer(f32 delta_time) {
 	auto& transforms = m_ECManager.engine_components<components::Transform>();
 	for (u32 i = 0; i < m_TransformBuffers.size(); ++i) {
-		DirectX::XMMATRIX world = transforms[i].transform();
+		sf::math::mat4 world = transforms[i].transform();
 		ObjectConstants obj_constants;
-		XMStoreFloat4x4(&obj_constants.World, XMMatrixTranspose(world));
+		obj_constants.World = world.transposed();
 		m_TransformBuffers[i].update(&obj_constants);
 	}
 }
@@ -116,8 +113,7 @@ void SandboxGameContext::render() {
 	m_GraphicsDevice->begin_frame();
 	auto& gfx_ctx = m_GraphicsDevice->current_graphics_contexts();
 	auto& current_backbuffer = m_GraphicsDevice->current_back_buffer();
-	gfx_ctx->add_resource_barrier(current_backbuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_PRESENT,
-								  D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfx_ctx->transition_barrier(current_backbuffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
 	gfx_ctx->execute_resource_barriers();
 	static stl::array<f32, 4> clear_color{0.3f, 0.4f, 0.6f, 1.0f};
 	gfx_ctx->clear_render_target_view(current_backbuffer, clear_color);
@@ -137,27 +133,23 @@ void SandboxGameContext::render() {
 	{
 		gfx_ctx->set_descriptor_heaps();
 		gfx_ctx->set_primitive_topology_layout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		DirectX::BoundingFrustum camera_frustum;
-		DirectX::BoundingFrustum::CreateFromMatrix(camera_frustum, m_MainCamera.projection);
-		auto view = m_MainCamera.view();
-		auto view_determinant = DirectX::XMMatrixDeterminant(view);
-		auto inv_view = DirectX::XMMatrixInverse(&view_determinant, view);
+		sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
+		sf::math::mat4 view = m_MainCamera.view();
+		sf::math::mat4 inv_view = view.inversed();
 		auto& render_components = m_ECManager.engine_components<components::RenderComponent>();
 		for (auto& comp : render_components) {
 			components::Transform transform;
 			if (!m_ECManager.get_other_engine_component<components::RenderComponent, components::Transform>(comp, transform))
 				continue;
 			const auto* mesh_asset = m_AssetManager.get_mesh(comp.mesh_uuid());
-			DirectX::BoundingBox aabb = mesh_asset->data->aabb;
-			DirectX::XMMATRIX world = transform.transform();
-			DirectX::XMVECTOR world_determinant = DirectX::XMMatrixDeterminant(world);
-			DirectX::XMMATRIX inv_world = DirectX::XMMatrixInverse(&world_determinant, world);
+			sf::math::aabb aabb = mesh_asset->data->aabb;
+			sf::math::mat4 world = transform.transform();
+			sf::math::mat4 inv_world = world.inversed();
 			// View space to object local space
-			DirectX::XMMATRIX view_to_local = DirectX::XMMatrixMultiply(inv_world, inv_view);
+			sf::math::mat4 view_to_local = inv_view * inv_world;
 			// Transform camera frustum from view space to object's local space
-			DirectX::BoundingFrustum local_space_frustum;
-			camera_frustum.Transform(local_space_frustum, view_to_local);
-			if (local_space_frustum.Contains(aabb) != DirectX::DISJOINT) {
+			sf::math::frustum local_space_frustum = camera_frustum.transform(view_to_local);
+			if (local_space_frustum.contains(aabb) != sf::math::ContainmentType::Disjoint) {
 				components::CPUData cpu_data = comp.cpu_data();
 				gfx_ctx->set_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
 				gfx_ctx->set_32_bit_graphics_constants(comp.per_draw_constants());
@@ -165,8 +157,7 @@ void SandboxGameContext::render() {
 			}
 		}
 	}
-	gfx_ctx->add_resource_barrier(current_backbuffer.allocation.resource.Get(), D3D12_RESOURCE_STATE_RENDER_TARGET,
-								  D3D12_RESOURCE_STATE_PRESENT);
+	gfx_ctx->transition_barrier(current_backbuffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
 	gfx_ctx->execute_resource_barriers();
 	stl::array<const d3d::Context*, 1> contexts = {gfx_ctx.get()};
 	m_GraphicsDevice->direct_command_queue()->execute_context(contexts);
@@ -181,7 +172,7 @@ void SandboxGameContext::resize_depth_texture() {
 		.usage = d3d::TextureUsage::DepthStencil,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.format = DXGI_FORMAT_D32_FLOAT,
+		.format = sf::render::Format::D32_FLOAT,
 		.name = L"Depth Texture",
 	});
 }

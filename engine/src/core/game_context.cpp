@@ -67,20 +67,20 @@ namespace Sapfire {
 						.name = L"Index buffer " + name,
 					},
 					mesh_asset->data->indices16()));
-				m_VertexPosBuffers.push_back(m_GraphicsDevice->create_buffer<DirectX::XMFLOAT3>(
+				m_VertexPosBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Pos buffer " + name,
 					},
 					mesh_asset->data->positions));
-				m_VertexNormalBuffers.push_back(m_GraphicsDevice->create_buffer<DirectX::XMFLOAT3>(
+				m_VertexNormalBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Norm buffer " + name,
 					},
 					mesh_asset->data->normals));
 				if (mesh_asset->data->tangentus.size() > 0) {
-					m_VertexTangentBuffers.push_back(m_GraphicsDevice->create_buffer<DirectX::XMFLOAT3>(
+					m_VertexTangentBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
 						d3d::BufferCreationDesc{
 							.usage = d3d::BufferUsage::StructuredBuffer,
 							.name = L"Vertex Tang buffer " + name,
@@ -88,7 +88,7 @@ namespace Sapfire {
 						mesh_asset->data->tangentus));
 					should_add_tangent = true;
 				}
-				m_VertexUVBuffers.push_back(m_GraphicsDevice->create_buffer<DirectX::XMFLOAT2>(
+				m_VertexUVBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec2>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex UV buffer " + name,

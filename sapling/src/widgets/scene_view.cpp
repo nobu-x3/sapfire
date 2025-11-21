@@ -11,25 +11,25 @@ namespace widgets {
 	static ImVec2 DOCK_SIZE{800, 600};
 
 	struct ObjectConstants {
-		DirectX::XMFLOAT4X4 World = Sapfire::math::Identity4x4();
+		sf::math::mat4 World = sf::math::mat4::identity();
 	};
 
 	struct PassConstants {
-		DirectX::XMFLOAT4X4 view = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT4X4 inv_view = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT4X4 proj = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT4X4 inv_proj = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT4X4 view_proj = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT4X4 inv_view_proj = Sapfire::math::Identity4x4();
-		DirectX::XMFLOAT3 EyePosW = {0.0f, 0.0f, 0.0f};
+		sf::math::mat4 view = sf::math::mat4::identity();
+		sf::math::mat4 inv_view = sf::math::mat4::identity();
+		sf::math::mat4 proj = sf::math::mat4::identity();
+		sf::math::mat4 inv_proj = sf::math::mat4::identity();
+		sf::math::mat4 view_proj = sf::math::mat4::identity();
+		sf::math::mat4 inv_view_proj = sf::math::mat4::identity();
+		sf::math::vec3 EyePosW = {0.0f, 0.0f, 0.0f};
 		float cbPerObjectPad1 = 0.0f;
-		DirectX::XMFLOAT2 render_target_size = {0.0f, 0.0f};
-		DirectX::XMFLOAT2 inv_render_target_size = {0.0f, 0.0f};
+		sf::math::vec2 render_target_size = {0.0f, 0.0f};
+		sf::math::vec2 inv_render_target_size = {0.0f, 0.0f};
 		float near_z = 0.0f;
 		float far_z = 0.0f;
 		float total_time = 0.0f;
 		float delta_time = 0.0f;
-		DirectX::XMFLOAT4 ambient_light = {0.0f, 0.0f, 0.0f, 1.0f};
+		sf::math::vec4 ambient_light = {0.0f, 0.0f, 0.0f, 1.0f};
 		// Indices [0, NUM_DIR_LIGHTS) are directional lights;
 		// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 		// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
@@ -55,7 +55,7 @@ namespace widgets {
 			.usage = d3d::TextureUsage::DepthStencil,
 			.width = 800,
 			.height = 600,
-			.format = DXGI_FORMAT_D32_FLOAT,
+			.format = sf::render::Format::D32_FLOAT,
 			.name = L"Scene View Depth Texture",
 		})),
 		m_MainPassCB(m_GraphicsDevice.create_buffer<PassConstants>(d3d::BufferCreationDesc{
@@ -68,8 +68,8 @@ namespace widgets {
 				.usage = Sapfire::d3d::TextureUsage::RenderTarget,
 				.width = 800,
 				.height = 600,
-				.format = DXGI_FORMAT_R16G16B16A16_FLOAT,
-				.optional_initial_state = D3D12_RESOURCE_STATE_COMMON,
+				.format = sf::render::Format::RGBA16_FLOAT,
+				.optional_initial_state = sf::render::ResourceState::Common,
 				.name = L"Scene View Offscreen Texture",
 			}));
 		}
@@ -119,20 +119,20 @@ namespace widgets {
 						.name = L"Index buffer " + name,
 					},
 					mesh_asset->data->indices16()));
-				m_VertexPosBuffers.push_back(m_GraphicsDevice.create_buffer<DirectX::XMFLOAT3>(
+				m_VertexPosBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Pos buffer " + name,
 					},
 					mesh_asset->data->positions));
-				m_VertexNormalBuffers.push_back(m_GraphicsDevice.create_buffer<DirectX::XMFLOAT3>(
+				m_VertexNormalBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Norm buffer " + name,
 					},
 					mesh_asset->data->normals));
 				if (mesh_asset->data->tangentus.size() > 0) {
-					m_VertexTangentBuffers.push_back(m_GraphicsDevice.create_buffer<DirectX::XMFLOAT3>(
+					m_VertexTangentBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
 						d3d::BufferCreationDesc{
 							.usage = d3d::BufferUsage::StructuredBuffer,
 							.name = L"Vertex Tang buffer " + name,
@@ -140,7 +140,7 @@ namespace widgets {
 						mesh_asset->data->tangentus));
 					should_add_tangent = true;
 				}
-				m_VertexUVBuffers.push_back(m_GraphicsDevice.create_buffer<DirectX::XMFLOAT2>(
+				m_VertexUVBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec2>(
 					d3d::BufferCreationDesc{
 						.usage = d3d::BufferUsage::StructuredBuffer,
 						.name = L"Vertex UV buffer " + name,

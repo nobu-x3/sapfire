@@ -1,6 +1,6 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "assets/material_manager.h"
 #include "core/file_system.h"
 #include "core/logger.h"
@@ -9,14 +9,12 @@
 #include "render/graphics_device.h"
 #include "render/resources.h"
 
-using namespace DirectX;
-
 namespace Sapfire::assets {
 
 	const UUID DEFAULT_MATERIAL_UUID = 13700118063961433559;
 	constexpr f32 DEFAULT_MATERIAL_ROUGHTNESS = 0.f;
-	constexpr DirectX::XMFLOAT4 DEFAULT_MATERIAL_ALBEDO = {1.f, 0.f, 1.f, 1.f};
-	constexpr DirectX::XMFLOAT3 DEFAULT_MATERIAL_FRESNEL = {1.f, 1.f, 1.f};
+	constexpr sf::math::vec4 DEFAULT_MATERIAL_ALBEDO = {1.f, 0.f, 1.f, 1.f};
+	constexpr sf::math::vec3 DEFAULT_MATERIAL_FRESNEL = {1.f, 1.f, 1.f};
 	const stl::string DEFAULT_MATERIAL_NAME = "Default Material";
 
 	void MaterialManager::add(const Sapfire::stl::string& path, Sapfire::UUID uuid, MaterialResource resource) {
@@ -71,8 +69,8 @@ namespace Sapfire::assets {
 		const UUID uuid = UUID{j["UUID"]};
 		d3d::Material material{.name = fs::file_name(j["name"])};
 		material.roughness = j["roughness"];
-		material.diffuse_albedo = XMFLOAT4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
-		material.fresnel_r0 = XMFLOAT3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
+		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
+		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
 		material.material_buffer = device.create_buffer<d3d::MaterialConstants>({
 			.usage = d3d::BufferUsage::ConstantBuffer,
 			.name = d3d::AnsiToWString(material.name),
@@ -114,8 +112,8 @@ namespace Sapfire::assets {
 		}
 		d3d::Material material{.name = fs::file_name(j["name"])};
 		material.roughness = j["roughness"];
-		material.diffuse_albedo = XMFLOAT4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
-		material.fresnel_r0 = XMFLOAT3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
+		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
+		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
 		material.material_buffer = device.create_buffer<d3d::MaterialConstants>({
 			.usage = d3d::BufferUsage::ConstantBuffer,
 			.name = d3d::AnsiToWString(material.name),

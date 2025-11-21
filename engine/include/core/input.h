@@ -1,6 +1,6 @@
 #pragma once
 
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "core/core.h"
 #include "core/stl/unique_ptr.h"
 
@@ -16,7 +16,7 @@ namespace Sapfire::input {
 
 	struct SFAPI InputComponent {
 		InputComponent();
-		DirectX::XMFLOAT4 input_axis;
+		sf::math::vec4 input_axis;
 		float sens_v = 0.002f;
 		float sens_h = 0.002f;
 		float mouse_delta_x = 0.f;

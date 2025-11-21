@@ -1,6 +1,5 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
 #include "core/application.h"
 #include "core/core.h"
 #include "core/input.h"

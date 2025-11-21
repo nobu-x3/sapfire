@@ -1,6 +1,5 @@
 #pragma once
 
-#include <DirectXMath.h>
 #include "core/core.h"
 
 namespace Sapfire {

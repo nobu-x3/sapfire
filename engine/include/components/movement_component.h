@@ -1,6 +1,6 @@
 #pragma once
 
-#include <DirectXMath.h>
+#include "math/math.h"
 #include "components/component.h"
 
 namespace Sapfire::components {
@@ -14,16 +14,16 @@ namespace Sapfire::components {
 		MovementComponent& operator=(const MovementComponent&);
 		MovementComponent& operator=(MovementComponent&&) noexcept;
 
-		inline DirectX::XMVECTOR acceleration() const { return m_Acceleration; }
-		inline void acceleration(DirectX::XMVECTOR acceleration) { m_Acceleration = acceleration; }
-		inline DirectX::XMVECTOR velocity() const { return m_Velocity; }
-		inline void velocity(DirectX::XMVECTOR velocity) { m_Velocity = velocity; }
+		inline sf::math::vec3 acceleration() const { return m_Acceleration; }
+		inline void acceleration(const sf::math::vec3& acceleration) { m_Acceleration = acceleration; }
+		inline sf::math::vec3 velocity() const { return m_Velocity; }
+		inline void velocity(const sf::math::vec3& velocity) { m_Velocity = velocity; }
 
     private:
         void register_rtti();
 
 	private:
-		DirectX::XMVECTOR m_Acceleration{0.0f, 0.0f, 0.0f, 0.0f};
-		DirectX::XMVECTOR m_Velocity{0.0f, 0.0f, 0.0f, 0.0f};
+		sf::math::vec3 m_Acceleration{0.0f, 0.0f, 0.0f};
+		sf::math::vec3 m_Velocity{0.0f, 0.0f, 0.0f};
 	};
 } // namespace Sapfire

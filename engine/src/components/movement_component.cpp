@@ -36,8 +36,8 @@ namespace Sapfire::components {
 
 	void MovementComponent::register_rtti() {
 		BEGIN_RTTI();
-		ADD_RTTI_FIELD(rtti::rtti_type::XMVECTOR, "Acceleration", &m_Acceleration, nullptr);
-		ADD_RTTI_FIELD(rtti::rtti_type::XMVECTOR, "Velocity", &m_Velocity, nullptr);
+		ADD_RTTI_FIELD(rtti::rtti_type::VEC3, "Acceleration", &m_Acceleration, nullptr);
+		ADD_RTTI_FIELD(rtti::rtti_type::VEC3, "Velocity", &m_Velocity, nullptr);
 		END_RTTI();
 	}
 

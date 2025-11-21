@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/base.h"
+#include "core/core.h"
 #include "render_api.h"
 #include "resource_types.h"
 #include "i_graphics_device.h"

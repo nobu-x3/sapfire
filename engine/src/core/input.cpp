@@ -1,6 +1,6 @@
 #include "engpch.h"
 
-#include <DirectXMath.h>
+#include "math/math.h"
 #include <windows.h>
 #include <winuser.h>
 #include "core/core.h"
@@ -10,8 +10,6 @@
 namespace Sapfire::input {
 
 	constexpr f32 MOUSE_THRESHOLD = 0.001f;
-
-	using namespace DirectX;
 
 #define abs(x) (x >= 0 ? x : -x)
 
@@ -65,7 +63,7 @@ namespace Sapfire::input {
 			if (abs(comp.get().mouse_delta_y) < MOUSE_THRESHOLD) {
 				comp.get().mouse_delta_y = 0.f;
 			}
-			XMFLOAT4 input_axis{0.f, 0.f, 0.f, 0.f};
+			sf::math::vec4 input_axis{0.f, 0.f, 0.f, 0.f};
 			if (is_key_down(VK_UP)) {
 				input_axis.x += 1;
 			}

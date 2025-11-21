@@ -3,7 +3,7 @@
 #include "core/core.h"
 
 namespace Sapfire::rtti {
-	enum class rtti_type { U8, U16, U32, U64, S8, S16, S32, S64, F32, F64, STRING, BOOL, XMVECTOR, REFERENCE };
+	enum class rtti_type { U8, U16, U32, U64, S8, S16, S32, S64, F32, F64, STRING, BOOL, VEC3, REFERENCE };
 
 	enum class rtti_reference_type {
 		None,
