@@ -2,10 +2,10 @@
 
 #include "core/file_system.h"
 #include "core/logger.h"
-#include "render/d3d_util.h"
-#include "tools/shader_compiler.h"
+#include "render/dx12/dx12_util.h"
+#include "render/dx12/dx12_shader_compiler.h"
 
-namespace Sapfire::tools::shader_compiler {
+namespace sf::render::dx12 {
 
 	using namespace Microsoft::WRL;
 
@@ -19,32 +19,32 @@ namespace Sapfire::tools::shader_compiler {
 
 	std::wstring shader_directory{};
 
-	Shader compile(const d3d::ShaderType& type, const stl::string_view path, const stl::string_view entry_point,
+	Shader compile(const ShaderType& type, const stl::string_view path, const stl::string_view entry_point,
 				   const bool extract_root_signature /*= false*/) {
 		Shader shader{};
 		if (!utils) {
-			d3d_check(::DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils)));
-			d3d_check(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-			d3d_check(utils->CreateDefaultIncludeHandler(&includeHandler));
+			dx12_check(::DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils)));
+			dx12_check(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
+			dx12_check(utils->CreateDefaultIncludeHandler(&includeHandler));
 			shader_directory = fs::full_path(L"assets/shaders");
-			CORE_INFO("Shader base directory: {}", d3d::WStringToANSI(shader_directory));
+			CORE_INFO("Shader base directory: {}", wstring_to_ansi(shader_directory));
 		}
 		CORE_INFO("Compiling shader at path: {}", path);
-		std::wstring shader_path = d3d::AnsiToWString(stl::string{path});
+		std::wstring shader_path = ansi_to_wstring(stl::string{path});
 		// Setup compilation arguments.
 		const std::wstring target_profile = [=]() {
 			switch (type) {
-			case d3d::ShaderType::Vertex:
+			case ShaderType::Vertex:
 				{
 					return L"vs_6_6";
 				}
 				break;
-			case d3d::ShaderType::Pixel:
+			case ShaderType::Pixel:
 				{
 					return L"ps_6_6";
 				}
 				break;
-			case d3d::ShaderType::Compute:
+			case ShaderType::Compute:
 				{
 					return L"cs_6_6";
 				}
@@ -56,7 +56,7 @@ namespace Sapfire::tools::shader_compiler {
 				break;
 			}
 		}();
-		std::wstring entry = d3d::AnsiToWString(stl::string{entry_point});
+		std::wstring entry = ansi_to_wstring(stl::string{entry_point});
 		stl::vector<LPCWSTR> compilation_arguments = {
 			L"-HV",
 			L"2021",
@@ -77,7 +77,7 @@ namespace Sapfire::tools::shader_compiler {
 		};
 		// Load the shader source file to a blob.
 		ComPtr<IDxcBlobEncoding> source_blob{nullptr};
-		d3d_check(utils->LoadFile(shader_path.data(), nullptr, &source_blob));
+		dx12_check(utils->LoadFile(shader_path.data(), nullptr, &source_blob));
 		const DxcBuffer sourceBuffer = {
 			.Ptr = source_blob->GetBufferPointer(),
 			.Size = source_blob->GetBufferSize(),
@@ -93,7 +93,7 @@ namespace Sapfire::tools::shader_compiler {
 		}
 		// Get compilation errors (if any).
 		ComPtr<IDxcBlobUtf8> errors{};
-		d3d_check(compiled_shader_buffer->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr));
+		dx12_check(compiled_shader_buffer->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr));
 		if (errors && errors->GetStringLength() > 0) {
 			const LPCSTR errorMessage = errors->GetStringPointer();
 			CORE_CRITICAL("Shader path : {}, Error : {}", path, errorMessage);
@@ -109,37 +109,37 @@ namespace Sapfire::tools::shader_compiler {
 		return shader;
 	}
 
-	Shader compile(const d3d::ShaderType& type, const stl::wstring_view path, const stl::wstring_view entry,
+	Shader compile(const ShaderType& type, const stl::wstring_view path, const stl::wstring_view entry,
 				   const bool extract_root_signature) {
 		Shader shader{};
 		if (!utils) {
-			d3d_check(::DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils)));
-			d3d_check(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
-			d3d_check(utils->CreateDefaultIncludeHandler(&includeHandler));
+			dx12_check(::DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&utils)));
+			dx12_check(::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
+			dx12_check(utils->CreateDefaultIncludeHandler(&includeHandler));
 			shader_directory = fs::full_path(L"assets/shaders");
 			if (shader_directory.empty()) {
 				CORE_WARN("Filesystem failed to find shader directory in assets/shaders. Taking a wild guess.");
-				shader_directory = d3d::AnsiToWString(fs::FileSystem::root_directory()) + L"assets/shaders";
+				shader_directory = ansi_to_wstring(fs::FileSystem::root_directory()) + L"assets/shaders";
 			}
-			CORE_INFO("Shader base directory: {}", d3d::WStringToANSI(shader_directory));
+			CORE_INFO("Shader base directory: {}", wstring_to_ansi(shader_directory));
 		}
         stl::wstring full_path = shader_directory + L"/" + stl::wstring{path};
-        std::string path_str = d3d::WStringToANSI(full_path);
+        std::string path_str = wstring_to_ansi(full_path);
 		CORE_INFO("Compiling shader at path: {}", path_str);
 		// Setup compilation arguments.
 		const std::wstring target_profile = [=]() {
 			switch (type) {
-			case d3d::ShaderType::Vertex:
+			case ShaderType::Vertex:
 				{
 					return L"vs_6_6";
 				}
 				break;
-			case d3d::ShaderType::Pixel:
+			case ShaderType::Pixel:
 				{
 					return L"ps_6_6";
 				}
 				break;
-			case d3d::ShaderType::Compute:
+			case ShaderType::Compute:
 				{
 					return L"cs_6_6";
 				}
@@ -171,7 +171,7 @@ namespace Sapfire::tools::shader_compiler {
 		};
 		// Load the shader source file to a blob.
 		ComPtr<IDxcBlobEncoding> source_blob{nullptr};
-		d3d_check(utils->LoadFile(full_path.data(), nullptr, &source_blob));
+		dx12_check(utils->LoadFile(full_path.data(), nullptr, &source_blob));
 		const DxcBuffer sourceBuffer = {
 			.Ptr = source_blob->GetBufferPointer(),
 			.Size = source_blob->GetBufferSize(),
@@ -187,7 +187,7 @@ namespace Sapfire::tools::shader_compiler {
 		}
 		// Get compilation errors (if any).
 		ComPtr<IDxcBlobUtf8> errors{};
-		d3d_check(compiled_shader_buffer->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr));
+		dx12_check(compiled_shader_buffer->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr));
 		if (errors && errors->GetStringLength() > 0) {
 			const LPCSTR errorMessage = errors->GetStringPointer();
 			CORE_CRITICAL("Shader path : {}, Error : {}", path_str, errorMessage);

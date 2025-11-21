@@ -78,3 +78,18 @@ inline u32 calculate_constant_buffer_byte_size(u32 byte_size) {
 }
 
 } // namespace sf::render::dx12
+
+// Backward compatibility for old Sapfire::d3d namespace
+namespace Sapfire::d3d {
+    using sf::render::dx12::calculate_constant_buffer_byte_size;
+    using sf::render::dx12::ansi_to_wstring;
+    using sf::render::dx12::wstring_to_ansi;
+    using sf::render::dx12::DxException;
+
+    #ifndef d3d_check
+    #define d3d_check(x) dx12_check(x)
+    #endif
+
+    using AnsiToWString = decltype(&ansi_to_wstring);
+    using WStringToANSI = decltype(&wstring_to_ansi);
+} // namespace Sapfire::d3d

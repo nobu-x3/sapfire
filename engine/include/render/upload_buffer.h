@@ -3,7 +3,7 @@
 #include <d3d12.h>
 #include <wrl.h>
 #include "d3dx12_core.h"
-#include "render/deprecated/d3d_util.h"
+#include "render/dx12/dx12_util.h"
 
 namespace Sapfire::d3d {
 	template <typename T>

@@ -24,6 +24,14 @@ using SwapchainCreationDesc = sf::render::SwapchainCreationDesc;
 constexpr u32 MAX_FRAMES_IN_FLIGHT = 3;
 constexpr u32 INVALID_INDEX_U32 = sf::render::INVALID_DESCRIPTOR_INDEX;
 
+// Shader types (for shader compilation)
+enum class ShaderType : u8 {
+    Vertex,
+    Pixel,
+    Compute,
+    RootSignature
+};
+
 // Helper functions from dx12_util
 inline std::wstring AnsiToWString(const std::string& str) {
     WCHAR buffer[512];

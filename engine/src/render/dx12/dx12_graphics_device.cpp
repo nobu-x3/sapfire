@@ -2,7 +2,7 @@
 #include "render/dx12/dx12_graphics_device.h"
 #include "render/dx12/dx12_type_conversions.h"
 #include "render/dx12/dx12_util.h"
-#include "tools/shader_compiler.h"
+#include "render/dx12/dx12_shader_compiler.h"
 #include "core/logger.h"
 
 namespace sf::render::dx12 {
@@ -314,8 +314,8 @@ void DX12GraphicsDevice::init_contexts() {
 
 void DX12GraphicsDevice::init_bindless_root_signature() {
     // Compile root signature from shader
-    auto shader_result = Sapfire::tools::shader_compiler::compile(
-        Sapfire::d3d::ShaderType::RootSignature,
+    auto shader_result = sf::render::dx12::compile(
+        sf::render::dx12::ShaderType::RootSignature,
         L"assets/shaders/bindless_rs.hlsl",
         L"VS",
         true

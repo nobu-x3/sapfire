@@ -2,7 +2,7 @@
 #include "render/dx12/dx12_pipeline_state.h"
 #include "render/dx12/dx12_type_conversions.h"
 #include "render/dx12/dx12_util.h"
-#include "tools/shader_compiler.h"
+#include "render/dx12/dx12_shader_compiler.h"
 #include <d3dx12_core.h>
 
 namespace sf::render::dx12 {
@@ -11,14 +11,14 @@ void DX12PipelineState::create_graphics(ID3D12Device* device, ID3D12RootSignatur
     m_IsCompute = false;
 
     // Compile shaders
-    auto vs_result = Sapfire::tools::shader_compiler::compile(
-        Sapfire::d3d::ShaderType::Vertex,
+    auto vs_result = sf::render::dx12::compile(
+        sf::render::dx12::ShaderType::Vertex,
         desc.shader_module.vertex_shader_path,
         desc.shader_module.vertex_entry_point
     );
 
-    auto ps_result = Sapfire::tools::shader_compiler::compile(
-        Sapfire::d3d::ShaderType::Pixel,
+    auto ps_result = sf::render::dx12::compile(
+        sf::render::dx12::ShaderType::Pixel,
         desc.shader_module.pixel_shader_path,
         desc.shader_module.pixel_entry_point
     );
@@ -118,8 +118,8 @@ void DX12PipelineState::create_compute(ID3D12Device* device, ID3D12RootSignature
     m_IsCompute = true;
 
     // Compile compute shader
-    auto cs_result = Sapfire::tools::shader_compiler::compile(
-        Sapfire::d3d::ShaderType::Compute,
+    auto cs_result = sf::render::dx12::compile(
+        sf::render::dx12::ShaderType::Compute,
         desc.shader_path,
         desc.entry_point
     );
