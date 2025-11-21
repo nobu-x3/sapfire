@@ -7,7 +7,7 @@
 #include "math/math_helper.h"
 #include "physics/physics_engine.h"
 #include "render/camera.h"
-#include "render/graphics_device.h"
+#include "render/render_compat.h"
 #include "render/material.h"
 
 namespace Sapfire {

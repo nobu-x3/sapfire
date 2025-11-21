@@ -4,8 +4,6 @@
 #include "core/application.h"
 #include "core/game_context.h"
 #include "core/memory.h"
-#include "render/d3d_util.h"
-#include "render/graphics_device.h"
 
 namespace Sapfire {
 
