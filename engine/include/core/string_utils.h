@@ -28,20 +28,26 @@ inline std::string to_string(const std::wstring_view wstr) {
     return result;
 }
 #else
-// Linux/macOS: Use standard library string conversion
-#include <codecvt>
-#include <locale>
+// Linux/macOS: Use mbstowcs/wcstombs for string conversion
+#include <cstdlib>
+#include <cwchar>
 
 inline std::wstring to_wstring(const std::string& str) {
     if (str.empty()) return std::wstring();
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    return converter.from_bytes(str);
+    size_t size_needed = mbstowcs(nullptr, str.c_str(), 0) + 1;
+    std::wstring result(size_needed, 0);
+    mbstowcs(&result[0], str.c_str(), size_needed);
+    result.resize(size_needed - 1); // Remove null terminator
+    return result;
 }
 
 inline std::string to_string(const std::wstring_view wstr) {
     if (wstr.empty()) return std::string();
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    return converter.to_bytes(wstr.data(), wstr.data() + wstr.size());
+    size_t size_needed = wcstombs(nullptr, std::wstring(wstr).c_str(), 0) + 1;
+    std::string result(size_needed, 0);
+    wcstombs(&result[0], std::wstring(wstr).c_str(), size_needed);
+    result.resize(size_needed - 1); // Remove null terminator
+    return result;
 }
 #endif
 

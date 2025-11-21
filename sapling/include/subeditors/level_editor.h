@@ -10,7 +10,7 @@ namespace Sapfire {
 	class ECManager;
 }
 
-using on_entity_selected_callback = Sapfire::stl::function<void(Sapfire::stl::optional<Sapfire::Entity>)>;
+using on_entity_selected_callback = sf::stl::function<void(sf::stl::optional<sf::Entity>)>;
 
 namespace ELevelEditorWidgetOrder {
 	enum ENUM { SceneHierarchy = 0, EntityInspector, AssetBrowser, SceneView };
@@ -18,23 +18,23 @@ namespace ELevelEditorWidgetOrder {
 
 class SLevelEditor final : public SSubeditor {
 public:
-	SLevelEditor(Sapfire::render::IGraphicsDevice* gfx_device, Sapfire::assets::AssetManager* am, const Sapfire::stl::string& scene_path,
-				 Sapfire::stl::function<void()> asset_imported_callback);
+	SLevelEditor(sf::render::IGraphicsDevice* gfx_device, sf::assets::AssetManager* am, const sf::stl::string& scene_path,
+				 sf::stl::function<void()> asset_imported_callback);
 	static SLevelEditor* level_editor();
-	Sapfire::assets::AssetManager& asset_manager() { return m_AssetManager; }
+	sf::assets::AssetManager& asset_manager() { return m_AssetManager; }
 
 private:
-	void on_entity_selected(Sapfire::stl::optional<Sapfire::Entity> entity);
+	void on_entity_selected(sf::stl::optional<sf::Entity> entity);
 	void on_mesh_added();
 	void draw_menu() override;
-	bool update(Sapfire::f32 delta_time) override;
+	bool update(sf::f32 delta_time) override;
 	void draw_open_scene_dialog();
 
 private:
-	Sapfire::stl::unique_ptr<Sapfire::ECManager> m_ECManager;
-	Sapfire::stl::vector<on_entity_selected_callback> m_EntitySelectedCallbacks;
-	Sapfire::assets::AssetManager& m_AssetManager;
-	Sapfire::stl::string m_CurrentSceneName{};
+	sf::stl::unique_ptr<sf::ECManager> m_ECManager;
+	sf::stl::vector<on_entity_selected_callback> m_EntitySelectedCallbacks;
+	sf::assets::AssetManager& m_AssetManager;
+	sf::stl::string m_CurrentSceneName{};
 
 	static SLevelEditor* s_Instance;
 };

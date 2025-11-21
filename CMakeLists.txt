@@ -20,13 +20,12 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-# Add SDL3
 add_subdirectory(engine/vendor/SDL3)
 
 include(engine_translation_units.cmake)
 
 add_subdirectory(engine)
-add_subdirectory(sapling)
+# add_subdirectory(sapling)  # Disabled - being refactored
 if(BUILD_TESTS)
 add_subdirectory(tests)
 endif()
@@ -49,21 +48,25 @@ add_custom_command(TARGET Sandbox POST_BUILD
 add_custom_command(TARGET Sandbox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:spdlog::spdlog> $<TARGET_FILE_DIR:Sandbox>/$<TARGET_FILE_NAME:spdlog::spdlog>
 )
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/dxc/_bin/x64/dxcompiler.dll $<TARGET_FILE_DIR:Sandbox>/dxcompiler.dll
-)
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/dxc/_bin/x64/dxil.dll $<TARGET_FILE_DIR:Sandbox>/dxil.dll
-)
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXAgilitySDK/_bin/x64/D3D12Core.dll $<TARGET_FILE_DIR:Sandbox>/D3D12Core.dll
-)
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXAgilitySDK/_bin/x64/d3d12SDKLayers.dll $<TARGET_FILE_DIR:Sandbox>/d3d12SDKLayers.dll
-)
-add_custom_command(TARGET Sandbox POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXTK12/_Bin/Desktop_2022_Win10/x64/Release/DirectXTK12.lib $<TARGET_FILE_DIR:Sandbox>/DirectXTK12.lib
-)
+
+# Windows-specific DLL copying
+if(WIN32)
+    add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/dxc/_bin/x64/dxcompiler.dll $<TARGET_FILE_DIR:Sandbox>/dxcompiler.dll
+    )
+    add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/dxc/_bin/x64/dxil.dll $<TARGET_FILE_DIR:Sandbox>/dxil.dll
+    )
+    add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXAgilitySDK/_bin/x64/D3D12Core.dll $<TARGET_FILE_DIR:Sandbox>/D3D12Core.dll
+    )
+    add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXAgilitySDK/_bin/x64/d3d12SDKLayers.dll $<TARGET_FILE_DIR:Sandbox>/d3d12SDKLayers.dll
+    )
+    add_custom_command(TARGET Sandbox POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/engine/vendor/DirectXTK12/_Bin/Desktop_2022_Win10/x64/Release/DirectXTK12.lib $<TARGET_FILE_DIR:Sandbox>/DirectXTK12.lib
+    )
+endif()
 add_custom_command(TARGET Sandbox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Sandbox>/assets
 )

@@ -46,7 +46,6 @@
 #include "render/render_backend.h"
 #include "render/lights.h"
 #include "render/material.h"
-#include "render/upload_buffer.h"
 #include "render/window.h"
 /////////////////////////////////
 

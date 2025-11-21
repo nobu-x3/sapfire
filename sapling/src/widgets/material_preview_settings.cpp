@@ -2,12 +2,12 @@
 #include "imgui.h"
 #include "rtti_drawer.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 namespace widgets {
-	SMaterialPreviewSettings::SMaterialPreviewSettings(Sapfire::components::RenderComponent* rc) : m_RenderComponent(*rc) {}
+	SMaterialPreviewSettings::SMaterialPreviewSettings(sf::components::RenderComponent* rc) : m_RenderComponent(*rc) {}
 
-	bool SMaterialPreviewSettings::update(Sapfire::f32 delta_time) {
+	bool SMaterialPreviewSettings::update(sf::f32 delta_time) {
 		if (!m_IsVisible)
 			return true;
 		if (ImGui::Begin("Preview Settings")) {

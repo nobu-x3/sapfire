@@ -14,14 +14,14 @@ namespace EWidgetOrder {
 
 class SMaterialEditor final : public SSubeditor {
 public:
-	SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::render::IGraphicsDevice* device);
-	bool update(Sapfire::f32 delta_time) override;
+	SMaterialEditor(sf::assets::AssetManager* am, sf::render::IGraphicsDevice* device);
+	bool update(sf::f32 delta_time) override;
 	void draw_menu() override;
 	void draw_dialogs();
 
 private:
-	Sapfire::assets::AssetManager& m_AssetManager;
-	Sapfire::assets::MaterialAsset* m_OpenedMaterial{nullptr};
-	Sapfire::stl::unique_ptr<Sapfire::ECManager> m_ECManager{nullptr};
-	Sapfire::Entity m_MaterialEntity;
+	sf::assets::AssetManager& m_AssetManager;
+	sf::assets::MaterialAsset* m_OpenedMaterial{nullptr};
+	sf::stl::unique_ptr<sf::ECManager> m_ECManager{nullptr};
+	sf::Entity m_MaterialEntity;
 };

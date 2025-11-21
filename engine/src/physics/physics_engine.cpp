@@ -29,7 +29,9 @@ namespace sf::physics {
 			velocity *= damping;
 			movement.velocity(velocity);
 			auto position = transform.position();
-			position += velocity * delta_time;
+			position.x += velocity.x * delta_time;
+			position.y += velocity.y * delta_time;
+			position.z += velocity.z * delta_time;
 			transform.position(position);
 		}
 	}

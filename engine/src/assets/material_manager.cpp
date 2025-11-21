@@ -5,14 +5,12 @@
 #include "core/file_system.h"
 #include "core/logger.h"
 #include "core/string_utils.h"
+#include "render/i_graphics_device.h"
 #include "nlohmann/json.hpp"
-#include "render/d3d_util.h"
-#include "render/graphics_device.h"
-#include "render/resources.h"
 
 namespace sf::assets {
 
-	const UUID DEFAULT_MATERIAL_UUID = 13700118063961433559;
+	const UUID DEFAULT_MATERIAL_UUID = 13700118063961433559ULL;
 	constexpr f32 DEFAULT_MATERIAL_ROUGHTNESS = 0.f;
 	constexpr sf::math::vec4 DEFAULT_MATERIAL_ALBEDO = {1.f, 0.f, 1.f, 1.f};
 	constexpr sf::math::vec3 DEFAULT_MATERIAL_FRESNEL = {1.f, 1.f, 1.f};
@@ -68,12 +66,14 @@ namespace sf::assets {
 			return;
 		}
 		const UUID uuid = UUID{j["UUID"]};
-		sf::render::Material material{.name = fs::file_name(j["name"])};
+		stl::string name_str = j["name"];
+		sf::render::Material material{.name = fs::file_name(name_str)};
 		material.roughness = j["roughness"];
 		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
 		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-		material.material_buffer = device->create_buffer<sf::render::MaterialConstants>({
-			.usage = sf::render::BufferUsage::ConstantBuffer,
+		material.material_buffer = device->create_buffer({
+			.usage = sf::render::BufferUsage::Constant,
+			.size_in_bytes = sizeof(sf::render::MaterialConstants),
 			.name = sf::string_utils::to_wstring(material.name),
 		});
 		material.material_cb_index = material.material_buffer.cbv_index;
@@ -111,12 +111,14 @@ namespace sf::assets {
 			CORE_CRITICAL("Broken material at path {}. Does not contain roughness.", path);
 			return;
 		}
-		sf::render::Material material{.name = fs::file_name(j["name"])};
+		stl::string name_str = j["name"];
+		sf::render::Material material{.name = fs::file_name(name_str)};
 		material.roughness = j["roughness"];
 		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
 		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-		material.material_buffer = device->create_buffer<sf::render::MaterialConstants>({
-			.usage = sf::render::BufferUsage::ConstantBuffer,
+		material.material_buffer = device->create_buffer({
+			.usage = sf::render::BufferUsage::Constant,
+			.size_in_bytes = sizeof(sf::render::MaterialConstants),
 			.name = sf::string_utils::to_wstring(material.name),
 		});
 		material.material_cb_index = material.material_buffer.cbv_index;
@@ -133,9 +135,10 @@ namespace sf::assets {
 			return;
 		}
 		asset.material.name = fs::file_name(path);
-		asset.material.material_buffer = device->create_buffer<d3d::MaterialConstants>({
-			.usage = sf::render::BufferUsage::ConstantBuffer,
-			.name = d3d::AnsiToWString(asset.material.name),
+		asset.material.material_buffer = device->create_buffer({
+			.usage = sf::render::BufferUsage::Constant,
+			.size_in_bytes = sizeof(sf::render::MaterialConstants),
+			.name = sf::string_utils::to_wstring(asset.material.name),
 		});
 		asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
 		const UUID uuid{asset.uuid};
@@ -281,8 +284,9 @@ namespace sf::assets {
 			.fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
 			.roughness = DEFAULT_MATERIAL_ROUGHTNESS,
 		};
-		static sf::render::Buffer buffer = device->create_buffer<sf::render::MaterialConstants>({
-			.usage = sf::render::BufferUsage::ConstantBuffer,
+		static sf::render::Buffer buffer = device->create_buffer({
+			.usage = sf::render::BufferUsage::Constant,
+			.size_in_bytes = sizeof(sf::render::MaterialConstants),
 			.name = name,
 		});
 		static MaterialAsset default_mat{
@@ -296,7 +300,7 @@ namespace sf::assets {
 				.material_cb_index = static_cast<i32>(buffer.cbv_index),
 			},
 		};
-		buffer.update(&default_material_constants);
+		buffer.update(&default_material_constants, sizeof(sf::render::MaterialConstants));
 		return &default_mat;
 	}
 

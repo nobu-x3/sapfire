@@ -6,7 +6,7 @@
 #include "imgui.h"
 #include "sapling_layer.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -123,10 +123,10 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-class SaplingApp final : public Sapfire::Application {
+class SaplingApp final : public sf::Application {
 public:
 	SaplingApp(const ApplicationCreationDesc& desc) :
-		Sapfire::Application(desc) {
+		sf::Application(desc) {
             push_layer(new SaplingLayer());
 	}
 
@@ -140,7 +140,7 @@ protected:
 
 };
 
-Sapfire::Application* Sapfire::create_application() {
+sf::Application* sf::create_application() {
 	return new SaplingApp({
 		.name = "Sapling",
 		.width = 800,

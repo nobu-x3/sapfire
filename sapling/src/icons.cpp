@@ -2,16 +2,15 @@
 
 namespace icons {
 
-	Sapfire::stl::unordered_map<Sapfire::stl::string, Sapfire::sf::render::Texture> g_IconTextures{};
-	Sapfire::stl::unordered_map<Sapfire::stl::string, ImTextureID> g_IconIDs{};
+	sf::stl::unordered_map<sf::stl::string, sf::render::Texture> g_IconTextures{};
+	sf::stl::unordered_map<sf::stl::string, ImTextureID> g_IconIDs{};
 
-	const Sapfire::sf::render::Texture& get(const Sapfire::stl::string& id) { return g_IconTextures[id]; }
+	const sf::render::Texture& get(const sf::stl::string& id) { return g_IconTextures[id]; }
 
-	void add(Sapfire::render::IGraphicsDevice* device, const Sapfire::stl::wstring& path, const Sapfire::stl::string& id) {
+	void add(sf::render::IGraphicsDevice* device, const sf::stl::wstring& path, const sf::stl::string& id) {
 		if (!g_IconTextures.contains(id)) {
 			g_IconTextures[id] = device->create_texture({
-				.usage = Sapfire::sf::render::TextureUsage::TextureFromPath,
-                .optional_initial_state = D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PRESENT,
+				.usage = sf::render::TextureUsage::ShaderResource,
                 .name = path,
 				.path = path,
 			});
@@ -21,5 +20,5 @@ namespace icons {
 		}
 	}
 
-	ImTextureID get_im_id(const Sapfire::stl::string& id) { return g_IconIDs[id]; }
+	ImTextureID get_im_id(const sf::stl::string& id) { return g_IconIDs[id]; }
 } // namespace icons

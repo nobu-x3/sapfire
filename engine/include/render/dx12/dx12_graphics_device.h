@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "render/i_graphics_device.h"
 #include "render/dx12/dx12_command_queue.h"
 #include "render/dx12/dx12_context.h"
@@ -182,3 +182,4 @@ private:
 };
 
 } // namespace sf::render::dx12
+#endif

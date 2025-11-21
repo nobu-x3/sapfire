@@ -5,14 +5,18 @@
 #include "sandbox_game_context.h"
 #include "sandbox_layer.h"
 
-using namespace Sapfire;
+using namespace sf;
 
-class Sandbox final : public Sapfire::Application {
+class Sandbox final : public sf::Application {
 public:
+	using sf::Application::push_layer;
+	using sf::Application::m_ClientExtent;
+	using sf::Application::m_Window;
+
 	Sandbox(const ApplicationCreationDesc& desc) :
-		Sapfire::Application(desc), m_GameContext({
+		sf::Application(desc), m_GameContext({
 										.client_extent = &m_ClientExtent,
-										.window_handle = m_Window->handle(),
+										.window_handle = m_Window->native_handle(),
 									}) {
 		push_layer(new SandboxLayer);
 		m_GameContext.init();
@@ -29,7 +33,7 @@ private:
 	SandboxGameContext m_GameContext;
 };
 
-Sapfire::Application* Sapfire::create_application() {
+sf::Application* sf::create_application() {
 	return new Sandbox({
 		.name = "Sapfire - Sandbox",
 		.width = 800,

@@ -11,20 +11,20 @@
 #include "subeditors/material_editor.h"
 #include "tools/profiling.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 SaplingLayer* g_Editor{nullptr};
 
 SaplingLayer* editor() { return g_Editor; }
 
-SaplingLayer::SaplingLayer() : Sapfire::Layer("Sapling Layer") {
+SaplingLayer::SaplingLayer() : sf::Layer("Sapling Layer") {
 	auto& app = Application::get();
 	m_GraphicsDevice = stl::make_unique<d3d::GraphicsDevice>(
-		Sapfire::mem::ENUM::Editor,
+		sf::mem::ENUM::Editor,
 		d3d::SwapchainCreationDesc{static_cast<u32>(app.client_extent()->width), static_cast<u32>(app.client_extent()->height), 120,
 								   sf::render::MAX_FRAMES_IN_FLIGHT, DXGI_FORMAT_R16G16B16A16_FLOAT, app.window()->handle()});
-	m_AssetManager = Sapfire::stl::make_unique<Sapfire::assets::AssetManager>(mem::Editor,
-																			  Sapfire::assets::AssetManagerCreationDesc{
+	m_AssetManager = sf::stl::make_unique<sf::assets::AssetManager>(mem::Editor,
+																			  sf::assets::AssetManagerCreationDesc{
 																				  .device = m_GraphicsDevice.get(),
 																				  .mesh_registry_path = "mesh_registry.db",
 																				  .texture_registry_path = "texture_registry.db",
@@ -159,7 +159,7 @@ void SaplingLayer::on_attach() {
 		.pipeline_name = L"Sapling Layer Bindless Pipeline",
 	});
 	IGFD::FileDialogConfig config{};
-	config.path = Sapfire::fs::FileSystem::root_directory();
+	config.path = sf::fs::FileSystem::root_directory();
 	config.countSelectionMax = 1;
 	ImGuiFileDialog::Instance()->OpenDialog("OpenProjectDlg", "Open project", ".sfproj", config);
 }
@@ -171,7 +171,7 @@ void SaplingLayer::on_detach() {
 	ImGui::DestroyContext();
 }
 
-void SaplingLayer::on_update(Sapfire::f32 delta_time) {
+void SaplingLayer::on_update(sf::f32 delta_time) {
 	PROFILE_FUNCTION();
 	// Wait for render to happen
 	m_GraphicsDevice->direct_command_queue()->flush();
@@ -232,13 +232,13 @@ void SaplingLayer::draw_menu_bar() {
 				IGFD::FileDialogConfig config{};
 				m_ProjectPath = "";
 				m_AssetManager =
-					Sapfire::stl::make_unique<Sapfire::assets::AssetManager>(mem::Editor,
-																			 Sapfire::assets::AssetManagerCreationDesc{
+					sf::stl::make_unique<sf::assets::AssetManager>(mem::Editor,
+																			 sf::assets::AssetManagerCreationDesc{
 																				 .device = m_GraphicsDevice.get(),
 																				 .mesh_registry_path = "mesh_registry.db",
 																				 .texture_registry_path = "texture_registry.db",
 																			 });
-				config.path = Sapfire::fs::FileSystem::root_directory();
+				config.path = sf::fs::FileSystem::root_directory();
 				config.countSelectionMax = 1;
 				ImGuiFileDialog::Instance()->OpenDialog("OpenProjectDlg", "Open project", ".sfproj", config);
 			}
@@ -315,7 +315,7 @@ void SaplingLayer::on_render() {
 	m_GraphicsDevice->end_frame();
 }
 
-void SaplingLayer::on_event(Sapfire::Event& e) {
+void SaplingLayer::on_event(sf::Event& e) {
 	PROFILE_FUNCTION();
 	EventDispatcher dispatcher(e);
 	dispatcher.dispatch<WindowResizeEvent>(BIND_EVENT_FN(SaplingLayer::on_window_resize));

@@ -1,4 +1,5 @@
 #pragma once
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include <dxcapi.h>
 #include <wrl.h>
 #include "core/core.h"
@@ -34,3 +35,4 @@ namespace sf::tools::shader_compiler {
 namespace sf::d3d {
     using ShaderType = sf::render::dx12::ShaderType;
 }
+#endif

@@ -5,37 +5,38 @@
 #include "components/test_custom_component.h"
 #include "core/game_context.h"
 
-using namespace Sapfire;
+using namespace sf;
 
-SandboxGameContext::SandboxGameContext(const Sapfire::GameContextCreationDesc& desc) : Sapfire::GameContext(desc) {
+SandboxGameContext::SandboxGameContext(const sf::GameContextCreationDesc& desc) : sf::GameContext(desc) {
 	m_MainCamera = {CAMERA_FOV, static_cast<f32>(m_ClientExtent->width) / m_ClientExtent->height, 0.1f, 1000.f};
 }
 
 void SandboxGameContext::load_contents() {
-	m_PipelineState = m_GraphicsDevice->create_pipeline_state({
+	m_PipelineState = m_GraphicsDevice->create_graphics_pipeline({
 		.shader_module =
 			{
-				.vertexShaderPath = L"bindless.hlsl",
-				.vertexEntryPoint = L"VS",
-				.pixelShaderPath = L"bindless.hlsl",
-				.pixelEntryPoint = L"PS",
+				.vertex_shader_path = L"bindless.hlsl",
+				.vertex_entry_point = L"VS",
+				.pixel_shader_path = L"bindless.hlsl",
+				.pixel_entry_point = L"PS",
 			},
-		.pipeline_name = L"Bindless Pipeline",
+		.name = L"Bindless Pipeline",
 	});
-	m_MainPassCB = m_GraphicsDevice->create_buffer<PassConstants>(sf::render::BufferCreationDesc{
-		.usage = sf::render::BufferUsage::ConstantBuffer,
+	m_MainPassCB = m_GraphicsDevice->create_buffer(sf::render::BufferCreationDesc{
+		.usage = sf::render::BufferUsage::Constant,
+		.size_in_bytes = sizeof(PassConstants),
 		.name = L"Main Pass Constant Buffer",
 	});
 	// textures:
 	m_DepthTexture = m_GraphicsDevice->create_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
+		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.format = sf::render::Format::D32_FLOAT,
 		.name = L"Depth Texture",
 	});
-	assets::SceneWriter writer{&m_ECManager, &m_AssetManager};
-	writer.deserealize("test_scene.scene", [&](Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths) {
+	assets::SceneWriter writer{&m_ECManager, m_AssetManager.get()};
+	writer.deserealize("test_scene.scene", [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 		create_render_component(entity, resource_paths);
 	});
 }
@@ -45,7 +46,7 @@ void SandboxGameContext::update(f32 delta_time) {
 	PROFILE_SCOPE("SandboxGameContext::update");
 	m_MainCamera.update(delta_time);
 	// Wait for render to happen
-	m_GraphicsDevice->direct_command_queue()->flush();
+	m_GraphicsDevice->get_direct_queue()->wait_for_idle();
 	// update buffers
 	update_pass_cb(delta_time);
 	update_materials(delta_time);
@@ -81,18 +82,18 @@ void SandboxGameContext::update_pass_cb(f32 delta_time) {
 	m_PassConstants.Lights[1].strength = {0.3f, 0.3f, 0.3f};
 	m_PassConstants.Lights[2].direction = {0.0f, -0.707f, -0.707f};
 	m_PassConstants.Lights[2].strength = {0.15f, 0.15f, 0.15f};
-	m_MainPassCB.update(&m_PassConstants);
+	m_MainPassCB.update(&m_PassConstants, sizeof(PassConstants));
 }
 
 void SandboxGameContext::update_materials(f32 delta_time) {
 	auto index = 0;
-	for (auto&& [path, asset] : m_AssetManager.path_material_map()) {
+	for (auto&& [path, asset] : m_AssetManager->path_material_map()) {
 		sf::render::MaterialConstants data{
 			.diffuse_albedo = asset.material.diffuse_albedo,
 			.fresnel_r0 = asset.material.fresnel_r0,
 			.roughness = asset.material.roughness,
 		};
-		asset.material.material_buffer.update(&data);
+		asset.material.material_buffer.update(&data, sizeof(sf::render::MaterialConstants));
 		asset.material.material_cb_index = index;
 		index++;
 	}
@@ -104,35 +105,36 @@ void SandboxGameContext::udpate_transform_buffer(f32 delta_time) {
 		sf::math::mat4 world = transforms[i].transform();
 		ObjectConstants obj_constants;
 		obj_constants.World = world.transposed();
-		m_TransformBuffers[i].update(&obj_constants);
+		m_TransformBuffers[i].update(&obj_constants, sizeof(ObjectConstants));
 	}
 }
 
 void SandboxGameContext::render() {
 	PROFILE_FUNCTION();
 	m_GraphicsDevice->begin_frame();
-	auto& gfx_ctx = m_GraphicsDevice->current_graphics_contexts();
-	auto& current_backbuffer = m_GraphicsDevice->current_back_buffer();
-	gfx_ctx->transition_barrier(current_backbuffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
-	gfx_ctx->execute_resource_barriers();
+	auto& gfx_ctx = m_GraphicsDevice->get_current_graphics_context();
+	auto& current_backbuffer = m_GraphicsDevice->get_current_back_buffer();
+	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
+	gfx_ctx.execute_resource_barriers();
 	static stl::array<f32, 4> clear_color{0.3f, 0.4f, 0.6f, 1.0f};
-	gfx_ctx->clear_render_target_view(current_backbuffer, clear_color);
-	gfx_ctx->clear_depth_stencil_view(m_DepthTexture);
+	gfx_ctx.clear_render_target_view(current_backbuffer, clear_color);
+	gfx_ctx.clear_depth_stencil_view(m_DepthTexture);
 	// TODO: setup barriers for all passes
-	gfx_ctx->set_graphics_root_signature_and_pipeline(m_PipelineState);
-	gfx_ctx->set_render_target(current_backbuffer, m_DepthTexture);
-	gfx_ctx->set_viewport({
-		.TopLeftX = 0.0f,
-		.TopLeftY = 0.0f,
-		.Width = static_cast<f32>(m_ClientExtent->width),
-		.Height = static_cast<f32>(m_ClientExtent->height),
-		.MinDepth = 0.0f,
-		.MaxDepth = 1.0f,
+	gfx_ctx.set_pipeline_state(m_PipelineState);
+	gfx_ctx.set_root_signature();
+	gfx_ctx.set_render_target(current_backbuffer, &m_DepthTexture);
+	gfx_ctx.set_viewport({
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = static_cast<f32>(m_ClientExtent->width),
+		.height = static_cast<f32>(m_ClientExtent->height),
+		.min_depth = 0.0f,
+		.max_depth = 1.0f,
 	});
 	// TODO: rendering
 	{
-		gfx_ctx->set_descriptor_heaps();
-		gfx_ctx->set_primitive_topology_layout(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		gfx_ctx.set_descriptor_heaps();
+		gfx_ctx.set_primitive_topology(sf::render::PrimitiveTopology::TriangleList);
 		sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
 		sf::math::mat4 view = m_MainCamera.view();
 		sf::math::mat4 inv_view = view.inversed();
@@ -141,7 +143,7 @@ void SandboxGameContext::render() {
 			components::Transform transform;
 			if (!m_ECManager.get_other_engine_component<components::RenderComponent, components::Transform>(comp, transform))
 				continue;
-			const auto* mesh_asset = m_AssetManager.get_mesh(comp.mesh_uuid());
+			const auto* mesh_asset = m_AssetManager->get_mesh(comp.mesh_uuid());
 			sf::math::aabb aabb = mesh_asset->data->aabb;
 			sf::math::mat4 world = transform.transform();
 			sf::math::mat4 inv_world = world.inversed();
@@ -151,28 +153,29 @@ void SandboxGameContext::render() {
 			sf::math::frustum local_space_frustum = camera_frustum.transform(view_to_local);
 			if (local_space_frustum.contains(aabb) != sf::math::ContainmentType::Disjoint) {
 				components::CPUData cpu_data = comp.cpu_data();
-				gfx_ctx->set_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
-				gfx_ctx->set_32_bit_graphics_constants(comp.per_draw_constants());
-				gfx_ctx->draw_instance_indexed(cpu_data.indices_size);
+				gfx_ctx.set_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
+				auto* per_draw = comp.per_draw_constants();
+				gfx_ctx.set_32_bit_constants(per_draw, sizeof(components::PerDrawConstants) / sizeof(u32));
+				gfx_ctx.draw_indexed_instanced(cpu_data.indices_size, 1);
 			}
 		}
 	}
-	gfx_ctx->transition_barrier(current_backbuffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
-	gfx_ctx->execute_resource_barriers();
-	stl::array<const d3d::Context*, 1> contexts = {gfx_ctx.get()};
-	m_GraphicsDevice->direct_command_queue()->execute_context(contexts);
+	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
+	gfx_ctx.execute_resource_barriers();
+	gfx_ctx.close();
+	m_GraphicsDevice->get_direct_queue()->execute_command_list(&gfx_ctx);
 	m_GraphicsDevice->present();
 	m_GraphicsDevice->end_frame();
 }
 
 void SandboxGameContext::resize_depth_texture() {
 	m_MainCamera = {CAMERA_FOV, static_cast<f32>(m_ClientExtent->width) / m_ClientExtent->height, 0.1f, 1000.f};
-	m_DepthTexture.allocation.reset();
+	// Release old texture by reassigning
 	m_DepthTexture = m_GraphicsDevice->create_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
+		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.format = sf::render::Format::D32_FLOAT,
 		.name = L"Depth Texture",
 	});
 }

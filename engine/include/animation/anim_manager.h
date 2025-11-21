@@ -3,6 +3,7 @@
 
 namespace sf {
 	class ECManager;
+	class Entity;
 	namespace render {
 		class IGraphicsDevice;
 	}

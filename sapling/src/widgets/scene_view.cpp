@@ -3,7 +3,6 @@
 #include "core/timer.h"
 #include "globals.h"
 #include "imgui.h"
-#include "render/d3d_util.h"
 #include "sapling_layer.h"
 #include "subeditors/level_editor.h"
 
@@ -35,11 +34,11 @@ namespace widgets {
 		// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 		// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
 		// are spot lights for a maximum of sf::render::MAX_LIGHTS per object.
-		Sapfire::sf::render::Light Lights[sf::render::MAX_LIGHTS];
+		sf::render::Light Lights[sf::render::MAX_LIGHTS];
 	};
 
-	using namespace Sapfire;
-	SSceneView::SSceneView(Sapfire::stl::string_view name, Sapfire::ECManager* ec_manager, Sapfire::render::IGraphicsDevice* gfx_device) :
+	using namespace sf;
+	SSceneView::SSceneView(sf::stl::string_view name, sf::ECManager* ec_manager, sf::render::IGraphicsDevice* gfx_device) :
 		m_ECManager(*ec_manager), m_GraphicsDevice(gfx_device),
 		m_PhysicsEngine(stl::make_unique<physics::PhysicsEngine>(mem::ENUM::Editor, ec_manager)),
 		m_PipelineState(m_GraphicsDevice->create_pipeline_state({
@@ -66,7 +65,7 @@ namespace widgets {
 		m_WidgetName(name) {
 		for (int i = 0; i < sf::render::MAX_FRAMES_IN_FLIGHT; ++i) {
 			m_OffscreenTextures.push_back(m_GraphicsDevice->create_texture({
-				.usage = Sapfire::sf::render::TextureUsage::RenderTarget,
+				.usage = sf::render::TextureUsage::RenderTarget,
 				.width = 800,
 				.height = 600,
 				.format = sf::render::Format::RGBA16_FLOAT,
@@ -77,7 +76,7 @@ namespace widgets {
 		m_MainCamera = {CAMERA_FOV, DOCK_SIZE.x / DOCK_SIZE.y, 0.1f, 1000.f};
 	}
 
-	void SSceneView::add_render_component(Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths) {
+	void SSceneView::add_render_component(sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 		bool already_has_component = m_ECManager.has_engine_component<components::RenderComponent>(entity);
 		auto* mesh_asset = resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh()
 															: editor()->asset_manager()->get_mesh(resource_paths.mesh_path);
@@ -236,7 +235,7 @@ namespace widgets {
 		}
 	}
 
-	Sapfire::Timer g_RiseTimer{};
+	sf::Timer g_RiseTimer{};
 
 	bool SSceneView::update(f32 delta_time) {
 		m_PhysicsEngine->simulate(delta_time);
@@ -272,7 +271,7 @@ namespace widgets {
 					auto& offscreen_texture = m_OffscreenTextures[i];
 					offscreen_texture.allocation.reset();
 					offscreen_texture = m_GraphicsDevice->create_texture({
-						.usage = Sapfire::sf::render::TextureUsage::RenderTarget,
+						.usage = sf::render::TextureUsage::RenderTarget,
 						.width = static_cast<u32>(DOCK_SIZE.x),
 						.height = static_cast<u32>(DOCK_SIZE.y),
 						.format = sf::render::Format::RGBA16_FLOAT,
@@ -362,7 +361,7 @@ namespace widgets {
 		}
 	}
 
-	void SSceneView::render(Sapfire::d3d::GraphicsContext& gfx_ctx) {
+	void SSceneView::render(sf::d3d::GraphicsContext& gfx_ctx) {
 		if (m_Resizing)
 			return;
 		auto& offscreen_texture = m_OffscreenTextures[m_GraphicsDevice.current_frame_id()];

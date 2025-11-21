@@ -4,9 +4,6 @@
 #include "assets/texture_manager.h"
 #include "core/string_utils.h"
 #include "nlohmann/json.hpp"
-#include "render/d3d_util.h"
-#include "render/graphics_device.h"
-#include "render/resources.h"
 #include "tools/texture_loader.h"
 
 namespace sf::assets {
@@ -41,19 +38,21 @@ namespace sf::assets {
 			.uuid = uuid,
 			.description =
 				sf::render::TextureCreationDesc{
-					.usage = sf::render::TextureUsage::TextureFromPath,
+					.usage = sf::render::TextureUsage::ShaderResource,
 					.width = static_cast<u32>(width),
 					.height = static_cast<u32>(height),
 					.name = name,
 					.path = sf::string_utils::to_wstring(path),
 				},
-			.data = device->create_texture(
+			.data = device->create_texture_with_data(
 				sf::render::TextureCreationDesc{
-					.usage = sf::render::TextureUsage::TextureFromPath,
+					.usage = sf::render::TextureUsage::ShaderResource,
+					.width = static_cast<u32>(width),
+					.height = static_cast<u32>(height),
 					.name = name,
 					.path = sf::string_utils::to_wstring(fs::full_path(path)),
 				},
-				data),
+				data, width * height * 4),
 		};
 		m_UUIDToPathMap[uuid] = path;
 	}
@@ -67,7 +66,7 @@ namespace sf::assets {
 			.uuid = uuid,
 			.description = desc,
 			.data = device->create_texture(sf::render::TextureCreationDesc{
-				.usage = sf::render::TextureUsage::TextureFromPath,
+				.usage = sf::render::TextureUsage::ShaderResource,
 				.name = name,
 				.path = sf::string_utils::to_wstring(fs::full_path(path)),
 			}),
@@ -82,24 +81,26 @@ namespace sf::assets {
 			i32 width{};
 			i32 height{};
 			void* data = tools::texture_loader::load(new_path.c_str(), width, height, 4);
-			auto name = d3d::AnsiToWString(new_path);
+			auto name = sf::string_utils::to_wstring(new_path);
 			m_PathToTextureAssetMap[new_path] = TextureAsset{
 				.uuid = uuid,
 				.description =
 					sf::render::TextureCreationDesc{
-						.usage = sf::render::TextureUsage::TextureFromPath,
+						.usage = sf::render::TextureUsage::ShaderResource,
 						.width = static_cast<u32>(width),
 						.height = static_cast<u32>(height),
 						.name = name,
-						.path = d3d::AnsiToWString(new_path),
+						.path = sf::string_utils::to_wstring(new_path),
 					},
-				.data = device->create_texture(
+				.data = device->create_texture_with_data(
 					sf::render::TextureCreationDesc{
-						.usage = sf::render::TextureUsage::TextureFromPath,
+						.usage = sf::render::TextureUsage::ShaderResource,
+						.width = static_cast<u32>(width),
+						.height = static_cast<u32>(height),
 						.name = name,
-						.path = d3d::AnsiToWString(new_path),
+						.path = sf::string_utils::to_wstring(new_path),
 					},
-					data),
+					data, width * height * 4),
 			};
 			m_UUIDToPathMap[uuid] = new_path;
 			return;
@@ -129,12 +130,11 @@ namespace sf::assets {
 				{"width", desc.width},
 				{"height", desc.height},
 				{"format", desc.format},
-				{"mip_levels", desc.mipLevels},
-				{"depth_or_array_size", desc.depthOrArraySize},
-				{"bytes_per_pixel", desc.bytesPerPixel},
+				{"mip_levels", desc.mip_levels},
+				{"depth_or_array_size", desc.depth_or_array_size},
 			};
-			if (desc.optional_initial_state.has_value()) {
-				desc_j["optional_initial_state"] = desc.optional_initial_state.value();
+			if (desc.initial_state != sf::render::ResourceState::Common) {
+				desc_j["initial_state"] = static_cast<u32>(desc.initial_state);
 			}
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}, {"description", desc_j}};
 			j["assets"].push_back(j_obj);
@@ -173,12 +173,11 @@ namespace sf::assets {
 				{"width", desc.width},
 				{"height", desc.height},
 				{"format", desc.format},
-				{"mip_levels", desc.mipLevels},
-				{"depth_or_array_size", desc.depthOrArraySize},
-				{"bytes_per_pixel", desc.bytesPerPixel},
+				{"mip_levels", desc.mip_levels},
+				{"depth_or_array_size", desc.depth_or_array_size},
 			};
-			if (desc.optional_initial_state.has_value()) {
-				desc_j["optional_initial_state"] = desc.optional_initial_state.value();
+			if (desc.initial_state != sf::render::ResourceState::Common) {
+				desc_j["initial_state"] = static_cast<u32>(desc.initial_state);
 			}
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}, {"description", desc_j}};
 			j.push_back(j_obj);
@@ -259,12 +258,12 @@ namespace sf::assets {
 			desc.width = description["width"];
 			desc.height = description["height"];
 			desc.usage = description["usage"];
-			desc.path = d3d::AnsiToWString(path);
-			desc.bytesPerPixel = description["bytes_per_pixel"];
+			desc.path = sf::string_utils::to_wstring(path);
 			desc.format = description["format"];
-			desc.mipLevels = description["mip_levels"];
-			if (description.contains("optional_initial_state")) {
-				desc.optional_initial_state = description["optional_initial_state"];
+			desc.mip_levels = description["mip_levels"];
+			desc.depth_or_array_size = description["depth_or_array_size"];
+			if (description.contains("initial_state")) {
+				desc.initial_state = description["initial_state"];
 			}
 			import_texture(device, path, desc, uuid);
 		}
@@ -274,12 +273,12 @@ namespace sf::assets {
 	constexpr u32 DEFAULT_TEXTURE_CHANNELS = 4;
 	constexpr u32 BYTE_COUNT = DEFAULT_TEXTURE_DIMENSIONS * DEFAULT_TEXTURE_DIMENSIONS * DEFAULT_TEXTURE_CHANNELS;
 	const sf::render::TextureCreationDesc DEFAULT_TEXTURE_CREATION_INFO = {
-		.usage = sf::render::TextureUsage::TextureFromData,
+		.usage = sf::render::TextureUsage::ShaderResource,
+		.format = sf::render::Format::RGBA8_UNORM,
 		.width = 256,
 		.height = 256,
-		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.depthOrArraySize = 1,
-		.bytesPerPixel = DEFAULT_TEXTURE_CHANNELS,
+		.depth_or_array_size = 1,
+		.mip_levels = 1,
 		.name = L"Default texture",
 	};
 
@@ -300,7 +299,7 @@ namespace sf::assets {
 		static TextureAsset asset = {
 			.uuid = default_texture_uuid,
 			.description = DEFAULT_TEXTURE_CREATION_INFO,
-			.data = device->create_texture(DEFAULT_TEXTURE_CREATION_INFO, data),
+			.data = device->create_texture_with_data(DEFAULT_TEXTURE_CREATION_INFO, data, BYTE_COUNT),
 		};
 		return &asset;
 	}

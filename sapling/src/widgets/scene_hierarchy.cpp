@@ -7,10 +7,10 @@
 #include "imgui.h"
 #include "widgets/scene_hierarchy.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 namespace widgets {
-	SSceneHierarchy::SSceneHierarchy(Sapfire::ECManager* ec_manager, EntitySelectedCallback callback) :
+	SSceneHierarchy::SSceneHierarchy(sf::ECManager* ec_manager, EntitySelectedCallback callback) :
 		m_ECManager(*ec_manager), m_ShowContextMenu(false), m_EntitySelectedCallback(callback) {}
 
 	bool SSceneHierarchy::update(f32 delta_time) {
@@ -74,7 +74,7 @@ namespace widgets {
 		if (!maybe_parent_entity.has_value())
 			return;
 		const auto& parent_entity = maybe_parent_entity.value();
-		auto& name_component = m_ECManager.engine_component<Sapfire::components::NameComponent>(parent_entity);
+		auto& name_component = m_ECManager.engine_component<sf::components::NameComponent>(parent_entity);
 		// Make a tree node for the parent entity
 		auto flags = ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth;
 		if (m_SelectedEntity.has_value() && m_SelectedEntity.value() == parent_entity) {
@@ -120,7 +120,7 @@ namespace widgets {
 		}
 	}
 
-	void SSceneHierarchy::draw_entity_context_menu(const Sapfire::Entity& parent_entity) {
+	void SSceneHierarchy::draw_entity_context_menu(const sf::Entity& parent_entity) {
 		// Right clicking will open a "context menu" as a popup
 		if (ImGui::IsItemHovered() && m_ShowContextMenu) {
 			ImGui::OpenPopup("scene_hierarchy_context_menu_for_entity");
@@ -147,10 +147,10 @@ namespace widgets {
 		}
 	}
 
-	void SSceneHierarchy::on_mouse_button_event(Sapfire::MouseButtonEvent& event) {
+	void SSceneHierarchy::on_mouse_button_event(sf::MouseButtonEvent& event) {
 		if (!event.is_down()) {
 			switch (event.button()) {
-			case Sapfire::MouseButton::RMB:
+			case sf::MouseButton::RMB:
 				m_ShowContextMenu = true;
 				break;
 			default:
@@ -162,7 +162,7 @@ namespace widgets {
 		if (event.is_down()) {
 			m_ShowContextMenu = false;
 			switch (event.button()) {
-			case Sapfire::MouseButton::LMB:
+			case sf::MouseButton::LMB:
 				m_SelectEntity = true;
 				break;
 			default:

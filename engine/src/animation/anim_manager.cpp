@@ -3,7 +3,7 @@
 #include "animation/anim_manager.h"
 #include "components/anim_component.h"
 #include "components/ec_manager.h"
-#include "render/graphics_device.h"
+#include "render/i_graphics_device.h"
 
 namespace sf::anim {
 	AnimationManager::AnimationManager(sf::ECManager* ec, sf::render::IGraphicsDevice* device) :
@@ -42,7 +42,7 @@ namespace sf::anim {
 	}
 
 	const sf::stl::vector<sf::math::mat4>& AnimationManager::final_transforms_for_current_clip(Entity entity) const {
-		return m_EntityTransformsMap[entity.uuid()];
+		return m_EntityTransformsMap.at(entity.uuid());
 	}
 
 } // namespace sf::anim

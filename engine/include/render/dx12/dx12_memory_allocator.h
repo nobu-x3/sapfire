@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "render/i_memory_allocator.h"
 #include "D3D12MemAlloc.h"
 #include <wrl/client.h>
@@ -30,3 +30,4 @@ private:
 };
 
 } // namespace sf::render::dx12
+#endif

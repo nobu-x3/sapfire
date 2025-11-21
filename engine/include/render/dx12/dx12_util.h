@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "core/core.h"
 #include <d3d12.h>
 #include <comdef.h>
@@ -93,3 +93,4 @@ namespace sf::d3d {
     using AnsiToWString = decltype(&ansi_to_wstring);
     using WStringToANSI = decltype(&wstring_to_ansi);
 } // namespace sf::d3d
+#endif

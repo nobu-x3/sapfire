@@ -259,13 +259,13 @@ private:                                                                        
 			::sf::components::ComponentRegistry::global_register_custom_component(default_component_##type);                          \
 		}                                                                                                                                  \
 	};                                                                                                                                     \
-	RegisteredComponent##type _registered_component;
+	inline RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT_IMPL(type)                                                                                                        \
 	struct RegisteredComponent##type {                                                                                                     \
 		RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_engine_component<type>(); }                \
 	};                                                                                                                                     \
-	RegisteredComponent##type _registered_component;
+	inline RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT(type)                                                                                                             \
 public:                                                                                                                                    \

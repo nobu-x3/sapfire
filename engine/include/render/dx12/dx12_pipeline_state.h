@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "render/i_pipeline_state.h"
 #include <wrl/client.h>
 #include <d3d12.h>
@@ -31,3 +31,4 @@ private:
 };
 
 } // namespace sf::render::dx12
+#endif

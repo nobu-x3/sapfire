@@ -3,7 +3,7 @@
 #include "core/stl/shared_ptr.h"
 #include "core/stl/unique_ptr.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 TEST(Memory_Tests, mem_new) {
 	auto& categories = mem::categories();

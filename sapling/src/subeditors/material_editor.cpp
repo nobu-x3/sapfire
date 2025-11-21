@@ -7,16 +7,16 @@
 #include "widgets/material_preview_settings.h"
 #include "widgets/scene_view.h"
 
-using namespace Sapfire;
+using namespace sf;
 
-SMaterialEditor::SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::render::IGraphicsDevice* device) :
+SMaterialEditor::SMaterialEditor(sf::assets::AssetManager* am, sf::render::IGraphicsDevice* device) :
 	SSubeditor("Material Editor"), m_AssetManager(*am), m_OpenedMaterial(nullptr), m_ECManager(stl::make_unique<ECManager>(mem::Editor)) {
-	m_Widgets.push_back(Sapfire::stl::make_unique<widgets::SMaterialInspector>(Sapfire::mem::Editor));
+	m_Widgets.push_back(sf::stl::make_unique<widgets::SMaterialInspector>(sf::mem::Editor));
 	m_MaterialEntity = m_ECManager->create_entity();
 	auto& transform = m_ECManager->engine_component<components::Transform>(m_MaterialEntity);
 	DirectX::XMVECTOR position{0, 0, 5};
 	transform.position(position);
-	auto scene_view = Sapfire::stl::make_unique<widgets::SSceneView>(mem::Editor, "Preview", m_ECManager.get(), device);
+	auto scene_view = sf::stl::make_unique<widgets::SSceneView>(mem::Editor, "Preview", m_ECManager.get(), device);
 	scene_view->add_render_component(m_MaterialEntity, {});
 	auto& render_component = m_ECManager->engine_component<components::RenderComponent>(m_MaterialEntity);
 	m_Widgets.push_back(std::move(scene_view));
@@ -30,13 +30,13 @@ void SMaterialEditor::draw_menu() {
 	if (ImGui::BeginMenu("Material Editor")) {
 		if (ImGui::MenuItem("New Material", "CTRL+M+N")) {
 			IGFD::FileDialogConfig config{};
-			config.path = Sapfire::fs::FileSystem::root_directory();
+			config.path = sf::fs::FileSystem::root_directory();
 			config.countSelectionMax = 0;
 			ImGuiFileDialog::Instance()->OpenDialog("NewMatDlg", "Create material", ".mat", config);
 		}
 		if (ImGui::MenuItem("Open Material", "CTRL+M+O")) {
 			IGFD::FileDialogConfig config{};
-			config.path = Sapfire::fs::FileSystem::root_directory();
+			config.path = sf::fs::FileSystem::root_directory();
 			config.countSelectionMax = 1;
 			ImGuiFileDialog::Instance()->OpenDialog("OpenMatDlg", "Open material", ".mat", config);
 		}
@@ -59,7 +59,7 @@ void SMaterialEditor::draw_menu() {
 	}
 }
 
-bool SMaterialEditor::update(Sapfire::f32 delta_time) {
+bool SMaterialEditor::update(sf::f32 delta_time) {
 	bool ret_val = SSubeditor::update(delta_time);
 	draw_dialogs();
 	return ret_val;
@@ -70,7 +70,7 @@ void SMaterialEditor::draw_dialogs() {
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			const stl::string filepath = ImGuiFileDialog::Instance()->GetFilePathName();
 			if (!filepath.empty()) {
-				auto relative_path = Sapfire::fs::relative_path(filepath);
+				auto relative_path = sf::fs::relative_path(filepath);
 				if (m_AssetManager.path_material_map().contains(relative_path)) {
 					m_OpenedMaterial = m_AssetManager.get_material(filepath);
 					widgets::SMaterialInspector* inspector =
@@ -91,7 +91,7 @@ void SMaterialEditor::draw_dialogs() {
 		if (ImGuiFileDialog::Instance()->IsOk()) {
 			const stl::string filepath = ImGuiFileDialog::Instance()->GetFilePathName();
 			if (!filepath.empty()) {
-				auto relative_path = Sapfire::fs::relative_path(filepath);
+				auto relative_path = sf::fs::relative_path(filepath);
 				assets::MaterialAsset asset{};
 				m_AssetManager.import_material(relative_path, std::move(asset));
 				if (m_AssetManager.path_material_map().contains(relative_path)) {

@@ -14,8 +14,8 @@
 
 namespace widgets {
 
-	using namespace Sapfire;
-	SEntityInspector::SEntityInspector(Sapfire::ECManager* ec_manager, AddRenderComponentCallback callback) :
+	using namespace sf;
+	SEntityInspector::SEntityInspector(sf::ECManager* ec_manager, AddRenderComponentCallback callback) :
 		m_ECManager(*ec_manager), m_AddRenderComponentCallback(callback) {}
 
 	template <typename T>
@@ -103,6 +103,6 @@ namespace widgets {
 		return true;
 	}
 
-	void SEntityInspector::select_entity(Sapfire::stl::optional<Sapfire::Entity> maybe_entity) { m_SelectedEntity = maybe_entity; }
+	void SEntityInspector::select_entity(sf::stl::optional<sf::Entity> maybe_entity) { m_SelectedEntity = maybe_entity; }
 
 } // namespace widgets

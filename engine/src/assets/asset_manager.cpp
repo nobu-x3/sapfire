@@ -18,7 +18,7 @@ namespace sf::assets {
 		}
 		if (texture->data.dsv_index == sf::render::INVALID_DESCRIPTOR_INDEX || texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
 			texture->data = m_Device->create_texture(sf::render::TextureCreationDesc{
-				.usage = sf::render::TextureUsage::TextureFromPath,
+				.usage = sf::render::TextureUsage::ShaderResource,
 				.name = sf::string_utils::to_wstring(relative_path),
 				.path = sf::string_utils::to_wstring(fs::full_path(texture_path)),
 			});
@@ -40,7 +40,7 @@ namespace sf::assets {
 		}
 		if (texture->data.dsv_index == sf::render::INVALID_DESCRIPTOR_INDEX || texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
 			texture->data = m_Device->create_texture(sf::render::TextureCreationDesc{
-				.usage = sf::render::TextureUsage::TextureFromPath,
+				.usage = sf::render::TextureUsage::ShaderResource,
 				.name = sf::string_utils::to_wstring(relative_path),
 				.path = sf::string_utils::to_wstring(fs::full_path(path)),
 			});

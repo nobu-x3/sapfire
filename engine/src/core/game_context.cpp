@@ -9,20 +9,11 @@ namespace sf {
 
 	GameContext::GameContext(const GameContextCreationDesc& desc) :
 		m_ClientExtent(desc.client_extent),
-		m_GraphicsDevice(nullptr),
-		m_AssetManager(assets::AssetManagerCreationDesc{
-			.device = nullptr,
-			.mesh_registry_path = desc.mesh_registry_path,
-			.texture_registry_path = desc.texture_registry_path,
-			.material_registry_path = desc.material_registry_path,
-		}) {
-		// Initialize render backend if not already done
+		m_GraphicsDevice(nullptr) {
 		if (!sf::render::RenderBackend::is_initialized()) {
-			// Default to DX12 for now (will add platform detection later)
 			sf::render::RenderBackend::initialize(sf::render::RenderAPI::DX12);
 		}
 
-		// Create graphics device
 		m_GraphicsDevice = sf::render::RenderBackend::create_device(sf::render::SwapchainCreationDesc{
 			.window_handle = desc.window_handle,
 			.width = static_cast<u32>(m_ClientExtent->width),
@@ -32,8 +23,7 @@ namespace sf {
 			.refresh_rate = 120
 		});
 
-		// Now update asset manager with the device
-		m_AssetManager = assets::AssetManager(assets::AssetManagerCreationDesc{
+		m_AssetManager = stl::make_unique<assets::AssetManager>(mem::ENUM::Engine_Scene, assets::AssetManagerCreationDesc{
 			.device = m_GraphicsDevice,
 			.mesh_registry_path = desc.mesh_registry_path,
 			.texture_registry_path = desc.texture_registry_path,
@@ -48,22 +38,22 @@ namespace sf {
 	void GameContext::create_render_component(Entity entity, const RenderComponentResourcePaths& resource_paths) {
 		const bool already_has_component = m_ECManager.has_engine_component<components::RenderComponent>(entity);
 		auto* mesh_asset =
-			resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh() : m_AssetManager.get_mesh(resource_paths.mesh_path);
+			resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh() : m_AssetManager->get_mesh(resource_paths.mesh_path);
 		auto* texture_asset = resource_paths.texture_path.empty() ? assets::TextureRegistry::default_texture(m_GraphicsDevice)
-																  : m_AssetManager.get_texture(resource_paths.texture_path);
+																  : m_AssetManager->get_texture(resource_paths.texture_path);
 		auto* material_asset = resource_paths.material_path.empty() ? assets::MaterialRegistry::default_material(m_GraphicsDevice)
-																	: m_AssetManager.get_material(resource_paths.material_path);
+																	: m_AssetManager->get_material(resource_paths.material_path);
 		if (!mesh_asset) {
-			m_AssetManager.import_mesh(resource_paths.mesh_path);
-			mesh_asset = m_AssetManager.get_mesh(resource_paths.mesh_path);
+			m_AssetManager->import_mesh(resource_paths.mesh_path);
+			mesh_asset = m_AssetManager->get_mesh(resource_paths.mesh_path);
 		}
-		if (!texture_asset || !m_AssetManager.is_texture_loaded_for_runtime(texture_asset->uuid)) {
-			m_AssetManager.import_texture(resource_paths.texture_path);
-			texture_asset = m_AssetManager.get_texture(resource_paths.texture_path);
+		if (!texture_asset || !m_AssetManager->is_texture_loaded_for_runtime(texture_asset->uuid)) {
+			m_AssetManager->import_texture(resource_paths.texture_path);
+			texture_asset = m_AssetManager->get_texture(resource_paths.texture_path);
 		}
-		if (!material_asset || !m_AssetManager.material_resource_exists(material_asset->uuid)) {
-			m_AssetManager.import_material(resource_paths.material_path);
-			material_asset = m_AssetManager.get_material(resource_paths.material_path);
+		if (!material_asset || !m_AssetManager->material_resource_exists(material_asset->uuid)) {
+			m_AssetManager->import_material(resource_paths.material_path);
+			material_asset = m_AssetManager->get_material(resource_paths.material_path);
 		}
 		if (mesh_asset && mesh_asset->data.has_value()) {
 			assert(mesh_asset->data->indices32.size() > 0);
@@ -71,13 +61,14 @@ namespace sf {
 			assert(mesh_asset->data->normals.size() > 0);
 			assert(mesh_asset->data->texcs.size() > 0);
 			if (!already_has_component) {
-				m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer<ObjectConstants>({
+				m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer({
 					.usage = sf::render::BufferUsage::Constant,
+					.size_in_bytes = sizeof(ObjectConstants),
 					.name = L"Transform buffer " + sf::stl::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
 				}));
 			}
 			bool should_add_tangent = false;
-			const bool should_allocate_mesh = !m_AssetManager.mesh_resource_exists(resource_paths.mesh_path);
+			const bool should_allocate_mesh = !m_AssetManager->mesh_resource_exists(resource_paths.mesh_path);
 			if (should_allocate_mesh) {
 				const stl::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
 					? L"Default Mesh"
@@ -132,16 +123,16 @@ namespace sf {
 			if (material_asset->uuid == assets::MaterialRegistry::default_material(m_GraphicsDevice)->uuid) {
 				material_cbuffer_idx = material_asset->material.material_cb_index;
 			} else {
-				material_cbuffer_idx = m_AssetManager.material_resource_exists(resource_paths.material_path)
-					? m_AssetManager.get_material_resource(resource_paths.material_path).gpu_idx
+				material_cbuffer_idx = m_AssetManager->material_resource_exists(resource_paths.material_path)
+					? m_AssetManager->get_material_resource(resource_paths.material_path).gpu_idx
 					: assets::MaterialRegistry::default_material(m_GraphicsDevice)->material.material_cb_index;
 			}
 			u32 texture_cbuffer_idx = 0;
 			if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_GraphicsDevice)->uuid) {
 				texture_cbuffer_idx = texture_asset->data.srv_index;
 			} else {
-				texture_cbuffer_idx = m_AssetManager.texture_resource_exists(resource_paths.texture_path)
-					? m_AssetManager.get_texture_resource(resource_paths.texture_path).gpu_idx
+				texture_cbuffer_idx = m_AssetManager->texture_resource_exists(resource_paths.texture_path)
+					? m_AssetManager->get_texture_resource(resource_paths.texture_path).gpu_idx
 					: texture_asset->data.srv_index;
 			}
 			auto gpu_data = components::PerDrawConstants{
@@ -157,8 +148,8 @@ namespace sf {
 				.texture_cbuffer_idx = texture_cbuffer_idx,
 			};
 			if (!should_allocate_mesh) {
-				cpu_data = m_AssetManager.get_mesh_resource(mesh_asset->uuid).cpu_data;
-				gpu_data = m_AssetManager.get_mesh_resource(mesh_asset->uuid).gpu_data;
+				cpu_data = m_AssetManager->get_mesh_resource(mesh_asset->uuid).cpu_data;
+				gpu_data = m_AssetManager->get_mesh_resource(mesh_asset->uuid).gpu_data;
 				gpu_data.scene_cbuffer_idx = already_has_component
 					? m_ECManager.engine_component<components::RenderComponent>(entity).per_draw_constants()->scene_cbuffer_idx
 					: m_TransformBuffers.back().cbv_index;
@@ -168,7 +159,7 @@ namespace sf {
 					? m_ECManager.engine_component<components::RenderComponent>(entity).cpu_data().transform_buffer_idx
 					: static_cast<u32>(m_TransformBuffers.size() - 1);
 			}
-			m_AssetManager.load_mesh_resource(resource_paths.mesh_path, {cpu_data, gpu_data});
+			m_AssetManager->load_mesh_resource(resource_paths.mesh_path, {cpu_data, gpu_data});
 			const components::RenderComponent render_component{
 				mesh_asset->uuid,
 				texture_asset->uuid,
@@ -183,17 +174,17 @@ namespace sf {
 						const auto mesh_uuid = component->mesh_uuid();
 						// The mesh we just assigned may not be allocated yet
 						const auto texture_uuid = component->texture_uuid();
-						const auto texture_path = m_AssetManager.get_texture_path(texture_uuid);
-						const auto mesh_path = m_AssetManager.get_mesh_path(mesh_uuid);
+						const auto texture_path = m_AssetManager->get_texture_path(texture_uuid);
+						const auto mesh_path = m_AssetManager->get_mesh_path(mesh_uuid);
 						const auto material_uuid = component->material_uuid();
-						const auto material_path = m_AssetManager.get_material_path(material_uuid);
-						if (!m_AssetManager.mesh_resource_exists(mesh_path) || !m_AssetManager.material_resource_exists(material_path) ||
-							!m_AssetManager.texture_resource_exists(texture_path)) {
+						const auto material_path = m_AssetManager->get_material_path(material_uuid);
+						if (!m_AssetManager->mesh_resource_exists(mesh_path) || !m_AssetManager->material_resource_exists(material_path) ||
+							!m_AssetManager->texture_resource_exists(texture_path)) {
 							create_render_component(entity,
 													{.mesh_path = mesh_path, .texture_path = texture_path, .material_path = material_path});
 							return;
 						}
-						auto data = m_AssetManager.get_mesh_resource(mesh_path);
+						auto data = m_AssetManager->get_mesh_resource(mesh_path);
 						data.gpu_data.scene_cbuffer_idx = old_gpu_data->scene_cbuffer_idx;
 						component->cpu_data(data.cpu_data);
 						component->per_draw_constants(data.gpu_data);

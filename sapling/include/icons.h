@@ -7,7 +7,7 @@ namespace icons {
 	constexpr const char* IMAGE_ICON_64_ID = "image_icon_64";
 	constexpr const char* IMAGE_ICON_16_ID = "image_icon_16";
 
-    const Sapfire::sf::render::Texture& get(const Sapfire::stl::string& id);
-    ImTextureID get_im_id(const Sapfire::stl::string& id);
-    void add(Sapfire::render::IGraphicsDevice* device, const Sapfire::stl::wstring& path, const Sapfire::stl::string& id);
+    const sf::render::Texture& get(const sf::stl::string& id);
+    ImTextureID get_im_id(const sf::stl::string& id);
+    void add(sf::render::IGraphicsDevice* device, const sf::stl::wstring& path, const sf::stl::string& id);
 }

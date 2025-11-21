@@ -10,12 +10,15 @@ namespace sf {
 	components::ComponentType components::ComponentRegistry::s_NextComponentTypeNumber = 0;
 } // namespace sf
 
-#include <crtdbg.h>
 #include <exception>
 #include "core/application.h"
 #include "core/memory.h"
 #include "core/stl/unique_ptr.h"
-#include "render/d3d_util.h"
+
+#ifdef SF_PLATFORM_WINDOWS
+#include <crtdbg.h>
+#include "render/dx12/dx12_util.h"
+#endif
 
 extern sf::Application* sf::create_application();
 
@@ -35,11 +38,15 @@ int main(int argc, char* argv[]) {
 		PROFILE_BEGIN_SESSION("Shutdown", "SapfireProfile_Shutdown.json");
 		delete application;
 		PROFILE_END_SESSION();
-	} catch (sf::d3d::DxException& e) {
-		CORE_CRITICAL(sf::d3d::WStringToANSI(e.to_string()));
+	}
+#ifdef SF_PLATFORM_WINDOWS
+	catch (sf::render::dx12::DxException& e) {
+		CORE_CRITICAL(sf::render::dx12::wstring_to_ansi(e.to_string()));
 		MessageBoxW(nullptr, e.to_string().c_str(), L"HR Failed", MB_OK);
 		return 0;
-	} catch (std::exception& e) {
+	}
+#endif
+	catch (std::exception& e) {
 		CORE_CRITICAL(e.what());
 		return 0;
 	}

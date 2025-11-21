@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "render/render_api.h"
 #include <d3d12.h>
 #include <dxgiformat.h>
@@ -402,3 +402,4 @@ inline D3D12_COMMAND_LIST_TYPE to_d3d12_command_list_type(CommandQueueType type)
 }
 
 } // namespace sf::render::dx12
+#endif

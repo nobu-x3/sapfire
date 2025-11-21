@@ -24,9 +24,9 @@ namespace sf::assets {
 	public:
 		explicit AssetManager(const AssetManagerCreationDesc& desc);
 		AssetManager(const AssetManager&) = delete;
-		AssetManager(AssetManager&&);
+		AssetManager(AssetManager&&) = delete;
 		AssetManager& operator=(const AssetManager&) = delete;
-		AssetManager& operator=(AssetManager&&);
+		AssetManager& operator=(AssetManager&&) = delete;
 		bool is_texture_loaded_for_runtime(UUID uuid);
 		void import_texture(const stl::string& path);
 		inline void move_texture(const stl::string& old_path, const stl::string& new_path) {

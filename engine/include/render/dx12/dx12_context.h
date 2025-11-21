@@ -1,4 +1,5 @@
 #pragma once
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 
 #include "render/i_context.h"
 #include <wrl/client.h>
@@ -152,3 +153,4 @@ private:
 };
 
 } // namespace sf::render::dx12
+#endif

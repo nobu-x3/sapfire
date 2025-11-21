@@ -1,6 +1,7 @@
 #include "engpch.h"
 
 #include "animation/skinned_data.h"
+#include <cfloat>
 
 namespace sf::anim {
 	f32 BoneAnimation::start_time() const {

@@ -2,10 +2,10 @@
 #include "nlohmann/json.hpp"
 
 namespace assets {
-	ProjectReader::ProjectReader(Sapfire::assets::AssetManager* asset_manager, Sapfire::stl::string& project_name) :
+	ProjectReader::ProjectReader(sf::assets::AssetManager* asset_manager, sf::stl::string& project_name) :
 		m_AssetManager(*asset_manager), m_ProjectName(project_name) {}
 
-	void ProjectReader::serialize(const Sapfire::stl::string& project_path) {
+	void ProjectReader::serialize(const sf::stl::string& project_path) {
 		nlohmann::json j;
 		j["name"] = m_ProjectName;
 		j["assets"] = nlohmann::json::parse(m_AssetManager.to_string());
@@ -15,7 +15,7 @@ namespace assets {
 		file.close();
 	}
 
-	void ProjectReader::deserealize(const Sapfire::stl::string& project_path) {
+	void ProjectReader::deserealize(const sf::stl::string& project_path) {
 		std::ifstream file{project_path};
 		if (!file.is_open()) {
 			CLIENT_CRITICAL("Scene at path {} could not be open.", project_path);

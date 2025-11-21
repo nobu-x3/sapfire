@@ -52,11 +52,7 @@ namespace sf {
 		SDL_PropertiesID props = SDL_GetWindowProperties(m_Window);
 		return SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
 #elif defined(SF_PLATFORM_LINUX)
-		SDL_PropertiesID props = SDL_GetWindowProperties(m_Window);
-		// Try X11 first, then Wayland
-		void* x11_window = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_WINDOW_POINTER, nullptr);
-		if (x11_window) return x11_window;
-		return SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
+		return m_Window;
 #else
 		return m_Window;
 #endif

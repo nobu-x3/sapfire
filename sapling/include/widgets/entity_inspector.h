@@ -9,17 +9,17 @@ namespace Sapfire {
 }
 
 namespace widgets {
-	using AddRenderComponentCallback = Sapfire::stl::function<void(Sapfire::Entity, const Sapfire::RenderComponentResourcePaths&)>;
+	using AddRenderComponentCallback = sf::stl::function<void(sf::Entity, const sf::RenderComponentResourcePaths&)>;
 
 	class SEntityInspector final : public IWidget {
 	public:
-		SEntityInspector(Sapfire::ECManager* ec_manager, AddRenderComponentCallback callback);
-		bool update(Sapfire::f32 delta_time) override;
-		void select_entity(Sapfire::stl::optional<Sapfire::Entity> maybe_entity);
+		SEntityInspector(sf::ECManager* ec_manager, AddRenderComponentCallback callback);
+		bool update(sf::f32 delta_time) override;
+		void select_entity(sf::stl::optional<sf::Entity> maybe_entity);
 
 	private:
-		Sapfire::ECManager& m_ECManager;
-		Sapfire::stl::optional<Sapfire::Entity> m_SelectedEntity{};
+		sf::ECManager& m_ECManager;
+		sf::stl::optional<sf::Entity> m_SelectedEntity{};
 		AddRenderComponentCallback m_AddRenderComponentCallback;
 		bool m_ShowAddComponentContextMenu{false};
 	};

@@ -7,20 +7,20 @@
 #include "widgets/scene_hierarchy.h"
 #include "widgets/scene_view.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 SLevelEditor* SLevelEditor::s_Instance{nullptr};
 SLevelEditor* SLevelEditor::level_editor() { return s_Instance; }
 
-SLevelEditor::SLevelEditor(Sapfire::render::IGraphicsDevice* gfx_device, Sapfire::assets::AssetManager* am,
-						   const Sapfire::stl::string& scene_path, Sapfire::stl::function<void()> asset_imported_callback) :
+SLevelEditor::SLevelEditor(sf::render::IGraphicsDevice* gfx_device, sf::assets::AssetManager* am,
+						   const sf::stl::string& scene_path, sf::stl::function<void()> asset_imported_callback) :
 	SSubeditor("Level Editor"),
 	m_ECManager(stl::make_unique<ECManager>(mem::ENUM::Editor)), m_AssetManager(*am) {
 	s_Instance = this;
 	m_Widgets.push_back(
 		stl::make_unique<widgets::SSceneHierarchy>(mem::ENUM::Editor, m_ECManager.get(), BIND_EVENT_FN(SLevelEditor::on_entity_selected)));
 	m_Widgets.push_back(stl::make_unique<widgets::SEntityInspector>(
-		mem::ENUM::Editor, m_ECManager.get(), [&](Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths) {
+		mem::ENUM::Editor, m_ECManager.get(), [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 			auto scene_view = static_cast<widgets::SSceneView*>(m_Widgets[ELevelEditorWidgetOrder::SceneView].get());
 			scene_view->add_render_component(entity, resource_paths);
 		}));
@@ -32,14 +32,14 @@ SLevelEditor::SLevelEditor(Sapfire::render::IGraphicsDevice* gfx_device, Sapfire
 	m_Widgets.push_back(stl::make_unique<widgets::SSceneView>(mem::ENUM::Editor, "Scene View", m_ECManager.get(), gfx_device));
 	if (!scene_path.empty()) {
 		assets::SceneWriter writer{m_ECManager.get(), &m_AssetManager};
-		writer.deserealize(scene_path, [&](Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths) {
+		writer.deserealize(scene_path, [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 			auto scene_view = static_cast<widgets::SSceneView*>(m_Widgets[ELevelEditorWidgetOrder::SceneView].get());
 			scene_view->add_render_component(entity, resource_paths);
 		});
 	}
 }
 
-void SLevelEditor::on_entity_selected(Sapfire::stl::optional<Sapfire::Entity> entity) {
+void SLevelEditor::on_entity_selected(sf::stl::optional<sf::Entity> entity) {
 	for (auto& f : m_EntitySelectedCallbacks) {
 		f(entity);
 	}
@@ -53,14 +53,14 @@ void SLevelEditor::draw_menu() {
 		}
 		if (ImGui::MenuItem("Open scene...")) {
 			IGFD::FileDialogConfig config{};
-			config.path = Sapfire::fs::FileSystem::root_directory();
+			config.path = sf::fs::FileSystem::root_directory();
 			ImGuiFileDialog::Instance()->OpenDialog("OpenSceneFileDlg", "Open scene", ".scene", config);
 		}
 		ImGui::EndMenu();
 	}
 }
 
-bool SLevelEditor::update(Sapfire::f32 delta_time) {
+bool SLevelEditor::update(sf::f32 delta_time) {
 	bool ret_val = SSubeditor::update(delta_time);
 	draw_open_scene_dialog();
 	return ret_val;
@@ -74,7 +74,7 @@ void SLevelEditor::draw_open_scene_dialog() {
 				m_CurrentSceneName = filepath;
 				m_ECManager->reset();
 				assets::SceneWriter writer{m_ECManager.get(), &m_AssetManager};
-				writer.deserealize(filepath, [&](Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths) {
+				writer.deserealize(filepath, [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 					auto widget = m_Widgets[ELevelEditorWidgetOrder::SceneView].get();
 					static_cast<widgets::SSceneView*>(widget)->add_render_component(entity, resource_paths);
 				});

@@ -44,6 +44,12 @@ add_library(Engine STATIC ${SAPFIRE_TRANSLATION_UNITS})
 #target_compile_options(Engine PRIVATE -Wall -Wextra)
 target_compile_definitions(Engine PUBLIC SF_BUILD_DLL)
 
+# Enable AddressSanitizer and UndefinedBehaviorSanitizer (to match spdlog)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(Engine PUBLIC -fsanitize=address -fsanitize=undefined)
+    target_link_options(Engine PUBLIC -fsanitize=address -fsanitize=undefined)
+endif()
+
 # Common include directories
 target_include_directories(Engine PUBLIC
     include

@@ -8,25 +8,25 @@
 
 namespace widgets {
 
-	static Sapfire::stl::vector<event_fn> asset_importer_events{};
+	static sf::stl::vector<event_fn> asset_importer_events{};
 
-	EAssetType get_asset_type(Sapfire::stl::string_view filename) {
-		if (Sapfire::fs::extension(filename) == ".obj") {
+	EAssetType get_asset_type(sf::stl::string_view filename) {
+		if (sf::fs::extension(filename) == ".obj") {
 			return EAssetType::Mesh;
-		} else if (Sapfire::fs::extension(filename) == ".dds" || Sapfire::fs::extension(filename) == ".png" ||
-				   Sapfire::fs::extension(filename) == ".jpg") {
+		} else if (sf::fs::extension(filename) == ".dds" || sf::fs::extension(filename) == ".png" ||
+				   sf::fs::extension(filename) == ".jpg") {
 			return EAssetType::Texture;
-		} else if (Sapfire::fs::extension(filename) == ".mat") {
+		} else if (sf::fs::extension(filename) == ".mat") {
 			return EAssetType::Material;
 		}
 		return EAssetType::Unknown;
 	}
 
-	SAssetBrowser::SAssetBrowser(Sapfire::stl::string_view name) : m_WidgetName(name) {}
+	SAssetBrowser::SAssetBrowser(sf::stl::string_view name) : m_WidgetName(name) {}
 
 	void SAssetBrowser::register_asset_imported_events(event_fn fn) { asset_importer_events.push_back(fn); }
 
-	bool SAssetBrowser::update(Sapfire::f32 delta_time) {
+	bool SAssetBrowser::update(sf::f32 delta_time) {
 		if (!m_IsVisible)
 			return true;
 		if (ImGui::Begin(m_WidgetName.c_str())) {
@@ -36,7 +36,7 @@ namespace widgets {
 			if (ImGui::BeginPopup("asset_browser_context_menu")) {
 				if (ImGui::MenuItem("Import")) {
 					IGFD::FileDialogConfig config{};
-					config.path = Sapfire::fs::FileSystem::root_directory();
+					config.path = sf::fs::FileSystem::root_directory();
 					ImGuiFileDialog::Instance()->OpenDialog("ImportAssetDlg", "Import asset", "Models{.obj},Textures{.png,.dds,.jpg},Materials{.mat}", config);
 					ImGui::CloseCurrentPopup();
 				}
@@ -49,11 +49,11 @@ namespace widgets {
 						EAssetType type = get_asset_type(filename);
 						switch (type) {
 						case EAssetType::Mesh:
-							editor()->asset_manager()->import_mesh(Sapfire::fs::relative_path(filepath));
+							editor()->asset_manager()->import_mesh(sf::fs::relative_path(filepath));
 							execute_asset_imported_events();
 							break;
 						case EAssetType::Texture:
-							editor()->asset_manager()->import_texture(Sapfire::fs::relative_path(filepath));
+							editor()->asset_manager()->import_texture(sf::fs::relative_path(filepath));
 							execute_asset_imported_events();
 							break;
 						default:
@@ -84,7 +84,7 @@ namespace widgets {
 				{
 					for (auto&& [path, mesh_asset] : editor()->asset_manager()->path_mesh_map()) {
 						if (filter.PassFilter(path.c_str())) {
-							auto asset_name = Sapfire::fs::file_name(path);
+							auto asset_name = sf::fs::file_name(path);
 							ImVec2 real_estate = ImGui::GetWindowSize();
 							ImVec2 sz = ImGui::CalcTextSize(asset_name.c_str());
 							ImVec2 cursor = ImGui::GetCursorPos();
@@ -113,7 +113,7 @@ namespace widgets {
 				{
 					for (auto&& [path, texture_asset] : editor()->asset_manager()->path_texture_map()) {
 						if (filter.PassFilter(path.c_str())) {
-							auto asset_name = Sapfire::fs::file_name(path);
+							auto asset_name = sf::fs::file_name(path);
 							ImVec2 real_estate = ImGui::GetWindowSize();
 							ImVec2 sz = ImGui::CalcTextSize(asset_name.c_str());
 							ImVec2 cursor = ImGui::GetCursorPos();
@@ -142,7 +142,7 @@ namespace widgets {
 				{
 					for (auto&& [path, material_asset] : editor()->asset_manager()->path_material_map()) {
 						if (filter.PassFilter(path.c_str())) {
-							auto asset_name = Sapfire::fs::file_name(path);
+							auto asset_name = sf::fs::file_name(path);
 							ImVec2 real_estate = ImGui::GetWindowSize();
 							ImVec2 sz = ImGui::CalcTextSize(asset_name.c_str());
 							ImVec2 cursor = ImGui::GetCursorPos();
@@ -173,10 +173,10 @@ namespace widgets {
 		return true;
 	}
 
-	void SAssetBrowser::on_mouse_button_event(Sapfire::MouseButtonEvent& event) {
+	void SAssetBrowser::on_mouse_button_event(sf::MouseButtonEvent& event) {
 		if (!event.is_down()) {
 			switch (event.button()) {
-			case Sapfire::MouseButton::RMB:
+			case sf::MouseButton::RMB:
 				m_ShowContextMenu = true;
 				break;
 			default:

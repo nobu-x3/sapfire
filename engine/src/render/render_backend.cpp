@@ -1,7 +1,10 @@
 #include "engpch.h"
 #include "render/render_backend.h"
-#include "render/dx12/dx12_graphics_device.h"
 #include "core/logger.h"
+
+#ifdef SF_PLATFORM_WINDOWS
+#include "render/dx12/dx12_graphics_device.h"
+#endif
 
 namespace sf::render {
 
@@ -36,7 +39,12 @@ IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc)
 
     switch (s_CurrentAPI) {
         case RenderAPI::DX12:
+#ifdef SF_PLATFORM_WINDOWS
             return new dx12::DX12GraphicsDevice(desc);
+#else
+            CORE_ERROR("DX12 is only available on Windows");
+            return nullptr;
+#endif
 
         case RenderAPI::Vulkan:
             CORE_ERROR("Vulkan backend not implemented yet");

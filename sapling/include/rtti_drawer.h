@@ -10,7 +10,7 @@
 
 template <typename T>
 void draw_rtti(T* component) {
-	using namespace Sapfire;
+	using namespace sf;
 	auto& type_info = component->get_rtti();
 	for (auto& field : type_info.fields) {
 		auto& name = field.name;
@@ -90,7 +90,7 @@ void draw_rtti(T* component) {
 			break;
 		case rtti::rtti_type::REFERENCE:
 			{
-				auto data = static_cast<Sapfire::UUID*>(value);
+				auto data = static_cast<sf::UUID*>(value);
 				ImGui::InputScalar(name.c_str(), ImGuiDataType_U64, data, nullptr, nullptr, nullptr, ImGuiInputTextFlags_ReadOnly);
 				if (ImGui::BeginDragDropTarget()) {
 					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_ASSET_UUID")) {
@@ -115,4 +115,4 @@ void draw_rtti(T* component) {
 	ImGui::Separator();
 }
 
-void draw_rtti(Sapfire::stl::shared_ptr<Sapfire::components::IComponent> custom_component);
+void draw_rtti(sf::stl::shared_ptr<sf::components::IComponent> custom_component);

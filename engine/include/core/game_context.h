@@ -65,7 +65,7 @@ namespace sf {
 		sf::stl::vector<sf::render::Buffer> m_VertexUVBuffers{};
 		sf::stl::vector<sf::render::Buffer> m_TransformBuffers{};
 		sf::render::Buffer m_MainPassCB{};
-		assets::AssetManager m_AssetManager;
+		stl::unique_ptr<assets::AssetManager> m_AssetManager;
 		ECManager m_ECManager{};
 		Camera m_MainCamera{};
 	};

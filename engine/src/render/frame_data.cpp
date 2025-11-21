@@ -1,5 +1,7 @@
 #include "engpch.h"
 
+#ifdef SF_PLATFORM_WINDOWS
+
 #include <string>
 #include "core/core.h"
 #include "d3d12.h"
@@ -36,3 +38,5 @@ namespace sf::d3d {
 																		 L"Material Constants " + std::to_wstring(m_FrameNumber));
 	}
 } // namespace sf::d3d
+
+#endif // SF_PLATFORM_WINDOWS

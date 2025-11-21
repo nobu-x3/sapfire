@@ -5,14 +5,14 @@
 
 class SSubeditor {
 public:
-	SSubeditor(Sapfire::stl::string_view editor_name);
+	SSubeditor(sf::stl::string_view editor_name);
 	virtual ~SSubeditor() = default;
-	virtual bool update(Sapfire::f32 delta_time);
-	virtual void render(Sapfire::d3d::GraphicsContext&);
+	virtual bool update(sf::f32 delta_time);
+	virtual void render(sf::d3d::GraphicsContext&);
 	virtual void draw_menu() {};
-	inline const Sapfire::stl::string& name() const { return m_Name; }
+	inline const sf::stl::string& name() const { return m_Name; }
 
 protected:
-	Sapfire::stl::vector<Sapfire::stl::unique_ptr<IWidget>> m_Widgets;
-	Sapfire::stl::string m_Name;
+	sf::stl::vector<sf::stl::unique_ptr<IWidget>> m_Widgets;
+	sf::stl::string m_Name;
 };

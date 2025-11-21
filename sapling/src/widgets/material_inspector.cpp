@@ -1,12 +1,12 @@
 #include "widgets/material_inspector.h"
 #include "imgui.h"
 
-using namespace Sapfire;
+using namespace sf;
 
 constexpr f32 ROUGHNESS_SLIDER_SENSITIVITY = 0.005f;
 
 namespace widgets {
-	bool SMaterialInspector::update(Sapfire::f32 delta_time) {
+	bool SMaterialInspector::update(sf::f32 delta_time) {
 		ImGui::Begin("Material Inspector", nullptr);
 		if (!m_CurrentMaterial) {
 			ImGui::Text("Open material...");

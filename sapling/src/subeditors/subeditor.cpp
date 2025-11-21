@@ -2,9 +2,9 @@
 #include "events/input_event.h"
 #include "imgui.h"
 
-using namespace Sapfire;
+using namespace sf;
 
-SSubeditor::SSubeditor(Sapfire::stl::string_view editor_name) : m_Name(editor_name) {}
+SSubeditor::SSubeditor(sf::stl::string_view editor_name) : m_Name(editor_name) {}
 
 bool SSubeditor::update(f32 delta_time) {
 	ImGui::Begin(m_Name.c_str(), nullptr);
@@ -88,7 +88,7 @@ bool SSubeditor::update(f32 delta_time) {
 	return return_val;
 }
 
-void SSubeditor::render(Sapfire::d3d::GraphicsContext& gfx_ctx) {
+void SSubeditor::render(sf::d3d::GraphicsContext& gfx_ctx) {
 	for (auto&& widget : m_Widgets) {
 		if (widget && widget->is_visible())
 			widget->render(gfx_ctx);

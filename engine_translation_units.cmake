@@ -31,8 +31,15 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/render/d3d_primitives.cpp
         engine/src/render/frame_data.cpp
         engine/src/render/render_backend.cpp
-        engine/src/render/render_compat.cpp
         engine/src/render/resource_types.cpp
+        engine/src/physics/physics_engine.cpp
+        engine/src/render/window.cpp
+        engine/src/animation/skinned_data.cpp
+        engine/src/animation/anim_manager.cpp
+)
+
+if(WIN32)
+set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
         engine/src/render/dx12/dx12_command_queue.cpp
         engine/src/render/dx12/dx12_context.cpp
         engine/src/render/dx12/dx12_descriptor_heap.cpp
@@ -40,11 +47,8 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/render/dx12/dx12_memory_allocator.cpp
         engine/src/render/dx12/dx12_pipeline_state.cpp
         engine/src/render/dx12/dx12_shader_compiler.cpp
-        engine/src/physics/physics_engine.cpp
-        engine/src/render/window.cpp
-        engine/src/animation/skinned_data.cpp
-        engine/src/animation/anim_manager.cpp
 )
+endif()
 
 foreach(TU ${RELATIVE_SAPFIRE_TRANSLATION_UNITS})
     set(TU ${CMAKE_CURRENT_SOURCE_DIR}/${TU})

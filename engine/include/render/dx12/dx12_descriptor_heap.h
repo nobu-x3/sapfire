@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef SAPFIRE_PLATFORM_WINDOWS
 #include "render/i_descriptor_heap.h"
 #include <wrl/client.h>
 #include <d3d12.h>
@@ -52,3 +52,4 @@ private:
 };
 
 } // namespace sf::render::dx12
+#endif
