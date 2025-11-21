@@ -2,7 +2,7 @@
 
 #include "component.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	class AnimComponent {
 		RTTI;
 		ENGINE_COMPONENT(AnimComponent);
@@ -31,4 +31,4 @@ namespace Sapfire::components {
 		UUID m_CurrentClip{0};
 		UUID m_ComponentUUID{};
 	};
-} // namespace Sapfire::components
+} // namespace sf::components

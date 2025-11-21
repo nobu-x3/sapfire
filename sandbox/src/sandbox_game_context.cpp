@@ -22,13 +22,13 @@ void SandboxGameContext::load_contents() {
 			},
 		.pipeline_name = L"Bindless Pipeline",
 	});
-	m_MainPassCB = m_GraphicsDevice->create_buffer<PassConstants>(d3d::BufferCreationDesc{
-		.usage = d3d::BufferUsage::ConstantBuffer,
+	m_MainPassCB = m_GraphicsDevice->create_buffer<PassConstants>(sf::render::BufferCreationDesc{
+		.usage = sf::render::BufferUsage::ConstantBuffer,
 		.name = L"Main Pass Constant Buffer",
 	});
 	// textures:
 	m_DepthTexture = m_GraphicsDevice->create_texture({
-		.usage = d3d::TextureUsage::DepthStencil,
+		.usage = sf::render::TextureUsage::DepthStencil,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
 		.format = sf::render::Format::D32_FLOAT,
@@ -87,7 +87,7 @@ void SandboxGameContext::update_pass_cb(f32 delta_time) {
 void SandboxGameContext::update_materials(f32 delta_time) {
 	auto index = 0;
 	for (auto&& [path, asset] : m_AssetManager.path_material_map()) {
-		d3d::MaterialConstants data{
+		sf::render::MaterialConstants data{
 			.diffuse_albedo = asset.material.diffuse_albedo,
 			.fresnel_r0 = asset.material.fresnel_r0,
 			.roughness = asset.material.roughness,
@@ -169,7 +169,7 @@ void SandboxGameContext::resize_depth_texture() {
 	m_MainCamera = {CAMERA_FOV, static_cast<f32>(m_ClientExtent->width) / m_ClientExtent->height, 0.1f, 1000.f};
 	m_DepthTexture.allocation.reset();
 	m_DepthTexture = m_GraphicsDevice->create_texture({
-		.usage = d3d::TextureUsage::DepthStencil,
+		.usage = sf::render::TextureUsage::DepthStencil,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
 		.format = sf::render::Format::D32_FLOAT,

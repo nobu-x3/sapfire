@@ -7,7 +7,7 @@
 #include "render/material.h"
 #include "render/upload_buffer.h"
 
-namespace Sapfire::d3d {
+namespace sf::d3d {
 
 	FrameData::FrameData(ID3D12Device* device, u32 pass_count, u32 object_count, u32 material_count, u32 frame_number) :
 		m_Device(device), m_PassCount(pass_count), m_ObjectCount(object_count), m_MaterialCount(material_count),
@@ -35,4 +35,4 @@ namespace Sapfire::d3d {
 		materials_cb = stl::make_unique<UploadBuffer<MaterialConstants>>(m_Device, m_MaterialCount, true,
 																		 L"Material Constants " + std::to_wstring(m_FrameNumber));
 	}
-} // namespace Sapfire::d3d
+} // namespace sf::d3d

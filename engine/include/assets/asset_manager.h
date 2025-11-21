@@ -4,14 +4,16 @@
 #include "mesh_manager.h"
 #include "texture_manager.h"
 
-namespace Sapfire {
-	class GraphicsDevice;
+namespace sf {
+	namespace render {
+		class IGraphicsDevice;
+	}
 }
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
 	struct SFAPI AssetManagerCreationDesc {
-		d3d::GraphicsDevice* device{nullptr};
+		sf::render::IGraphicsDevice* device{nullptr};
 		stl::string mesh_registry_path{"mesh_registry.db"};
 		stl::string texture_registry_path{"texture_registry.db"};
 		stl::string material_registry_path{"material_registry.db"};
@@ -90,7 +92,7 @@ namespace Sapfire::assets {
 		}
 
 		inline bool material_resource_exists(const UUID& uuid) const {
-			if (uuid == MaterialRegistry::default_material(&m_Device)->uuid)
+			if (uuid == MaterialRegistry::default_material(m_Device)->uuid)
 				return true;
 			return m_MaterialManager.uuid_to_path_map.contains(uuid);
 		}
@@ -111,6 +113,6 @@ namespace Sapfire::assets {
 		TextureManager m_TextureManager;
 		MaterialRegistry m_MaterialRegistry;
 		MaterialManager m_MaterialManager;
-		d3d::GraphicsDevice& m_Device;
+		sf::render::IGraphicsDevice* m_Device;
 	};
-} // namespace Sapfire::assets
+} // namespace sf::assets

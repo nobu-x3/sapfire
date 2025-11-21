@@ -3,7 +3,7 @@
 #include "components/component.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	class NameComponent {
 		RTTI;
@@ -23,4 +23,4 @@ namespace Sapfire::components {
 	private:
 		stl::string m_Name;
 	};
-} // namespace Sapfire
+} // namespace sf

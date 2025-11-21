@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "math/math.h"
 
-namespace Sapfire::d3d::primitives {
+namespace sf::render::primitives {
 
 	struct Vertex {
 		sf::math::vec3 position;
@@ -40,4 +40,4 @@ namespace Sapfire::d3d::primitives {
 	MeshData create_box(float width, float height, float depth, u32 num_subdivisions);
 	MeshData create_quad(float x, float y, float w, float h, float depth);
 
-} // namespace Sapfire::d3d::primitives
+} // namespace sf::render::primitives

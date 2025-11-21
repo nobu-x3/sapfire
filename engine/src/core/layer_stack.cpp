@@ -3,7 +3,7 @@
 #include "core/layer.h"
 #include "core/layer_stack.h"
 
-namespace Sapfire {
+namespace sf {
 
 	LayerStack::~LayerStack() {
 		for (auto* layer : m_Layers) {
@@ -35,4 +35,4 @@ namespace Sapfire {
 			m_Layers.erase(it);
 		}
 	}
-} // namespace Sapfire
+} // namespace sf

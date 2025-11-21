@@ -2,7 +2,7 @@
 
 #include "math/math.h"
 
-namespace Sapfire::d3d {
+namespace sf::render {
 
 	struct Light {
 		sf::math::vec3 strength = {0.5f, 0.5f, 0.5f};
@@ -13,6 +13,6 @@ namespace Sapfire::d3d {
 		float SpotPower = 64.0f; // spot light only
 	};
 
-#define MaxLights 16
+	constexpr u32 MAX_LIGHTS = 16;
 
-} // namespace Sapfire::d3d
+} // namespace sf::render

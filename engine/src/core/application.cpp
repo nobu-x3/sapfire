@@ -11,7 +11,7 @@
 #include "render/window.h"
 #include "tools/profiling.h"
 
-namespace Sapfire {
+namespace sf {
 
 #ifdef SF_PLATFORM_WINDOWS
 	// Setting the Agility SDK parameters.
@@ -166,4 +166,4 @@ namespace Sapfire {
 
 	Application& Application::get() { return *s_Instance; }
 
-} // namespace Sapfire
+} // namespace sf

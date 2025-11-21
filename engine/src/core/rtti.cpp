@@ -4,7 +4,7 @@
 #include "core/rtti.h"
 
 #pragma warning(disable : 4244)
-namespace Sapfire::rtti {
+namespace sf::rtti {
 
 	void set_rtti_field_value(rtti_object* obj, rtti_field* field, void* value) {
 		switch (field->type) {
@@ -39,28 +39,28 @@ namespace Sapfire::rtti {
 		case rtti_type::S8:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
-				auto* data = static_cast<s8*>(value);
+				auto* data = static_cast<i8*>(value);
 				*ptr = *data;
 				break;
 			}
 		case rtti_type::S16:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
-				auto* data = static_cast<s16*>(value);
+				auto* data = static_cast<i16*>(value);
 				*ptr = *data;
 				break;
 			}
 		case rtti_type::S32:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
-				auto* data = static_cast<s32*>(value);
+				auto* data = static_cast<i32*>(value);
 				*ptr = *data;
 				break;
 			}
 		case rtti_type::S64:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
-				auto* data = static_cast<s64*>(value);
+				auto* data = static_cast<i64*>(value);
 				*ptr = *data;
 				break;
 			}
@@ -103,7 +103,7 @@ namespace Sapfire::rtti {
 		case rtti_type::REFERENCE:
 			{
 				auto* ptr = static_cast<u8*>(obj->head) + field->offset;
-				auto data = *static_cast<Sapfire::UUID*>(value);
+				auto data = *static_cast<sf::UUID*>(value);
 				*ptr = data;
 				break;
 			}
@@ -117,5 +117,5 @@ namespace Sapfire::rtti {
 		auto* ptr = static_cast<u8*>(obj->head);
 		*value = ptr + field->offset;
 	}
-} // namespace Sapfire::rtti
+} // namespace sf::rtti
 #pragma warning(default : 4244)

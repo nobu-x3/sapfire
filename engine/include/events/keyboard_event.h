@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "events/event.h"
 
-namespace Sapfire {
+namespace sf {
 
 	class KeyPressedEvent final : public Event {
 	public:
@@ -24,4 +24,4 @@ namespace Sapfire {
 	private:
 		u64 m_State;
 	};
-} // namespace Sapfire
+} // namespace sf

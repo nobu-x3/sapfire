@@ -2,7 +2,7 @@
 
 #include "events/event.h"
 
-namespace Sapfire {
+namespace sf {
 	class Layer {
 	public:
 		Layer(stl::string_view name) : m_DebugName(name){};
@@ -17,4 +17,4 @@ namespace Sapfire {
 	protected:
 		stl::string m_DebugName;
 	};
-} // namespace Sapfire
+} // namespace sf

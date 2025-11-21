@@ -9,7 +9,7 @@
 
 using namespace Sapfire;
 
-SMaterialEditor::SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::d3d::GraphicsDevice* device) :
+SMaterialEditor::SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::render::IGraphicsDevice* device) :
 	SSubeditor("Material Editor"), m_AssetManager(*am), m_OpenedMaterial(nullptr), m_ECManager(stl::make_unique<ECManager>(mem::Editor)) {
 	m_Widgets.push_back(Sapfire::stl::make_unique<widgets::SMaterialInspector>(Sapfire::mem::Editor));
 	m_MaterialEntity = m_ECManager->create_entity();

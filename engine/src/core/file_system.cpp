@@ -3,7 +3,7 @@
 #include "core/file_system.h"
 #include "core/logger.h"
 
-namespace Sapfire::fs {
+namespace sf::fs {
 	void FileSystem::locate_root_directory() {
 		auto currentDirectory = std::filesystem::current_path();
 		// The asset directory is one folder within the root directory.
@@ -21,4 +21,4 @@ namespace Sapfire::fs {
 		s_RootDirectoryPath = currentDirectory.string() + "/";
 		CORE_INFO("Detected root directory at path : {}.", s_RootDirectoryPath);
 	}
-} // namespace Sapfire::fs
+} // namespace sf::fs

@@ -5,7 +5,7 @@
 #include "components/transform.h"
 #include "core/memory.h"
 
-namespace Sapfire {
+namespace sf {
 
 	ECManager::ECManager() :
 		m_ComponentRegistry(stl::make_unique<components::ComponentRegistry>(mem::ENUM::Engine_Components)),
@@ -37,4 +37,4 @@ namespace Sapfire {
 		}
 		m_ComponentRegistry->entity_destroyed(entity);
 	}
-} // namespace Sapfire
+} // namespace sf

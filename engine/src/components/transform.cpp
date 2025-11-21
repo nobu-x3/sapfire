@@ -5,7 +5,7 @@
 #include "core/rtti.h"
 #include "tools/profiling.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	ENGINE_COMPONENT_IMPL(Transform);
 
@@ -130,4 +130,4 @@ namespace Sapfire::components {
 		return *this;
 	}
 
-} // namespace Sapfire::components
+} // namespace sf::components

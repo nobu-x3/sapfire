@@ -43,9 +43,13 @@
 /////////////////////////////////
 /////// RENDERING ///////////////
 #include "render/camera.h"
-#include "render/render_compat.h"
+#include "render/render_backend.h"
 #include "render/lights.h"
 #include "render/material.h"
 #include "render/upload_buffer.h"
 #include "render/window.h"
+/////////////////////////////////
+
+////// UTILITIES ////////////////
+#include "core/string_utils.h"
 /////////////////////////////////

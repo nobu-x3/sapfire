@@ -2,7 +2,7 @@
 
 #include "events/event.h"
 
-namespace Sapfire {
+namespace sf {
 
 	class WindowResizeEvent final : public Event {
 	public:
@@ -33,4 +33,4 @@ namespace Sapfire {
 		EVENT_CLASS_TYPE(WindowClose);
 		EVENT_CLASS_CATEGORY(EventCategory::EventCategoryApplication)
 	};
-} // namespace Sapfire
+} // namespace sf

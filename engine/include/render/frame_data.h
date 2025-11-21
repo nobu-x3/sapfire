@@ -7,7 +7,7 @@
 #include "render/material.h"
 #include "render/upload_buffer.h"
 
-namespace Sapfire::d3d {
+namespace sf::d3d {
 
 	struct Texture {
 		// Unique material name for lookup.
@@ -78,4 +78,4 @@ namespace Sapfire::d3d {
 		u32 m_FrameNumber = 0;
 	};
 
-} // namespace Sapfire::d3d
+} // namespace sf::d3d

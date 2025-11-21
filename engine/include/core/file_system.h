@@ -1,9 +1,8 @@
 #pragma once
 
 #include "core.h"
-#include "render/d3d_util.h"
 
-namespace Sapfire::fs {
+namespace sf::fs {
 
 	class FileSystem {
 	public:
@@ -55,4 +54,4 @@ namespace Sapfire::fs {
 		return path.filename().string();
 	}
 
-} // namespace Sapfire::fs
+} // namespace sf::fs

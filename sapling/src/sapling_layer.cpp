@@ -22,17 +22,17 @@ SaplingLayer::SaplingLayer() : Sapfire::Layer("Sapling Layer") {
 	m_GraphicsDevice = stl::make_unique<d3d::GraphicsDevice>(
 		Sapfire::mem::ENUM::Editor,
 		d3d::SwapchainCreationDesc{static_cast<u32>(app.client_extent()->width), static_cast<u32>(app.client_extent()->height), 120,
-								   d3d::MAX_FRAMES_IN_FLIGHT, DXGI_FORMAT_R16G16B16A16_FLOAT, app.window()->handle()});
+								   sf::render::MAX_FRAMES_IN_FLIGHT, DXGI_FORMAT_R16G16B16A16_FLOAT, app.window()->handle()});
 	m_AssetManager = Sapfire::stl::make_unique<Sapfire::assets::AssetManager>(mem::Editor,
 																			  Sapfire::assets::AssetManagerCreationDesc{
 																				  .device = m_GraphicsDevice.get(),
 																				  .mesh_registry_path = "mesh_registry.db",
 																				  .texture_registry_path = "texture_registry.db",
 																			  });
-	icons::add(*m_GraphicsDevice, L"editor_assets/icons/mesh_icon_64.png", icons::MESH_ICON_64_ID);
-	icons::add(*m_GraphicsDevice, L"editor_assets/icons/mesh_icon_16.png", icons::MESH_ICON_16_ID);
-	icons::add(*m_GraphicsDevice, L"editor_assets/icons/image_icon_16.png", icons::IMAGE_ICON_16_ID);
-	icons::add(*m_GraphicsDevice, L"editor_assets/icons/image_icon_64.png", icons::IMAGE_ICON_64_ID);
+	icons::add(m_GraphicsDevice.get(), L"editor_assets/icons/mesh_icon_64.png", icons::MESH_ICON_64_ID);
+	icons::add(m_GraphicsDevice.get(), L"editor_assets/icons/mesh_icon_16.png", icons::MESH_ICON_16_ID);
+	icons::add(m_GraphicsDevice.get(), L"editor_assets/icons/image_icon_16.png", icons::IMAGE_ICON_16_ID);
+	icons::add(m_GraphicsDevice.get(), L"editor_assets/icons/image_icon_64.png", icons::IMAGE_ICON_64_ID);
 	g_Editor = this;
 }
 
@@ -136,13 +136,13 @@ void SaplingLayer::on_attach() {
 	// Setup Platform/Renderer backends
 	auto& app = Application::get();
 	ImGui_ImplWin32_Init(app.window()->handle());
-	ImGui_ImplDX12_Init(m_GraphicsDevice->device(), d3d::MAX_FRAMES_IN_FLIGHT, m_GraphicsDevice->swapchain_back_buffer_format(),
+	ImGui_ImplDX12_Init(m_GraphicsDevice->device(), sf::render::MAX_FRAMES_IN_FLIGHT, m_GraphicsDevice->swapchain_back_buffer_format(),
 						m_GraphicsDevice->dsv_descriptor_heap()->descriptor_heap(),
 						m_GraphicsDevice->cbv_srv_uav_descriptor_heap()->current_descriptor_handle().cpu_descriptor_handle,
 						m_GraphicsDevice->cbv_srv_uav_descriptor_heap()->current_descriptor_handle().gpu_descriptor_handle);
 	setup_imgui_style();
 	m_DepthTexture = m_GraphicsDevice->create_texture({
-		.usage = d3d::TextureUsage::DepthStencil,
+		.usage = sf::render::TextureUsage::DepthStencil,
 		.width = static_cast<u32>(app.client_extent()->width),
 		.height = static_cast<u32>(app.client_extent()->height),
 		.format = DXGI_FORMAT_D32_FLOAT,
@@ -329,7 +329,7 @@ bool SaplingLayer::on_window_resize_finished(WindowResizeFinishedEvent& e) {
 			m_GraphicsDevice->resize_window(static_cast<u32>(app.client_extent()->width), static_cast<u32>(app.client_extent()->height));
 		m_DepthTexture.allocation.reset();
 		m_DepthTexture = m_GraphicsDevice->create_texture({
-			.usage = d3d::TextureUsage::DepthStencil,
+			.usage = sf::render::TextureUsage::DepthStencil,
 			.width = static_cast<u32>(app.client_extent()->width),
 			.height = static_cast<u32>(app.client_extent()->height),
 			.format = DXGI_FORMAT_D32_FLOAT,
@@ -346,7 +346,7 @@ bool SaplingLayer::on_window_resize(WindowResizeEvent& e) {
 			m_GraphicsDevice->resize_window(static_cast<u32>(e.width()), static_cast<u32>(e.height()));
 		m_DepthTexture.allocation.reset();
 		m_DepthTexture = m_GraphicsDevice->create_texture({
-			.usage = d3d::TextureUsage::DepthStencil,
+			.usage = sf::render::TextureUsage::DepthStencil,
 			.width = static_cast<u32>(e.width()),
 			.height = static_cast<u32>(e.height()),
 			.format = DXGI_FORMAT_D32_FLOAT,

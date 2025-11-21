@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 
-namespace Sapfire::mem {
+namespace sf::mem {
 	enum ENUM : u16 {
 		Engine_Rendering = 0x0,
 		Engine_Physics = 0b0000000000000010,
@@ -25,13 +25,13 @@ namespace Sapfire::mem {
 	void alloc(ENUM, size_t);
 	void dealloc(ENUM, size_t);
 	void memdump();
-	Sapfire::stl::unordered_map<Sapfire::mem::ENUM, size_t>& categories();
-} // namespace Sapfire::mem
+	sf::stl::unordered_map<sf::mem::ENUM, size_t>& categories();
+} // namespace sf::mem
 
 #if defined(DEBUG) | defined(_DEBUG)
-/* [[nodiscard]] void* __cdecl operator new(size_t size, Sapfire::mem::ENUM category); */
+/* [[nodiscard]] void* __cdecl operator new(size_t size, sf::mem::ENUM category); */
 /* void delete_memory(void* address); */
-/* #define mem_new(category) new (Sapfire::mem::ENUM::Engine_Core) */
+/* #define mem_new(category) new (sf::mem::ENUM::Engine_Core) */
 /* #define mem_delete(thing) \ */
 /* 	delete_memory(reinterpret_cast<void*>(thing)); \ */
 /* 	thing = nullptr */
@@ -43,7 +43,7 @@ namespace Sapfire::mem {
 #endif
 /* void operator delete(void*); */
 
-namespace Sapfire::stl {
+namespace sf::stl {
 	template <typename T>
 	struct Deleter {
 		constexpr Deleter() noexcept = default;
@@ -56,4 +56,4 @@ namespace Sapfire::stl {
 			mem_delete(p);
 		}
 	};
-} // namespace Sapfire::stl
+} // namespace sf::stl

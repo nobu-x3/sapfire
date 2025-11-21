@@ -3,7 +3,7 @@
 #include "components/component.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	class SFAPI Transform {
 		RTTI;
@@ -11,7 +11,7 @@ namespace Sapfire::components {
 
 	public:
 		inline Transform() { register_rtti(); }
-		inline Transform(s32 parent_index) : m_ParentIndex(parent_index) { register_rtti(); }
+		inline Transform(i32 parent_index) : m_ParentIndex(parent_index) { register_rtti(); }
 		void register_rtti();
 		Transform(const Transform&);
 		Transform(Transform&&) noexcept;
@@ -27,8 +27,8 @@ namespace Sapfire::components {
 		inline sf::math::vec3 up() const { return m_Up; }
 		inline sf::math::vec3 right() const { return m_Right; }
 		inline sf::math::mat4 rotation_matrix() const { return m_RotationMatrix; }
-		inline s32 parent() const { return m_ParentIndex; }
-		inline void parent(s32 parent_index) {
+		inline i32 parent() const { return m_ParentIndex; }
+		inline void parent(i32 parent_index) {
 			m_ParentIndex = parent_index;
 			m_Dirty = true;
 		}
@@ -47,7 +47,7 @@ namespace Sapfire::components {
 		sf::math::vec3 m_Up{0.0f, 1.0f, 0.0f};
 		sf::math::vec3 m_EulerAngles{0.0f, 0.0f, 0.0f};
 		sf::math::mat4 m_RotationMatrix{sf::math::mat4::identity()};
-		s32 m_ParentIndex{-1};
+		i32 m_ParentIndex{-1};
 		bool m_Dirty{true};
 	};
-} // namespace Sapfire::components
+} // namespace sf::components

@@ -12,7 +12,7 @@ using namespace Sapfire;
 SLevelEditor* SLevelEditor::s_Instance{nullptr};
 SLevelEditor* SLevelEditor::level_editor() { return s_Instance; }
 
-SLevelEditor::SLevelEditor(Sapfire::d3d::GraphicsDevice* gfx_device, Sapfire::assets::AssetManager* am,
+SLevelEditor::SLevelEditor(Sapfire::render::IGraphicsDevice* gfx_device, Sapfire::assets::AssetManager* am,
 						   const Sapfire::stl::string& scene_path, Sapfire::stl::function<void()> asset_imported_callback) :
 	SSubeditor("Level Editor"),
 	m_ECManager(stl::make_unique<ECManager>(mem::ENUM::Editor)), m_AssetManager(*am) {

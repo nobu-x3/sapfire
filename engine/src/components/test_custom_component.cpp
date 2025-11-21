@@ -3,7 +3,7 @@
 #include "components/test_custom_component.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	COMPONENT_IMPL(TestCustomComponent)
 
@@ -40,4 +40,4 @@ namespace Sapfire::components {
 		ADD_RTTI_FIELD(rtti::rtti_type::STRING, "Message", &m_Message, nullptr);
 		END_RTTI();
 	}
-} // namespace Sapfire::components
+} // namespace sf::components

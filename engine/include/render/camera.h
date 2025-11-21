@@ -4,7 +4,7 @@
 #include "core/input.h"
 #include "components/transform.h"
 
-namespace Sapfire {
+namespace sf {
 	struct SFAPI Camera {
 		Camera() = default;
 		Camera(f32 fov, f32 aspect, f32 near_plane, f32 far_plane);
@@ -19,4 +19,4 @@ namespace Sapfire {
 		f32 near_plane{};
 		f32 far_plane{};
 	};
-} // namespace Sapfire
+} // namespace sf

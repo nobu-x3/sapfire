@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 
-namespace Sapfire {
+namespace sf {
 
 	class Layer;
 
@@ -27,4 +27,4 @@ namespace Sapfire {
 		stl::vector<Layer*> m_Layers;
 		u32 m_LayerInsertIndex = 0;
 	};
-} // namespace Sapfire
+} // namespace sf

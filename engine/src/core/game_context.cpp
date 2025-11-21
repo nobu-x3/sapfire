@@ -5,20 +5,41 @@
 #include "core/game_context.h"
 #include "core/memory.h"
 
-namespace Sapfire {
+namespace sf {
 
 	GameContext::GameContext(const GameContextCreationDesc& desc) :
 		m_ClientExtent(desc.client_extent),
-		m_GraphicsDevice(stl::make_unique<d3d::GraphicsDevice>(
-			mem::ENUM::Engine_Scene,
-			d3d::SwapchainCreationDesc{static_cast<u32>(m_ClientExtent->width), static_cast<u32>(m_ClientExtent->height), 120,
-									   d3d::MAX_FRAMES_IN_FLIGHT, DXGI_FORMAT_R16G16B16A16_FLOAT, desc.window_handle})),
+		m_GraphicsDevice(nullptr),
 		m_AssetManager(assets::AssetManagerCreationDesc{
-			.device = m_GraphicsDevice.get(),
+			.device = nullptr,
 			.mesh_registry_path = desc.mesh_registry_path,
 			.texture_registry_path = desc.texture_registry_path,
 			.material_registry_path = desc.material_registry_path,
 		}) {
+		// Initialize render backend if not already done
+		if (!sf::render::RenderBackend::is_initialized()) {
+			// Default to DX12 for now (will add platform detection later)
+			sf::render::RenderBackend::initialize(sf::render::RenderAPI::DX12);
+		}
+
+		// Create graphics device
+		m_GraphicsDevice = sf::render::RenderBackend::create_device(sf::render::SwapchainCreationDesc{
+			.window_handle = desc.window_handle,
+			.width = static_cast<u32>(m_ClientExtent->width),
+			.height = static_cast<u32>(m_ClientExtent->height),
+			.buffer_count = 3,
+			.format = sf::render::Format::RGBA16_FLOAT,
+			.refresh_rate = 120
+		});
+
+		// Now update asset manager with the device
+		m_AssetManager = assets::AssetManager(assets::AssetManagerCreationDesc{
+			.device = m_GraphicsDevice,
+			.mesh_registry_path = desc.mesh_registry_path,
+			.texture_registry_path = desc.texture_registry_path,
+			.material_registry_path = desc.material_registry_path,
+		});
+
 		m_PhysicsEngine = stl::make_unique<physics::PhysicsEngine>(mem::ENUM::Engine_Scene, &m_ECManager);
 	}
 
@@ -28,9 +49,9 @@ namespace Sapfire {
 		const bool already_has_component = m_ECManager.has_engine_component<components::RenderComponent>(entity);
 		auto* mesh_asset =
 			resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh() : m_AssetManager.get_mesh(resource_paths.mesh_path);
-		auto* texture_asset = resource_paths.texture_path.empty() ? assets::TextureRegistry::default_texture(m_GraphicsDevice.get())
+		auto* texture_asset = resource_paths.texture_path.empty() ? assets::TextureRegistry::default_texture(m_GraphicsDevice)
 																  : m_AssetManager.get_texture(resource_paths.texture_path);
-		auto* material_asset = resource_paths.material_path.empty() ? assets::MaterialRegistry::default_material(m_GraphicsDevice.get())
+		auto* material_asset = resource_paths.material_path.empty() ? assets::MaterialRegistry::default_material(m_GraphicsDevice)
 																	: m_AssetManager.get_material(resource_paths.material_path);
 		if (!mesh_asset) {
 			m_AssetManager.import_mesh(resource_paths.mesh_path);
@@ -51,8 +72,8 @@ namespace Sapfire {
 			assert(mesh_asset->data->texcs.size() > 0);
 			if (!already_has_component) {
 				m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer<ObjectConstants>({
-					.usage = d3d::BufferUsage::ConstantBuffer,
-					.name = L"Transform buffer " + d3d::AnsiToWString(resource_paths.mesh_path),
+					.usage = sf::render::BufferUsage::Constant,
+					.name = L"Transform buffer " + sf::stl::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
 				}));
 			}
 			bool should_add_tangent = false;
@@ -60,37 +81,37 @@ namespace Sapfire {
 			if (should_allocate_mesh) {
 				const stl::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
 					? L"Default Mesh"
-					: d3d::AnsiToWString(resource_paths.mesh_path);
+					: sf::stl::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
 				m_RTIndexBuffers.push_back(m_GraphicsDevice->create_buffer<u16>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::IndexBuffer,
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::Index,
 						.name = L"Index buffer " + name,
 					},
 					mesh_asset->data->indices16()));
 				m_VertexPosBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::Structured,
 						.name = L"Vertex Pos buffer " + name,
 					},
 					mesh_asset->data->positions));
 				m_VertexNormalBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::Structured,
 						.name = L"Vertex Norm buffer " + name,
 					},
 					mesh_asset->data->normals));
 				if (mesh_asset->data->tangentus.size() > 0) {
 					m_VertexTangentBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
-						d3d::BufferCreationDesc{
-							.usage = d3d::BufferUsage::StructuredBuffer,
+						sf::render::BufferCreationDesc{
+							.usage = sf::render::BufferUsage::Structured,
 							.name = L"Vertex Tang buffer " + name,
 						},
 						mesh_asset->data->tangentus));
 					should_add_tangent = true;
 				}
 				m_VertexUVBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec2>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::Structured,
 						.name = L"Vertex UV buffer " + name,
 					},
 					mesh_asset->data->texcs));
@@ -108,15 +129,15 @@ namespace Sapfire {
 
 			};
 			u32 material_cbuffer_idx = 0;
-			if (material_asset->uuid == assets::MaterialRegistry::default_material(m_GraphicsDevice.get())->uuid) {
+			if (material_asset->uuid == assets::MaterialRegistry::default_material(m_GraphicsDevice)->uuid) {
 				material_cbuffer_idx = material_asset->material.material_cb_index;
 			} else {
 				material_cbuffer_idx = m_AssetManager.material_resource_exists(resource_paths.material_path)
 					? m_AssetManager.get_material_resource(resource_paths.material_path).gpu_idx
-					: assets::MaterialRegistry::default_material(m_GraphicsDevice.get())->material.material_cb_index;
+					: assets::MaterialRegistry::default_material(m_GraphicsDevice)->material.material_cb_index;
 			}
 			u32 texture_cbuffer_idx = 0;
-			if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_GraphicsDevice.get())->uuid) {
+			if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_GraphicsDevice)->uuid) {
 				texture_cbuffer_idx = texture_asset->data.srv_index;
 			} else {
 				texture_cbuffer_idx = m_AssetManager.texture_resource_exists(resource_paths.texture_path)
@@ -206,4 +227,4 @@ namespace Sapfire {
 		}
 	}
 
-} // namespace Sapfire
+} // namespace sf

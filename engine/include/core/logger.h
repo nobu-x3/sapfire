@@ -11,7 +11,7 @@ namespace spdlog {
 	class logger;
 }
 
-namespace Sapfire {
+namespace sf {
 	class SFAPI Log {
 	public:
 		static void Init();
@@ -23,18 +23,18 @@ namespace Sapfire {
 		static stl::shared_ptr<spdlog::logger> s_CoreLogger;
 		static stl::shared_ptr<spdlog::logger> s_ClientLogger;
 	};
-} // namespace Sapfire
+} // namespace sf
 
 // Core log macros
-#define CORE_TRACE(...) ::Sapfire::Log::get_core_logger()->trace(__VA_ARGS__)
-#define CORE_INFO(...) ::Sapfire::Log::get_core_logger()->info(__VA_ARGS__)
-#define CORE_WARN(...) ::Sapfire::Log::get_core_logger()->warn(__VA_ARGS__)
-#define CORE_ERROR(...) ::Sapfire::Log::get_core_logger()->error(__VA_ARGS__)
-#define CORE_CRITICAL(...) ::Sapfire::Log::get_core_logger()->critical(__VA_ARGS__)
+#define CORE_TRACE(...) ::sf::Log::get_core_logger()->trace(__VA_ARGS__)
+#define CORE_INFO(...) ::sf::Log::get_core_logger()->info(__VA_ARGS__)
+#define CORE_WARN(...) ::sf::Log::get_core_logger()->warn(__VA_ARGS__)
+#define CORE_ERROR(...) ::sf::Log::get_core_logger()->error(__VA_ARGS__)
+#define CORE_CRITICAL(...) ::sf::Log::get_core_logger()->critical(__VA_ARGS__)
 
 // Client log macros
-#define CLIENT_TRACE(...) ::Sapfire::Log::get_client_logger()->trace(__VA_ARGS__)
-#define CLIENT_INFO(...) ::Sapfire::Log::get_client_logger()->info(__VA_ARGS__)
-#define CLIENT_WARN(...) ::Sapfire::Log::get_client_logger()->warn(__VA_ARGS__)
-#define CLIENT_ERROR(...) ::Sapfire::Log::get_client_logger()->error(__VA_ARGS__)
-#define CLIENT_CRITICAL(...) ::Sapfire::Log::get_client_logger()->critical(__VA_ARGS__)
+#define CLIENT_TRACE(...) ::sf::Log::get_client_logger()->trace(__VA_ARGS__)
+#define CLIENT_INFO(...) ::sf::Log::get_client_logger()->info(__VA_ARGS__)
+#define CLIENT_WARN(...) ::sf::Log::get_client_logger()->warn(__VA_ARGS__)
+#define CLIENT_ERROR(...) ::sf::Log::get_client_logger()->error(__VA_ARGS__)
+#define CLIENT_CRITICAL(...) ::sf::Log::get_client_logger()->critical(__VA_ARGS__)

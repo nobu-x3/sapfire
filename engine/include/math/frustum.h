@@ -28,50 +28,50 @@ struct frustum {
 
         // Left plane
         f.planes[0] = vec4(
-            projection.m[0][3] + projection.m[0][0],
-            projection.m[1][3] + projection.m[1][0],
-            projection.m[2][3] + projection.m[2][0],
-            projection.m[3][3] + projection.m[3][0]
+            projection.m2[0][3] + projection.m2[0][0],
+            projection.m2[1][3] + projection.m2[1][0],
+            projection.m2[2][3] + projection.m2[2][0],
+            projection.m2[3][3] + projection.m2[3][0]
         );
 
         // Right plane
         f.planes[1] = vec4(
-            projection.m[0][3] - projection.m[0][0],
-            projection.m[1][3] - projection.m[1][0],
-            projection.m[2][3] - projection.m[2][0],
-            projection.m[3][3] - projection.m[3][0]
+            projection.m2[0][3] - projection.m2[0][0],
+            projection.m2[1][3] - projection.m2[1][0],
+            projection.m2[2][3] - projection.m2[2][0],
+            projection.m2[3][3] - projection.m2[3][0]
         );
 
         // Bottom plane
         f.planes[2] = vec4(
-            projection.m[0][3] + projection.m[0][1],
-            projection.m[1][3] + projection.m[1][1],
-            projection.m[2][3] + projection.m[2][1],
-            projection.m[3][3] + projection.m[3][1]
+            projection.m2[0][3] + projection.m2[0][1],
+            projection.m2[1][3] + projection.m2[1][1],
+            projection.m2[2][3] + projection.m2[2][1],
+            projection.m2[3][3] + projection.m2[3][1]
         );
 
         // Top plane
         f.planes[3] = vec4(
-            projection.m[0][3] - projection.m[0][1],
-            projection.m[1][3] - projection.m[1][1],
-            projection.m[2][3] - projection.m[2][1],
-            projection.m[3][3] - projection.m[3][1]
+            projection.m2[0][3] - projection.m2[0][1],
+            projection.m2[1][3] - projection.m2[1][1],
+            projection.m2[2][3] - projection.m2[2][1],
+            projection.m2[3][3] - projection.m2[3][1]
         );
 
         // Near plane
         f.planes[4] = vec4(
-            projection.m[0][2],
-            projection.m[1][2],
-            projection.m[2][2],
-            projection.m[3][2]
+            projection.m2[0][2],
+            projection.m2[1][2],
+            projection.m2[2][2],
+            projection.m2[3][2]
         );
 
         // Far plane
         f.planes[5] = vec4(
-            projection.m[0][3] - projection.m[0][2],
-            projection.m[1][3] - projection.m[1][2],
-            projection.m[2][3] - projection.m[2][2],
-            projection.m[3][3] - projection.m[3][2]
+            projection.m2[0][3] - projection.m2[0][2],
+            projection.m2[1][3] - projection.m2[1][2],
+            projection.m2[2][3] - projection.m2[2][2],
+            projection.m2[3][3] - projection.m2[3][2]
         );
 
         // Normalize planes

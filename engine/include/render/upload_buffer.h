@@ -5,7 +5,7 @@
 #include "d3dx12_core.h"
 #include "render/dx12/dx12_util.h"
 
-namespace Sapfire::d3d {
+namespace sf::d3d {
 	template <typename T>
 	class UploadBuffer {
 
@@ -48,4 +48,4 @@ namespace Sapfire::d3d {
 		int m_ElementByteSize = 0;
 		bool m_IsConstantBuffer = false;
 	};
-} // namespace Sapfire::d3d
+} // namespace sf::d3d

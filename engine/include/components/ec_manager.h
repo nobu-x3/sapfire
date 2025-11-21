@@ -5,7 +5,7 @@
 #include "core/core.h"
 #include "core/stl/unique_ptr.h"
 
-namespace Sapfire {
+namespace sf {
 	class SFAPI ECManager {
 	public:
 		ECManager();
@@ -109,4 +109,4 @@ namespace Sapfire {
 		stl::unique_ptr<components::ComponentRegistry> m_ComponentRegistry;
 		stl::unique_ptr<EntityRegistry> m_EntityRegistry;
 	};
-}; // namespace Sapfire
+}; // namespace sf

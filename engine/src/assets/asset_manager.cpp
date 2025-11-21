@@ -1,12 +1,13 @@
 #include "engpch.h"
 
 #include "assets/asset_manager.h"
+#include "core/string_utils.h"
 #include "nlohmann/json.hpp"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
 	AssetManager::AssetManager(const AssetManagerCreationDesc& desc) :
-		m_Device(*desc.device), m_MeshRegistry(desc.mesh_registry_path), m_TextureRegistry(desc.texture_registry_path) {}
+		m_Device(desc.device), m_MeshRegistry(desc.mesh_registry_path), m_TextureRegistry(desc.texture_registry_path) {}
 
 	void AssetManager::load_runtime_texture(const stl::string& texture_path) {
 		auto relative_path = fs::relative_path(texture_path);
@@ -15,11 +16,11 @@ namespace Sapfire::assets {
 			m_TextureRegistry.import_texture(m_Device, relative_path);
 			texture = m_TextureRegistry.get(relative_path);
 		}
-		if (texture->data.dsv_index == d3d::INVALID_INDEX_U32 || texture->data.srv_index == d3d::INVALID_INDEX_U32) {
-			texture->data = m_Device.create_texture(d3d::TextureCreationDesc{
-				.usage = d3d::TextureUsage::TextureFromPath,
-				.name = d3d::AnsiToWString(relative_path),
-				.path = d3d::AnsiToWString(fs::full_path(texture_path)),
+		if (texture->data.dsv_index == sf::render::INVALID_DESCRIPTOR_INDEX || texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
+			texture->data = m_Device->create_texture(sf::render::TextureCreationDesc{
+				.usage = sf::render::TextureUsage::TextureFromPath,
+				.name = sf::string_utils::to_wstring(relative_path),
+				.path = sf::string_utils::to_wstring(fs::full_path(texture_path)),
 			});
 		}
 		if (texture) {
@@ -37,11 +38,11 @@ namespace Sapfire::assets {
 			m_TextureRegistry.import_texture(m_Device, relative_path);
 			texture = m_TextureRegistry.get(relative_path);
 		}
-		if (texture->data.dsv_index == d3d::INVALID_INDEX_U32 || texture->data.srv_index == d3d::INVALID_INDEX_U32) {
-			texture->data = m_Device.create_texture(d3d::TextureCreationDesc{
-				.usage = d3d::TextureUsage::TextureFromPath,
-				.name = d3d::AnsiToWString(relative_path),
-				.path = d3d::AnsiToWString(fs::full_path(path)),
+		if (texture->data.dsv_index == sf::render::INVALID_DESCRIPTOR_INDEX || texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
+			texture->data = m_Device->create_texture(sf::render::TextureCreationDesc{
+				.usage = sf::render::TextureUsage::TextureFromPath,
+				.name = sf::string_utils::to_wstring(relative_path),
+				.path = sf::string_utils::to_wstring(fs::full_path(path)),
 			});
 		}
 		if (texture) {
@@ -53,7 +54,7 @@ namespace Sapfire::assets {
 	}
 
 	bool AssetManager::is_texture_loaded_for_runtime(UUID uuid) {
-		if (uuid == TextureRegistry::default_texture(&m_Device)->uuid) {
+		if (uuid == TextureRegistry::default_texture(m_Device)->uuid) {
 			return true;
 		}
 		bool loaded = true;
@@ -89,10 +90,10 @@ namespace Sapfire::assets {
 
 	void AssetManager::serialize(const MaterialAsset& asset) { m_MaterialRegistry.serialize(asset); }
 
-	void Sapfire::assets::AssetManager::serialize() {
+	void sf::assets::AssetManager::serialize() {
 		m_MeshRegistry.serialize();
 		m_TextureRegistry.serialize();
 		m_MaterialRegistry.serialize();
 		load_all_runtime_textures();
 	}
-} // namespace Sapfire::assets
+} // namespace sf::assets

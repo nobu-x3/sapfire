@@ -2,7 +2,7 @@
 
 #include "math/math.h"
 
-namespace Sapfire::anim {
+namespace sf::anim {
 	struct SFAPI Keyframe {
 		f32 time_pos;
 		sf::math::vec3 position{0};
@@ -46,4 +46,4 @@ namespace Sapfire::anim {
 		stl::vector<sf::math::mat4> m_BoneOffsets;
 		stl::unordered_map<UUID, AnimationClip> m_Animations;
 	};
-} // namespace Sapfire::anim
+} // namespace sf::anim

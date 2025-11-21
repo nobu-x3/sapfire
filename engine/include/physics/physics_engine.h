@@ -2,11 +2,11 @@
 
 #include "core/core.h"
 
-namespace Sapfire {
+namespace sf {
     class ECManager;
 }
 
-namespace Sapfire::physics {
+namespace sf::physics {
 
 	class SFAPI PhysicsEngine {
 	public:
@@ -16,4 +16,4 @@ namespace Sapfire::physics {
 	private:
         ECManager& m_ECManager;
 	};
-} // namespace Sapfire::physics
+} // namespace sf::physics

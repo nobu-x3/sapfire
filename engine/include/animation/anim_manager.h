@@ -1,14 +1,14 @@
 #pragma once
 #include "skinned_data.h"
 
-namespace Sapfire {
+namespace sf {
 	class ECManager;
-	namespace d3d {
-		class GraphicsDevice;
+	namespace render {
+		class IGraphicsDevice;
 	}
-} // namespace Sapfire
+} // namespace sf
 
-namespace Sapfire::anim {
+namespace sf::anim {
 
 	struct SFAPI AnimationResource {
 		u32 cpu_idx{0};
@@ -20,7 +20,7 @@ namespace Sapfire::anim {
 
 	class SFAPI AnimationManager {
 	public:
-		explicit AnimationManager(Sapfire::ECManager* ec, Sapfire::d3d::GraphicsDevice* device);
+		explicit AnimationManager(sf::ECManager* ec, sf::render::IGraphicsDevice* device);
 		void update(f32 delta_time);
 		const stl::vector<sf::math::mat4>& final_transforms_for_current_clip(Entity entity) const;
 
@@ -31,7 +31,7 @@ namespace Sapfire::anim {
 		// Entity UUID is the key
 		stl::unordered_map<UUID, stl::vector<sf::math::mat4>> m_EntityTransformsMap{};
 		FinalTransformCache m_FinalTransformsCache{};
-		Sapfire::ECManager& m_ECManager;
-		Sapfire::d3d::GraphicsDevice& m_Device;
+		sf::ECManager& m_ECManager;
+		sf::render::IGraphicsDevice* m_Device;
 	};
-} // namespace Sapfire::anim
+} // namespace sf::anim

@@ -20,30 +20,37 @@
 #include <vector>
 #include <filesystem>
 #include "core/platform.h"
+
+// Platform-specific DLL export/import
 #ifdef SF_PLATFORM_WINDOWS
-#ifdef SF_BUILD_DLL
-#define SFAPI __declspec(dllexport)
+    #ifdef SF_BUILD_DLL
+        #define SFAPI __declspec(dllexport)
+    #else
+        #define SFAPI __declspec(dllimport)
+    #endif
 #else
-#define SFAPI __declspec(dllimport)
-#endif
-#else
-#error Sapfire only supports Windows!
+    // Linux/macOS: use visibility attributes for shared libraries
+    #ifdef SF_BUILD_DLL
+        #define SFAPI __attribute__((visibility("default")))
+    #else
+        #define SFAPI
+    #endif
 #endif
 
 #ifdef _MSC_VER
 #pragma warning(disable : 4251)
 #endif
 
-namespace Sapfire {
+namespace sf {
 
 	using u8 = uint8_t;
 	using u16 = uint16_t;
 	using u32 = uint32_t;
 	using u64 = uint64_t;
-	using s8 = int8_t;
-	using s16 = int16_t;
-	using s32 = int32_t;
-	using s64 = int64_t;
+	using i8 = int8_t;
+	using i16 = int16_t;
+	using i32 = int32_t;
+	using i64 = int64_t;
 	using f32 = float;
 	using f64 = double;
 	using RendererID = u32;
@@ -220,4 +227,4 @@ namespace Sapfire {
 
 	} // namespace stl
 
-} // namespace Sapfire
+} // namespace sf

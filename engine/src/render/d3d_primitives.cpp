@@ -3,7 +3,7 @@
 #include "math/math.h"
 #include "render/d3d_primitives.h"
 
-namespace Sapfire::d3d::primitives {
+namespace sf::render::primitives {
 	void subdivide(MeshData&);
 	Vertex mid_point(const Vertex&, const Vertex&);
 
@@ -209,4 +209,4 @@ namespace Sapfire::d3d::primitives {
 		v.texc = tex;
 		return v;
 	}
-} // namespace Sapfire::d3d::primitives
+} // namespace sf::render::primitives

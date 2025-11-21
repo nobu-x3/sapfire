@@ -4,12 +4,13 @@
 #include "assets/material_manager.h"
 #include "core/file_system.h"
 #include "core/logger.h"
+#include "core/string_utils.h"
 #include "nlohmann/json.hpp"
 #include "render/d3d_util.h"
 #include "render/graphics_device.h"
 #include "render/resources.h"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
 	const UUID DEFAULT_MATERIAL_UUID = 13700118063961433559;
 	constexpr f32 DEFAULT_MATERIAL_ROUGHTNESS = 0.f;
@@ -17,7 +18,7 @@ namespace Sapfire::assets {
 	constexpr sf::math::vec3 DEFAULT_MATERIAL_FRESNEL = {1.f, 1.f, 1.f};
 	const stl::string DEFAULT_MATERIAL_NAME = "Default Material";
 
-	void MaterialManager::add(const Sapfire::stl::string& path, Sapfire::UUID uuid, MaterialResource resource) {
+	void MaterialManager::add(const sf::stl::string& path, sf::UUID uuid, MaterialResource resource) {
 		material_resources[path] = resource;
 		uuid_to_path_map[uuid] = path;
 	}
@@ -35,7 +36,7 @@ namespace Sapfire::assets {
 		file.close();
 	}
 
-	void MaterialRegistry::import_material(d3d::GraphicsDevice& device, const stl::string& path) {
+	void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path) {
 		if (m_PathToMaterialAssetMap.contains(path))
 			return;
 		std::ifstream file{path};
@@ -67,13 +68,13 @@ namespace Sapfire::assets {
 			return;
 		}
 		const UUID uuid = UUID{j["UUID"]};
-		d3d::Material material{.name = fs::file_name(j["name"])};
+		sf::render::Material material{.name = fs::file_name(j["name"])};
 		material.roughness = j["roughness"];
 		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
 		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-		material.material_buffer = device.create_buffer<d3d::MaterialConstants>({
-			.usage = d3d::BufferUsage::ConstantBuffer,
-			.name = d3d::AnsiToWString(material.name),
+		material.material_buffer = device->create_buffer<sf::render::MaterialConstants>({
+			.usage = sf::render::BufferUsage::ConstantBuffer,
+			.name = sf::string_utils::to_wstring(material.name),
 		});
 		material.material_cb_index = material.material_buffer.cbv_index;
 		m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -83,7 +84,7 @@ namespace Sapfire::assets {
 		m_UUIDToPathMap[uuid] = path;
 	}
 
-	void MaterialRegistry::import_material(d3d::GraphicsDevice& device, const stl::string& path, UUID uuid) {
+	void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid) {
 		if (m_PathToMaterialAssetMap.contains(path))
 			return;
 		std::ifstream file{path};
@@ -110,13 +111,13 @@ namespace Sapfire::assets {
 			CORE_CRITICAL("Broken material at path {}. Does not contain roughness.", path);
 			return;
 		}
-		d3d::Material material{.name = fs::file_name(j["name"])};
+		sf::render::Material material{.name = fs::file_name(j["name"])};
 		material.roughness = j["roughness"];
 		material.diffuse_albedo = sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
 		material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-		material.material_buffer = device.create_buffer<d3d::MaterialConstants>({
-			.usage = d3d::BufferUsage::ConstantBuffer,
-			.name = d3d::AnsiToWString(material.name),
+		material.material_buffer = device->create_buffer<sf::render::MaterialConstants>({
+			.usage = sf::render::BufferUsage::ConstantBuffer,
+			.name = sf::string_utils::to_wstring(material.name),
 		});
 		material.material_cb_index = material.material_buffer.cbv_index;
 		m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -126,14 +127,14 @@ namespace Sapfire::assets {
 		m_UUIDToPathMap[uuid] = path;
 	}
 
-	void MaterialRegistry::import_material(d3d::GraphicsDevice& device, MaterialAsset&& asset, const stl::string& path) {
+	void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path) {
 		if (m_PathToMaterialAssetMap.contains(path)) {
 			CORE_ERROR("Material with path {} already exists.", path);
 			return;
 		}
 		asset.material.name = fs::file_name(path);
-		asset.material.material_buffer = device.create_buffer<d3d::MaterialConstants>({
-			.usage = d3d::BufferUsage::ConstantBuffer,
+		asset.material.material_buffer = device->create_buffer<d3d::MaterialConstants>({
+			.usage = sf::render::BufferUsage::ConstantBuffer,
 			.name = d3d::AnsiToWString(asset.material.name),
 		});
 		asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
@@ -142,7 +143,7 @@ namespace Sapfire::assets {
 		m_UUIDToPathMap[uuid] = path;
 	}
 
-	void MaterialRegistry::move_material(d3d::GraphicsDevice& device, const stl::string& old_path, const stl::string& new_path) {}
+	void MaterialRegistry::move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path) {}
 
 	void MaterialRegistry::release_material(const stl::string& path) {
 		if (!m_PathToMaterialAssetMap.contains(path)) {
@@ -212,7 +213,7 @@ namespace Sapfire::assets {
 		}
 	}
 
-	void MaterialRegistry::deserialize(d3d::GraphicsDevice& device, const stl::string& data) {
+	void MaterialRegistry::deserialize(sf::render::IGraphicsDevice* device, const stl::string& data) {
 		nlohmann::json j = nlohmann::json::parse(data)["assets"];
 		for (auto&& asset : j["material_registry"]) {
 			if (!asset.contains("path")) {
@@ -273,15 +274,15 @@ namespace Sapfire::assets {
 		return m_UUIDToPathMap.at(uuid);
 	}
 
-	MaterialAsset* MaterialRegistry::default_material(d3d::GraphicsDevice* device) {
-		const static stl::wstring name = d3d::AnsiToWString(DEFAULT_MATERIAL_NAME);
-		static d3d::MaterialConstants default_material_constants{
+	MaterialAsset* MaterialRegistry::default_material(sf::render::IGraphicsDevice* device) {
+		const static stl::wstring name = sf::string_utils::to_wstring(DEFAULT_MATERIAL_NAME);
+		static sf::render::MaterialConstants default_material_constants{
 			.diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
 			.fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
 			.roughness = DEFAULT_MATERIAL_ROUGHTNESS,
 		};
-		static d3d::Buffer buffer = device->create_buffer<d3d::MaterialConstants>({
-			.usage = d3d::BufferUsage::ConstantBuffer,
+		static sf::render::Buffer buffer = device->create_buffer<sf::render::MaterialConstants>({
+			.usage = sf::render::BufferUsage::ConstantBuffer,
 			.name = name,
 		});
 		static MaterialAsset default_mat{
@@ -292,11 +293,11 @@ namespace Sapfire::assets {
 				.fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
 				.roughness = DEFAULT_MATERIAL_ROUGHTNESS,
 				.material_buffer = buffer,
-				.material_cb_index = static_cast<s32>(buffer.cbv_index),
+				.material_cb_index = static_cast<i32>(buffer.cbv_index),
 			},
 		};
 		buffer.update(&default_material_constants);
 		return &default_mat;
 	}
 
-} // namespace Sapfire::assets
+} // namespace sf::assets

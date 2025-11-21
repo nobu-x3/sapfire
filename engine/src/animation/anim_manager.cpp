@@ -5,9 +5,9 @@
 #include "components/ec_manager.h"
 #include "render/graphics_device.h"
 
-namespace Sapfire::anim {
-	AnimationManager::AnimationManager(Sapfire::ECManager* ec, Sapfire::d3d::GraphicsDevice* device) :
-		m_ECManager(*ec), m_Device(*device) {}
+namespace sf::anim {
+	AnimationManager::AnimationManager(sf::ECManager* ec, sf::render::IGraphicsDevice* device) :
+		m_ECManager(*ec), m_Device(device) {}
 
 	void AnimationManager::update(f32 delta_time) {
 		auto& anim_components = m_ECManager.engine_components<components::AnimComponent>();
@@ -41,8 +41,8 @@ namespace Sapfire::anim {
 		}
 	}
 
-	const Sapfire::stl::vector<sf::math::mat4>& AnimationManager::final_transforms_for_current_clip(Entity entity) const {
+	const sf::stl::vector<sf::math::mat4>& AnimationManager::final_transforms_for_current_clip(Entity entity) const {
 		return m_EntityTransformsMap[entity.uuid()];
 	}
 
-} // namespace Sapfire::anim
+} // namespace sf::anim

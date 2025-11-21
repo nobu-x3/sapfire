@@ -2,7 +2,7 @@
 
 #include "animation/skinned_data.h"
 
-namespace Sapfire::anim {
+namespace sf::anim {
 	f32 BoneAnimation::start_time() const {
 		// keyframes are sorted by time, so first keyframe gives start time.
 		return keyframes.front().time_pos;
@@ -103,4 +103,4 @@ namespace Sapfire::anim {
 		}
 	}
 
-} // namespace Sapfire::anim
+} // namespace sf::anim

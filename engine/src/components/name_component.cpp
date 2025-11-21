@@ -3,7 +3,7 @@
 
 #include "components/name_component.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	ENGINE_COMPONENT_IMPL(NameComponent);
 
 	stl::unordered_map<stl::string, u32> g_Names{{"Entity", 0}};
@@ -60,4 +60,4 @@ namespace Sapfire::components {
 			g_Names[m_Name] = 0;
 		}
 	}
-} // namespace Sapfire
+} // namespace sf

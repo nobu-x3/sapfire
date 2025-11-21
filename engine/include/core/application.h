@@ -9,7 +9,7 @@
 #include "events/input_event.h"
 #include "events/keyboard_event.h"
 
-namespace Sapfire {
+namespace sf {
 
 	constexpr f32 FRAME_STATS_PERIOD = 1.0f;
 
@@ -75,4 +75,4 @@ namespace Sapfire {
 
 	// Must be defined in client
 	Application* create_application();
-} // namespace Sapfire
+} // namespace sf

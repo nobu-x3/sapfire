@@ -3,7 +3,7 @@
 #include "math/math.h"
 #include "components/component.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	class MovementComponent {
 		RTTI;
 		ENGINE_COMPONENT(MovementComponent)
@@ -26,4 +26,4 @@ namespace Sapfire::components {
 		sf::math::vec3 m_Acceleration{0.0f, 0.0f, 0.0f};
 		sf::math::vec3 m_Velocity{0.0f, 0.0f, 0.0f};
 	};
-} // namespace Sapfire
+} // namespace sf

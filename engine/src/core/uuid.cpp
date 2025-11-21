@@ -1,9 +1,8 @@
 #include "engpch.h"
 
-#include <rpcdce.h>
 #include "core/uuid.h"
 
-namespace Sapfire {
+namespace sf {
 
 	static std::random_device s_RandomDevice;
 	static std::mt19937_64 s_Engine(s_RandomDevice());
@@ -13,4 +12,4 @@ namespace Sapfire {
 
 	UUID::UUID(uint64_t uuid) : m_UUID(uuid) {}
 
-} // namespace Sapfire
+} // namespace sf

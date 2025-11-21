@@ -26,11 +26,11 @@ Shader compile(ShaderType type, const stl::wstring_view path, const stl::wstring
 } // namespace sf::render::dx12
 
 // Backward compatibility for old namespace
-namespace Sapfire::tools::shader_compiler {
+namespace sf::tools::shader_compiler {
     using sf::render::dx12::Shader;
     using sf::render::dx12::compile;
 }
 
-namespace Sapfire::d3d {
+namespace sf::d3d {
     using ShaderType = sf::render::dx12::ShaderType;
 }

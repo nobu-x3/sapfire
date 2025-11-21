@@ -9,7 +9,7 @@
 #include "core/logger.h"
 #include "tools/obj_loader.h"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
 	MeshRegistry::MeshRegistry(const stl::string& registry_file_path) : m_RegistryFilePath(fs::full_path(registry_file_path)) {}
 
@@ -210,12 +210,12 @@ namespace Sapfire::assets {
 
 	const UUID DEFAULT_MESH_UUID{5596545107579832552};
 
-	Sapfire::assets::MeshAsset* MeshRegistry::default_mesh() {
+	sf::assets::MeshAsset* MeshRegistry::default_mesh() {
 		static MeshAsset asset{
 			.uuid = DEFAULT_MESH_UUID,
-			.data = d3d::primitives::create_box(1, 1, 1, 0),
+			.data = sf::render::primitives::create_box(1, 1, 1, 0),
 		};
 		return &asset;
 	}
 
-} // namespace Sapfire::assets
+} // namespace sf::assets

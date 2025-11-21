@@ -6,7 +6,7 @@
 #include "core/rtti.h"
 #include "core/stl/shared_ptr.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	using ComponentType = u8;
 
@@ -83,7 +83,11 @@ namespace Sapfire::components {
 					break;
 				}
 			}
-			assert(index < m_Components.size(), "get_owner() assumes the given component is registered through ECManager.");
+			// Verify component is registered
+			if (index >= m_Components.size()) {
+				CORE_ERROR("get_owner() called on unregistered component");
+				return Entity{}; // Return invalid entity
+			}
 			return m_IndexToEntityMap[index];
 		}
 
@@ -236,36 +240,36 @@ namespace Sapfire::components {
 
 #define COMPONENT(type)                                                                                                                    \
 public:                                                                                                                                    \
-	inline const ::Sapfire::stl::string& to_string() const override { return s_ComponentName; }                                            \
-	inline ::Sapfire::components::ComponentType component_type() override { return s_ComponentType; }                                      \
-	inline void copy(::Sapfire::stl::shared_ptr<IComponent>& dest) override {                                                              \
-		dest = ::Sapfire::stl::make_shared<type>(::Sapfire::mem::ENUM::Game_Components, *this);                                            \
+	inline const ::sf::stl::string& to_string() const override { return s_ComponentName; }                                            \
+	inline ::sf::components::ComponentType component_type() override { return s_ComponentType; }                                      \
+	inline void copy(::sf::stl::shared_ptr<IComponent>& dest) override {                                                              \
+		dest = ::sf::stl::make_shared<type>(::sf::mem::ENUM::Game_Components, *this);                                            \
 	}                                                                                                                                      \
                                                                                                                                            \
 private:                                                                                                                                   \
-	static ::Sapfire::stl::string s_ComponentName;                                                                                         \
-	static ::Sapfire::components::ComponentType s_ComponentType;
+	static ::sf::stl::string s_ComponentName;                                                                                         \
+	static ::sf::components::ComponentType s_ComponentType;
 
 #define COMPONENT_IMPL(type)                                                                                                               \
-	::Sapfire::stl::string type::s_ComponentName = #type;                                                                                  \
-	::Sapfire::components::ComponentType type::s_ComponentType = ::Sapfire::components::ComponentRegistry::s_NextComponentTypeNumber;      \
-	::Sapfire::stl::shared_ptr<type> default_component_##type = ::Sapfire::stl::make_shared<type>(::Sapfire::mem::ENUM::Game_Components);  \
+	::sf::stl::string type::s_ComponentName = #type;                                                                                  \
+	::sf::components::ComponentType type::s_ComponentType = ::sf::components::ComponentRegistry::s_NextComponentTypeNumber;      \
+	::sf::stl::shared_ptr<type> default_component_##type = ::sf::stl::make_shared<type>(::sf::mem::ENUM::Game_Components);  \
 	struct RegisteredComponent##type {                                                                                                     \
 		RegisteredComponent##type() {                                                                                                      \
-			::Sapfire::components::ComponentRegistry::global_register_custom_component(default_component_##type);                          \
+			::sf::components::ComponentRegistry::global_register_custom_component(default_component_##type);                          \
 		}                                                                                                                                  \
 	};                                                                                                                                     \
 	RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT_IMPL(type)                                                                                                        \
 	struct RegisteredComponent##type {                                                                                                     \
-		RegisteredComponent##type() { ::Sapfire::components::ComponentRegistry::global_register_engine_component<type>(); }                \
+		RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_engine_component<type>(); }                \
 	};                                                                                                                                     \
 	RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT(type)                                                                                                             \
 public:                                                                                                                                    \
-	static ::Sapfire::stl::string to_string() { return #type; }                                                                            \
+	static ::sf::stl::string to_string() { return #type; }                                                                            \
                                                                                                                                            \
 private:
-} // namespace Sapfire::components
+} // namespace sf::components

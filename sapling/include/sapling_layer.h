@@ -28,7 +28,7 @@ public:
 	void on_render() final;
 
 	Sapfire::assets::AssetManager* asset_manager() { return m_AssetManager.get(); }
-	Sapfire::d3d::GraphicsDevice& gfx_device() { return *m_GraphicsDevice; }
+	Sapfire::render::IGraphicsDevice* gfx_device() { return m_GraphicsDevice.get(); }
 
 private:
 	void serialize();
@@ -42,10 +42,10 @@ private:
 
 private:
 	Sapfire::stl::array<Sapfire::stl::unique_ptr<SSubeditor>, 2> m_Subeditors{};
-	Sapfire::stl::unique_ptr<Sapfire::d3d::GraphicsDevice> m_GraphicsDevice{};
+	Sapfire::stl::unique_ptr<Sapfire::render::IGraphicsDevice> m_GraphicsDevice{};
 	Sapfire::stl::unique_ptr<Sapfire::assets::AssetManager> m_AssetManager{};
 	Sapfire::d3d::PipelineState m_PipelineState{};
-	Sapfire::d3d::Texture m_DepthTexture{};
+	Sapfire::sf::render::Texture m_DepthTexture{};
 	Sapfire::u8 m_ActiveSubeditors{0};
 	Sapfire::stl::string m_ProjectPath;
 	Sapfire::stl::string m_ProjectName;

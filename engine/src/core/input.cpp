@@ -10,7 +10,7 @@
 #include "core/input.h"
 #include "tools/profiling.h"
 
-namespace Sapfire::input {
+namespace sf::input {
 
 	constexpr f32 MOUSE_THRESHOLD = 0.001f;
 
@@ -52,7 +52,7 @@ namespace Sapfire::input {
 
 	u64 InputSystem::keyboard_state() { return s_Instance->m_KeyboardState; }
 
-	bool InputSystem::is_key_down(s32 scan_code) {
+	bool InputSystem::is_key_down(i32 scan_code) {
 #ifdef SF_PLATFORM_WINDOWS
 		return GetAsyncKeyState(scan_code);
 #else
@@ -93,4 +93,4 @@ namespace Sapfire::input {
 		}
 		mouse_position(s_Instance->m_MousePosition);
 	}
-} // namespace Sapfire::input
+} // namespace sf::input

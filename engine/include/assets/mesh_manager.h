@@ -5,20 +5,20 @@
 #include "render/d3d_primitives.h"
 #include "components/render_component.h"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
     struct SFAPI MeshResource {
-        Sapfire::components::CPUData cpu_data;
-        Sapfire::components::PerDrawConstants gpu_data;
+        sf::components::CPUData cpu_data;
+        sf::components::PerDrawConstants gpu_data;
     };
 
     struct SFAPI MeshManager {
-        Sapfire::stl::unordered_map<Sapfire::stl::string, MeshResource> mesh_resources;
+        sf::stl::unordered_map<sf::stl::string, MeshResource> mesh_resources;
     };
 
 	struct SFAPI MeshAsset {
 		UUID uuid;
-		stl::optional<d3d::primitives::MeshData> data;
+		stl::optional<sf::render::primitives::MeshData> data;
 	};
 
 	class SFAPI MeshRegistry {
@@ -56,4 +56,4 @@ namespace Sapfire::assets {
 		stl::unordered_map<stl::string, MeshAsset> m_PathToMeshAssetMap{};
 		stl::unordered_map<UUID, stl::string> m_UUIDToPathMap{};
 	};
-} // namespace Sapfire::assets
+} // namespace sf::assets

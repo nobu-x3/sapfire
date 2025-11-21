@@ -8,7 +8,7 @@
 struct SDL_Window;
 union SDL_Event;
 
-namespace Sapfire {
+namespace sf {
 
 	using EventCallbackFn = std::function<void(Event&)>;
 
@@ -49,4 +49,4 @@ namespace Sapfire {
 		SDL_Window* m_Window = nullptr;
 		u32 m_WindowID = 0;
 	};
-} // namespace Sapfire
+} // namespace sf

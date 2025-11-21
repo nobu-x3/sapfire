@@ -2,7 +2,7 @@
 
 #include "core/memory.h"
 
-namespace Sapfire::stl {
+namespace sf::stl {
 
 	template <typename T>
 	using shared_ptr = std::shared_ptr<T>;
@@ -15,4 +15,4 @@ namespace Sapfire::stl {
 	SFAPI constexpr shared_ptr<T> make_shared(mem::ENUM category, Args&&... args) {
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
-} // namespace Sapfire::stl
+} // namespace sf::stl

@@ -4,7 +4,7 @@
 #include "components/transform.h"
 #include "physics/physics_engine.h"
 
-namespace Sapfire::physics {
+namespace sf::physics {
 
 	PhysicsEngine::PhysicsEngine(ECManager* ec_manager) : m_ECManager(*ec_manager) {}
 
@@ -33,4 +33,4 @@ namespace Sapfire::physics {
 			transform.position(position);
 		}
 	}
-} // namespace Sapfire::physics
+} // namespace sf::physics

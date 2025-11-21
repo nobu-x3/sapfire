@@ -2,9 +2,9 @@
 
 #include "math/math.h"
 #include "core/core.h"
-#include "render/render_compat.h"
+#include "render/resource_types.h"
 
-namespace Sapfire::d3d {
+namespace sf::render {
 
 	struct SFAPI MaterialConstants {
 		sf::math::vec4 diffuse_albedo{1.f, 1.f, 1.f, 1.f};
@@ -18,6 +18,6 @@ namespace Sapfire::d3d {
 		sf::math::vec3 fresnel_r0{0.01f, 0.01f, 0.01f};
 		f32 roughness = 0.25f;
 		Buffer material_buffer{};
-		s32 material_cb_index = -1;
+		i32 material_cb_index = -1;
 	};
-} // namespace Sapfire::d3d
+} // namespace sf::render

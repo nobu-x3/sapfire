@@ -22,8 +22,8 @@ struct PassConstants {
 	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
 	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
-	// are spot lights for a maximum of MaxLights per object.
-	Sapfire::d3d::Light Lights[MaxLights];
+	// are spot lights for a maximum of sf::render::MAX_LIGHTS per object.
+	Sapfire::sf::render::Light Lights[sf::render::MAX_LIGHTS];
 };
 
 class SandboxGameContext final : public Sapfire::GameContext {
@@ -40,7 +40,7 @@ private:
 	void udpate_transform_buffer(Sapfire::f32 delta_time);
 
 private:
-	Sapfire::d3d::Texture m_DepthTexture{};
+	Sapfire::sf::render::Texture m_DepthTexture{};
 	Sapfire::d3d::PipelineState m_PipelineState{};
     PassConstants m_PassConstants{};
 };

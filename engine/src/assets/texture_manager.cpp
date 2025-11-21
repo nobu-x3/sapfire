@@ -2,15 +2,16 @@
 #include "engpch.h"
 
 #include "assets/texture_manager.h"
+#include "core/string_utils.h"
 #include "nlohmann/json.hpp"
 #include "render/d3d_util.h"
 #include "render/graphics_device.h"
 #include "render/resources.h"
 #include "tools/texture_loader.h"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
-	void TextureManager::add(const Sapfire::stl::string& path, Sapfire::UUID uuid, TextureResource resource) {
+	void TextureManager::add(const sf::stl::string& path, sf::UUID uuid, TextureResource resource) {
 		texture_resources[path] = resource;
 		uuid_to_path_map[uuid] = path;
 	}
@@ -28,73 +29,73 @@ namespace Sapfire::assets {
 		file.close();
 	}
 
-	void TextureRegistry::import_texture(d3d::GraphicsDevice& device, const stl::string& path) {
+	void TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path) {
 		auto uuid = UUID{};
-		s32 width{};
-		s32 height{};
+		i32 width{};
+		i32 height{};
 		void* data = tools::texture_loader::load(fs::full_path(path).c_str(), width, height, 4);
-		auto name = d3d::AnsiToWString(path);
+		auto name = sf::string_utils::to_wstring(path);
 		if (m_PathToTextureAssetMap.contains(path))
 			return;
 		m_PathToTextureAssetMap[path] = TextureAsset{
 			.uuid = uuid,
 			.description =
-				d3d::TextureCreationDesc{
-					.usage = d3d::TextureUsage::TextureFromPath,
+				sf::render::TextureCreationDesc{
+					.usage = sf::render::TextureUsage::TextureFromPath,
 					.width = static_cast<u32>(width),
 					.height = static_cast<u32>(height),
 					.name = name,
-					.path = d3d::AnsiToWString(path),
+					.path = sf::string_utils::to_wstring(path),
 				},
-			.data = device.create_texture(
-				d3d::TextureCreationDesc{
-					.usage = d3d::TextureUsage::TextureFromPath,
+			.data = device->create_texture(
+				sf::render::TextureCreationDesc{
+					.usage = sf::render::TextureUsage::TextureFromPath,
 					.name = name,
-					.path = d3d::AnsiToWString(fs::full_path(path)),
+					.path = sf::string_utils::to_wstring(fs::full_path(path)),
 				},
 				data),
 		};
 		m_UUIDToPathMap[uuid] = path;
 	}
 
-	void TextureRegistry::import_texture(d3d::GraphicsDevice& device, const stl::string& path, const d3d::TextureCreationDesc& desc,
+	void TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path, const sf::render::TextureCreationDesc& desc,
 										 UUID uuid) {
-		auto name = d3d::AnsiToWString(path);
+		auto name = sf::string_utils::to_wstring(path);
 		if (m_PathToTextureAssetMap.contains(path))
 			return;
 		m_PathToTextureAssetMap[path] = TextureAsset{
 			.uuid = uuid,
 			.description = desc,
-			.data = device.create_texture(d3d::TextureCreationDesc{
-				.usage = d3d::TextureUsage::TextureFromPath,
+			.data = device->create_texture(sf::render::TextureCreationDesc{
+				.usage = sf::render::TextureUsage::TextureFromPath,
 				.name = name,
-				.path = d3d::AnsiToWString(fs::full_path(path)),
+				.path = sf::string_utils::to_wstring(fs::full_path(path)),
 			}),
 		};
 		m_UUIDToPathMap[uuid] = path;
 	}
 
-	void TextureRegistry::move_texture(d3d::GraphicsDevice& device, const stl::string& old_path, const stl::string& new_path) {
+	void TextureRegistry::move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path) {
 		if (!m_PathToTextureAssetMap.contains(old_path)) {
 			CORE_WARN("Texture at path {} does not exist, adding new.", old_path);
 			auto uuid = UUID{};
-			s32 width{};
-			s32 height{};
+			i32 width{};
+			i32 height{};
 			void* data = tools::texture_loader::load(new_path.c_str(), width, height, 4);
 			auto name = d3d::AnsiToWString(new_path);
 			m_PathToTextureAssetMap[new_path] = TextureAsset{
 				.uuid = uuid,
 				.description =
-					d3d::TextureCreationDesc{
-						.usage = d3d::TextureUsage::TextureFromPath,
+					sf::render::TextureCreationDesc{
+						.usage = sf::render::TextureUsage::TextureFromPath,
 						.width = static_cast<u32>(width),
 						.height = static_cast<u32>(height),
 						.name = name,
 						.path = d3d::AnsiToWString(new_path),
 					},
-				.data = device.create_texture(
-					d3d::TextureCreationDesc{
-						.usage = d3d::TextureUsage::TextureFromPath,
+				.data = device->create_texture(
+					sf::render::TextureCreationDesc{
+						.usage = sf::render::TextureUsage::TextureFromPath,
 						.name = name,
 						.path = d3d::AnsiToWString(new_path),
 					},
@@ -185,7 +186,7 @@ namespace Sapfire::assets {
 		return j.dump();
 	}
 
-	void TextureRegistry::deserialize(d3d::GraphicsDevice& device, const stl::string& data) {
+	void TextureRegistry::deserialize(sf::render::IGraphicsDevice* device, const stl::string& data) {
 		nlohmann::json j = nlohmann::json::parse(data)["assets"];
 		if (!j.contains("texture_registry")) {
 			CORE_CRITICAL("Given texture registry string for deserialization deos not contain texture registry. The texture registry will "
@@ -254,7 +255,7 @@ namespace Sapfire::assets {
 						   path, data);
 				continue;
 			}
-			d3d::TextureCreationDesc desc;
+			sf::render::TextureCreationDesc desc;
 			desc.width = description["width"];
 			desc.height = description["height"];
 			desc.usage = description["usage"];
@@ -272,8 +273,8 @@ namespace Sapfire::assets {
 	constexpr u32 DEFAULT_TEXTURE_DIMENSIONS = 256;
 	constexpr u32 DEFAULT_TEXTURE_CHANNELS = 4;
 	constexpr u32 BYTE_COUNT = DEFAULT_TEXTURE_DIMENSIONS * DEFAULT_TEXTURE_DIMENSIONS * DEFAULT_TEXTURE_CHANNELS;
-	const d3d::TextureCreationDesc DEFAULT_TEXTURE_CREATION_INFO = {
-		.usage = d3d::TextureUsage::TextureFromData,
+	const sf::render::TextureCreationDesc DEFAULT_TEXTURE_CREATION_INFO = {
+		.usage = sf::render::TextureUsage::TextureFromData,
 		.width = 256,
 		.height = 256,
 		.format = DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -293,7 +294,7 @@ namespace Sapfire::assets {
 		return data;
 	}
 
-	TextureAsset* TextureRegistry::default_texture(d3d::GraphicsDevice* device) {
+	TextureAsset* TextureRegistry::default_texture(sf::render::IGraphicsDevice* device) {
 		const static UUID default_texture_uuid = UUID{5596545107579832553};
 		static auto data = default_texture_data();
 		static TextureAsset asset = {
@@ -304,4 +305,4 @@ namespace Sapfire::assets {
 		return &asset;
 	}
 
-} // namespace Sapfire::assets
+} // namespace sf::assets

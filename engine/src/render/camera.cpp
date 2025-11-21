@@ -3,7 +3,7 @@
 #include "render/camera.h"
 #include "math/math.h"
 
-namespace Sapfire {
+namespace sf {
 
 	Camera::Camera(f32 fov, f32 aspect, f32 near_plane, f32 far_plane) :
 		fov(fov), aspect(aspect), near_plane(near_plane), far_plane(far_plane) {
@@ -34,4 +34,4 @@ namespace Sapfire {
 		stl::vector<components::Transform> t{};
 		transform.update(t);
 	}
-} // namespace Sapfire
+} // namespace sf

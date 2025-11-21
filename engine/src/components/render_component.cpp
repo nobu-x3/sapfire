@@ -3,7 +3,7 @@
 #include "components/render_component.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	ENGINE_COMPONENT_IMPL(RenderComponent);
 
 	RenderComponent::RenderComponent(UUID mesh_uuid, UUID texture_uuid, UUID material_uuid, CPUData cpu_data,
@@ -70,4 +70,4 @@ namespace Sapfire::components {
 		});
 		END_RTTI();
 	}
-} // namespace Sapfire::components
+} // namespace sf::components

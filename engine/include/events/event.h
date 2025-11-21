@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Sapfire {
+namespace sf {
 	enum class EventType {
 		None = 0,
 		WindowClose,
@@ -63,4 +63,4 @@ namespace Sapfire {
 		Event& m_Event;
 	};
 
-} // namespace Sapfire
+} // namespace sf

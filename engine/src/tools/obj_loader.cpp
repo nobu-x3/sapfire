@@ -6,9 +6,9 @@
 #include "tiny_obj_loader.h"
 #include "tools/obj_loader.h"
 
-namespace Sapfire::tools {
+namespace sf::tools {
 
-	stl::optional<d3d::primitives::MeshData> OBJLoader::load_mesh(const stl::string& full_path) {
+	stl::optional<sf::render::primitives::MeshData> OBJLoader::load_mesh(const stl::string& full_path) {
 		tinyobj::attrib_t attrib;
 		stl::vector<tinyobj::shape_t> shapes;
 		stl::string warning, error;
@@ -20,7 +20,7 @@ namespace Sapfire::tools {
 			CORE_ERROR("Error while reading obj file: {}", error);
 			return {};
 		}
-		d3d::primitives::MeshData mesh_data{};
+		sf::render::primitives::MeshData mesh_data{};
 		sf::math::vec3 v_min{+FLT_MAX, +FLT_MAX, +FLT_MAX};
 		sf::math::vec3 v_max{-FLT_MAX, -FLT_MAX, -FLT_MAX};
 		// Loop over shapes
@@ -67,4 +67,4 @@ namespace Sapfire::tools {
 		mesh_data.aabb = sf::math::aabb(center, extents);
 		return mesh_data;
 	}
-} // namespace Sapfire::tools
+} // namespace sf::tools

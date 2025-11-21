@@ -20,8 +20,8 @@ constexpr f32 DEG_TO_RAD = PI / 180.0f;
 constexpr f32 RAD_TO_DEG = 180.0f / PI;
 
 // Utility functions
-inline f32 to_radians(f32 degrees) { return degrees * DEG_TO_RAD; }
-inline f32 to_degrees(f32 radians) { return radians * RAD_TO_DEG; }
+constexpr inline f32 to_radians(f32 degrees) { return degrees * DEG_TO_RAD; }
+constexpr inline f32 to_degrees(f32 radians) { return radians * RAD_TO_DEG; }
 
 inline f32 clamp(f32 value, f32 min, f32 max) {
     return value < min ? min : (value > max ? max : value);

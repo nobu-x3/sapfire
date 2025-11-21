@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "core/uuid.h"
 
-namespace Sapfire{
+namespace sf{
 
 	constexpr size_t MAX_COMPONENTS = 128;
 	using Signature = stl::bitset<MAX_COMPONENTS>;
@@ -44,14 +44,14 @@ namespace Sapfire{
 		stl::generational_index_allocator m_Allocator{};
 		stl::generational_vector<Entity> m_Entities{};
 	};
-} // namespace Sapfire
+} // namespace sf
   //
 namespace std {
 	template <typename T>
 	struct hash;
 
 	template <>
-	struct hash<Sapfire::Entity> {
-		std::size_t operator()(const Sapfire::Entity& entity) const { return entity.uuid(); }
+	struct hash<sf::Entity> {
+		std::size_t operator()(const sf::Entity& entity) const { return entity.uuid(); }
 	};
 } // namespace std

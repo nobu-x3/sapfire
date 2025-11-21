@@ -4,7 +4,7 @@
 #include "core/core.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	class TestCustomComponent : public IComponent {
 		RTTI_COMPONENT;
@@ -24,4 +24,4 @@ namespace Sapfire::components {
 	private:
 		stl::string m_Message{"Message"};
 	};
-} // namespace Sapfire
+} // namespace sf

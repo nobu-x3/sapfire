@@ -7,10 +7,10 @@
 #include "math/math.h"
 #include "physics/physics_engine.h"
 #include "render/camera.h"
-#include "render/render_compat.h"
+#include "render/render_backend.h"
 #include "render/material.h"
 
-namespace Sapfire {
+namespace sf {
 
 	struct ObjectConstants {
 		sf::math::mat4 World = sf::math::mat4::identity();
@@ -20,8 +20,8 @@ namespace Sapfire {
 		class PhysicsEngine;
 	}
 
-	namespace d3d {
-		class GraphicsDevice;
+	namespace render {
+		class IGraphicsDevice;
 	}
 
 	class Application;
@@ -56,17 +56,17 @@ namespace Sapfire {
 
 	protected:
 		ClientExtent* m_ClientExtent;
-		stl::unique_ptr<d3d::GraphicsDevice> m_GraphicsDevice;
+		sf::render::IGraphicsDevice* m_GraphicsDevice = nullptr;
 		stl::unique_ptr<physics::PhysicsEngine> m_PhysicsEngine;
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_RTIndexBuffers{};
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_VertexPosBuffers{};
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_VertexNormalBuffers{};
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_VertexTangentBuffers{};
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_VertexUVBuffers{};
-		Sapfire::stl::vector<Sapfire::d3d::Buffer> m_TransformBuffers{};
-		Sapfire::d3d::Buffer m_MainPassCB{};
+		sf::stl::vector<sf::render::Buffer> m_RTIndexBuffers{};
+		sf::stl::vector<sf::render::Buffer> m_VertexPosBuffers{};
+		sf::stl::vector<sf::render::Buffer> m_VertexNormalBuffers{};
+		sf::stl::vector<sf::render::Buffer> m_VertexTangentBuffers{};
+		sf::stl::vector<sf::render::Buffer> m_VertexUVBuffers{};
+		sf::stl::vector<sf::render::Buffer> m_TransformBuffers{};
+		sf::render::Buffer m_MainPassCB{};
 		assets::AssetManager m_AssetManager;
 		ECManager m_ECManager{};
 		Camera m_MainCamera{};
 	};
-} // namespace Sapfire
+} // namespace sf

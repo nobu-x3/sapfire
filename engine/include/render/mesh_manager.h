@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "render/d3d_primitives.h"
 
-namespace Sapfire::d3d {
+namespace sf::d3d {
     class MeshManager {
         public:
             bool import_mesh();

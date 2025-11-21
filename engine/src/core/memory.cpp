@@ -3,11 +3,11 @@
 #include <cstdlib>
 #include "core/memory.h"
 
-Sapfire::stl::unordered_map<Sapfire::mem::ENUM, size_t> g_CategorySizes{};
+sf::stl::unordered_map<sf::mem::ENUM, size_t> g_CategorySizes{};
 
-namespace Sapfire::mem {
+namespace sf::mem {
 
-	Sapfire::stl::unordered_map<Sapfire::mem::ENUM, size_t>& categories() { return g_CategorySizes; }
+	sf::stl::unordered_map<sf::mem::ENUM, size_t>& categories() { return g_CategorySizes; }
 
 	void memdump() {
 #if defined(DEBUG) | defined(_DEBUG)
@@ -69,15 +69,15 @@ namespace Sapfire::mem {
 		}
 		return os;
 	}
-} // namespace Sapfire::mem
+} // namespace sf::mem
 
-constexpr size_t CATEGORY_BYTE_LENGTH = sizeof(Sapfire::mem::ENUM) / sizeof(char);
+constexpr size_t CATEGORY_BYTE_LENGTH = sizeof(sf::mem::ENUM) / sizeof(char);
 constexpr size_t SIZE_BYTE_LENGTH = sizeof(size_t) / sizeof(char);
 
-void* operator new(size_t size, Sapfire::mem::ENUM category) {
+void* operator new(size_t size, sf::mem::ENUM category) {
 	alloc(category, size);
-	void* address = malloc(sizeof(Sapfire::mem::ENUM) + sizeof(size_t) + size);
-	auto* cat = reinterpret_cast<Sapfire::mem::ENUM*>(address);
+	void* address = malloc(sizeof(sf::mem::ENUM) + sizeof(size_t) + size);
+	auto* cat = reinterpret_cast<sf::mem::ENUM*>(address);
 	*cat = category;
 	auto* mem = reinterpret_cast<char*>(address);
 	mem += CATEGORY_BYTE_LENGTH;
@@ -92,8 +92,8 @@ void delete_memory(void* address) {
 	char* p_size_addr = mem - SIZE_BYTE_LENGTH;
 	char* p_cat_addr = p_size_addr - CATEGORY_BYTE_LENGTH;
 	size_t* p_size = reinterpret_cast<size_t*>(p_size_addr);
-	const Sapfire::mem::ENUM cat = *reinterpret_cast<Sapfire::mem::ENUM*>(p_cat_addr);
-	mem -= sizeof(Sapfire::mem::ENUM) / sizeof(char);
+	const sf::mem::ENUM cat = *reinterpret_cast<sf::mem::ENUM*>(p_cat_addr);
+	mem -= sizeof(sf::mem::ENUM) / sizeof(char);
 	dealloc(cat, *p_size);
 	free(p_cat_addr);
     address = nullptr;

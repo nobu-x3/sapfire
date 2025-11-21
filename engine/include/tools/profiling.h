@@ -9,7 +9,7 @@
 #include <mutex>
 #include <thread>
 
-namespace Sapfire {
+namespace sf {
 
 	using FloatingPointMicroseconds = std::chrono::duration<double, std::micro>;
 
@@ -175,7 +175,7 @@ namespace Sapfire {
 			return result;
 		}
 	} // namespace InstrumentorUtils
-} // namespace Sapfire
+} // namespace sf
 
 #define PROFILE 1
 #if PROFILE
@@ -200,11 +200,11 @@ namespace Sapfire {
 #define FUNC_SIG "FUNC_SIG unknown!"
 #endif
 
-#define PROFILE_BEGIN_SESSION(name, filepath) ::Sapfire::Instrumentor::Get().BeginSession(name, filepath)
-#define PROFILE_END_SESSION() ::Sapfire::Instrumentor::Get().EndSession()
+#define PROFILE_BEGIN_SESSION(name, filepath) ::sf::Instrumentor::Get().BeginSession(name, filepath)
+#define PROFILE_END_SESSION() ::sf::Instrumentor::Get().EndSession()
 #define PROFILE_SCOPE_LINE2(name, line)                                                                                                    \
-	constexpr auto fixedName##line = ::Sapfire::InstrumentorUtils::CleanupOutputString(name, "__cdecl ");                                  \
-	const ::Sapfire::InstrumentationTimer timer##line(fixedName##line.Data)
+	constexpr auto fixedName##line = ::sf::InstrumentorUtils::CleanupOutputString(name, "__cdecl ");                                  \
+	const ::sf::InstrumentationTimer timer##line(fixedName##line.Data)
 #define PROFILE_SCOPE_LINE(name, line) PROFILE_SCOPE_LINE2(name, line)
 #define PROFILE_SCOPE(name) PROFILE_SCOPE_LINE(name, __LINE__)
 #define PROFILE_FUNCTION() PROFILE_SCOPE(FUNC_SIG)

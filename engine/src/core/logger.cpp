@@ -4,7 +4,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include "core/logger.h"
 
-namespace Sapfire {
+namespace sf {
 
 	stl::shared_ptr<spdlog::logger> Log::s_CoreLogger;
 	stl::shared_ptr<spdlog::logger> Log::s_ClientLogger;
@@ -32,4 +32,4 @@ namespace Sapfire {
 
 	stl::shared_ptr<spdlog::logger>& Log::get_client_logger() { return s_ClientLogger; }
 
-} // namespace Sapfire
+} // namespace sf

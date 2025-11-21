@@ -3,7 +3,7 @@
 #include "components/movement_component.h"
 #include "core/rtti.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	ENGINE_COMPONENT_IMPL(MovementComponent);
 
 	MovementComponent::MovementComponent() { register_rtti(); }
@@ -41,4 +41,4 @@ namespace Sapfire::components {
 		END_RTTI();
 	}
 
-} // namespace Sapfire
+} // namespace sf

@@ -4,10 +4,10 @@
 #include "core/core.h"
 #include "core/stl/unique_ptr.h"
 
-namespace Sapfire::input {
+namespace sf::input {
 
 	struct SFAPI MousePosition {
-		s32 x = 0, y = 0;
+		i32 x = 0, y = 0;
 	};
 
 	struct SFAPI MouseState {
@@ -41,7 +41,7 @@ namespace Sapfire::input {
 		static MousePosition mouse_position();
 		static MouseState mouse_state();
 		static u64 keyboard_state();
-		static bool is_key_down(s32 scan_code);
+		static bool is_key_down(i32 scan_code);
 
 	private:
 		static stl::unique_ptr<InputSystem> s_Instance;
@@ -53,4 +53,4 @@ namespace Sapfire::input {
 		u64 m_KeyboardState{};
 	};
 
-} // namespace Sapfire::input
+} // namespace sf::input

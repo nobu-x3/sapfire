@@ -2,7 +2,7 @@
 
 #include <chrono>
 
-namespace Sapfire {
+namespace sf {
 
 	class Timer {
 	public:
@@ -20,4 +20,4 @@ namespace Sapfire {
 	private:
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_Start;
 	};
-} // namespace Sapfire
+} // namespace sf

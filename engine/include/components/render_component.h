@@ -2,36 +2,36 @@
 
 #include "components/component.h"
 
-namespace Sapfire {
+namespace sf {
 	namespace d3d {
 		class GraphicsDevice;
 	}
 	namespace assets {
 		class MeshRegistry;
 	}
-} // namespace Sapfire
+} // namespace sf
 
-namespace Sapfire::components {
+namespace sf::components {
 
 	struct PerDrawConstants {
-		Sapfire::u32 position_buffer_idx = 0;
-		Sapfire::u32 normal_buffer_idx = 0;
-		Sapfire::u32 tangent_buffer_idx = 0;
-		Sapfire::u32 uv_buffer_idx = 0;
-		Sapfire::u32 scene_cbuffer_idx = 0;
-		Sapfire::u32 pass_cbuffer_idx = 0;
-		Sapfire::u32 material_cbuffer_idx = 0;
-		Sapfire::u32 texture_cbuffer_idx = 0;
+		sf::u32 position_buffer_idx = 0;
+		sf::u32 normal_buffer_idx = 0;
+		sf::u32 tangent_buffer_idx = 0;
+		sf::u32 uv_buffer_idx = 0;
+		sf::u32 scene_cbuffer_idx = 0;
+		sf::u32 pass_cbuffer_idx = 0;
+		sf::u32 material_cbuffer_idx = 0;
+		sf::u32 texture_cbuffer_idx = 0;
 	};
 
 	struct CPUData {
-		Sapfire::u32 indices_size = 0;
-		Sapfire::u32 index_id = 0;
-		Sapfire::u32 position_idx = 0;
-		Sapfire::u32 normal_idx = 0;
-		Sapfire::u32 tangent_idx = 0;
-		Sapfire::u32 uv_idx = 0;
-		Sapfire::u32 transform_buffer_idx = 0;
+		sf::u32 indices_size = 0;
+		sf::u32 index_id = 0;
+		sf::u32 position_idx = 0;
+		sf::u32 normal_idx = 0;
+		sf::u32 tangent_idx = 0;
+		sf::u32 uv_idx = 0;
+		sf::u32 transform_buffer_idx = 0;
 	};
 
 	class RenderComponent {
@@ -65,4 +65,4 @@ namespace Sapfire::components {
 		PerDrawConstants m_PerDrawConstants{};
 		std::function<void(RenderComponent*)> m_OptionalSetter = nullptr;
 	};
-} // namespace Sapfire::components
+} // namespace sf::components

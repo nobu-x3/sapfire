@@ -2,7 +2,7 @@
 
 #include "components/anim_component.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	ENGINE_COMPONENT_IMPL(AnimComponent);
 
 	AnimComponent::AnimComponent() { register_rtti(); }
@@ -47,4 +47,4 @@ namespace Sapfire::components {
 		END_RTTI();
 	}
 
-} // namespace Sapfire::components
+} // namespace sf::components

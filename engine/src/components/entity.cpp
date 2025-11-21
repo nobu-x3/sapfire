@@ -2,7 +2,7 @@
 
 #include "components/entity.h"
 
-namespace Sapfire {
+namespace sf {
 
 	Entity::Entity(UUID uuid, stl::generational_index id) : m_UUID(uuid), m_Id(id) {}
 
@@ -62,4 +62,4 @@ namespace Sapfire {
 			return {};
 		return {*entity};
 	}
-} // namespace Sapfire
+} // namespace sf

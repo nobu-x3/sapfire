@@ -14,7 +14,7 @@ namespace EWidgetOrder {
 
 class SMaterialEditor final : public SSubeditor {
 public:
-	SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::d3d::GraphicsDevice* device);
+	SMaterialEditor(Sapfire::assets::AssetManager* am, Sapfire::render::IGraphicsDevice* device);
 	bool update(Sapfire::f32 delta_time) override;
 	void draw_menu() override;
 	void draw_dialogs();

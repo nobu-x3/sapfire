@@ -1,4 +1,5 @@
 #include "widgets/scene_view.h"
+#include "core/string_utils.h"
 #include "core/timer.h"
 #include "globals.h"
 #include "imgui.h"
@@ -33,15 +34,15 @@ namespace widgets {
 		// Indices [0, NUM_DIR_LIGHTS) are directional lights;
 		// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
 		// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
-		// are spot lights for a maximum of MaxLights per object.
-		Sapfire::d3d::Light Lights[MaxLights];
+		// are spot lights for a maximum of sf::render::MAX_LIGHTS per object.
+		Sapfire::sf::render::Light Lights[sf::render::MAX_LIGHTS];
 	};
 
 	using namespace Sapfire;
-	SSceneView::SSceneView(Sapfire::stl::string_view name, Sapfire::ECManager* ec_manager, Sapfire::d3d::GraphicsDevice* gfx_device) :
-		m_ECManager(*ec_manager), m_GraphicsDevice(*gfx_device),
+	SSceneView::SSceneView(Sapfire::stl::string_view name, Sapfire::ECManager* ec_manager, Sapfire::render::IGraphicsDevice* gfx_device) :
+		m_ECManager(*ec_manager), m_GraphicsDevice(gfx_device),
 		m_PhysicsEngine(stl::make_unique<physics::PhysicsEngine>(mem::ENUM::Editor, ec_manager)),
-		m_PipelineState(m_GraphicsDevice.create_pipeline_state({
+		m_PipelineState(m_GraphicsDevice->create_pipeline_state({
 			.shader_module =
 				{
 					.vertexShaderPath = L"bindless.hlsl",
@@ -51,21 +52,21 @@ namespace widgets {
 				},
 			.pipeline_name = L"Scene View Bindless Pipeline",
 		})),
-		m_DepthTexture(m_GraphicsDevice.create_texture({
-			.usage = d3d::TextureUsage::DepthStencil,
+		m_DepthTexture(m_GraphicsDevice->create_texture({
+			.usage = sf::render::TextureUsage::DepthStencil,
 			.width = 800,
 			.height = 600,
 			.format = sf::render::Format::D32_FLOAT,
 			.name = L"Scene View Depth Texture",
 		})),
-		m_MainPassCB(m_GraphicsDevice.create_buffer<PassConstants>(d3d::BufferCreationDesc{
-			.usage = d3d::BufferUsage::ConstantBuffer,
+		m_MainPassCB(m_GraphicsDevice->create_buffer<PassConstants>(sf::render::BufferCreationDesc{
+			.usage = sf::render::BufferUsage::ConstantBuffer,
 			.name = L"Scene View Main Pass Constant Buffer",
 		})),
 		m_WidgetName(name) {
-		for (int i = 0; i < d3d::MAX_FRAMES_IN_FLIGHT; ++i) {
-			m_OffscreenTextures.push_back(m_GraphicsDevice.create_texture({
-				.usage = Sapfire::d3d::TextureUsage::RenderTarget,
+		for (int i = 0; i < sf::render::MAX_FRAMES_IN_FLIGHT; ++i) {
+			m_OffscreenTextures.push_back(m_GraphicsDevice->create_texture({
+				.usage = Sapfire::sf::render::TextureUsage::RenderTarget,
 				.width = 800,
 				.height = 600,
 				.format = sf::render::Format::RGBA16_FLOAT,
@@ -80,9 +81,9 @@ namespace widgets {
 		bool already_has_component = m_ECManager.has_engine_component<components::RenderComponent>(entity);
 		auto* mesh_asset = resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh()
 															: editor()->asset_manager()->get_mesh(resource_paths.mesh_path);
-		auto* texture_asset = resource_paths.texture_path.empty() ? assets::TextureRegistry::default_texture(&m_GraphicsDevice)
+		auto* texture_asset = resource_paths.texture_path.empty() ? assets::TextureRegistry::default_texture(m_GraphicsDevice)
 																  : editor()->asset_manager()->get_texture(resource_paths.texture_path);
-		auto* material_asset = resource_paths.material_path.empty() ? assets::MaterialRegistry::default_material(&m_GraphicsDevice)
+		auto* material_asset = resource_paths.material_path.empty() ? assets::MaterialRegistry::default_material(m_GraphicsDevice)
 																	: editor()->asset_manager()->get_material(resource_paths.material_path);
 		if (!mesh_asset) {
 			editor()->asset_manager()->import_mesh(resource_paths.mesh_path);
@@ -102,9 +103,9 @@ namespace widgets {
 			assert(mesh_asset->data->normals.size() > 0);
 			assert(mesh_asset->data->texcs.size() > 0);
 			if (!already_has_component) {
-				m_TransformBuffers.emplace_back(m_GraphicsDevice.create_buffer<ObjectConstants>({
-					.usage = d3d::BufferUsage::ConstantBuffer,
-					.name = L"Transform buffer " + d3d::AnsiToWString(resource_paths.mesh_path),
+				m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer<ObjectConstants>({
+					.usage = sf::render::BufferUsage::ConstantBuffer,
+					.name = L"Transform buffer " + sf::string_utils::to_wstring(resource_paths.mesh_path),
 				}));
 			}
 			bool should_add_tangent = false;
@@ -112,37 +113,37 @@ namespace widgets {
 			if (should_allocate_mesh) {
 				const stl::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
 					? L"Default Mesh"
-					: d3d::AnsiToWString(resource_paths.mesh_path);
-				m_RTIndexBuffers.push_back(m_GraphicsDevice.create_buffer<u16>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::IndexBuffer,
+					: sf::string_utils::to_wstring(resource_paths.mesh_path);
+				m_RTIndexBuffers.push_back(m_GraphicsDevice->create_buffer<u16>(
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::IndexBuffer,
 						.name = L"Index buffer " + name,
 					},
 					mesh_asset->data->indices16()));
-				m_VertexPosBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+				m_VertexPosBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Pos buffer " + name,
 					},
 					mesh_asset->data->positions));
-				m_VertexNormalBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+				m_VertexNormalBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::StructuredBuffer,
 						.name = L"Vertex Norm buffer " + name,
 					},
 					mesh_asset->data->normals));
 				if (mesh_asset->data->tangentus.size() > 0) {
-					m_VertexTangentBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec3>(
-						d3d::BufferCreationDesc{
-							.usage = d3d::BufferUsage::StructuredBuffer,
+					m_VertexTangentBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+						sf::render::BufferCreationDesc{
+							.usage = sf::render::BufferUsage::StructuredBuffer,
 							.name = L"Vertex Tang buffer " + name,
 						},
 						mesh_asset->data->tangentus));
 					should_add_tangent = true;
 				}
-				m_VertexUVBuffers.push_back(m_GraphicsDevice.create_buffer<sf::math::vec2>(
-					d3d::BufferCreationDesc{
-						.usage = d3d::BufferUsage::StructuredBuffer,
+				m_VertexUVBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec2>(
+					sf::render::BufferCreationDesc{
+						.usage = sf::render::BufferUsage::StructuredBuffer,
 						.name = L"Vertex UV buffer " + name,
 					},
 					mesh_asset->data->texcs));
@@ -160,15 +161,15 @@ namespace widgets {
 
 			};
 			u32 material_cbuffer_idx = 0;
-			if (material_asset->uuid == assets::MaterialRegistry::default_material(&m_GraphicsDevice)->uuid) {
+			if (material_asset->uuid == assets::MaterialRegistry::default_material(m_GraphicsDevice)->uuid) {
 				material_cbuffer_idx = material_asset->material.material_cb_index;
 			} else {
 				material_cbuffer_idx = editor()->asset_manager()->material_resource_exists(resource_paths.material_path)
 					? editor()->asset_manager()->get_material_resource(resource_paths.material_path).gpu_idx
-					: assets::MaterialRegistry::default_material(&m_GraphicsDevice)->material.material_cb_index;
+					: assets::MaterialRegistry::default_material(m_GraphicsDevice)->material.material_cb_index;
 			}
 			u32 texture_cbuffer_idx = 0;
-			if (texture_asset->uuid == assets::TextureRegistry::default_texture(&m_GraphicsDevice)->uuid) {
+			if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_GraphicsDevice)->uuid) {
 				texture_cbuffer_idx = texture_asset->data.srv_index;
 			} else {
 				texture_cbuffer_idx = editor()->asset_manager()->texture_resource_exists(resource_paths.texture_path)
@@ -266,22 +267,22 @@ namespace widgets {
 			} else if (m_Resizing && g_RiseTimer.elapsed_millis() > 1000) {
 				m_MainCamera = {CAMERA_FOV, work_size.x / work_size.y, 0.1f, 1000.f};
 				m_Resizing = false;
-				m_GraphicsDevice.direct_command_queue()->flush();
-				for (int i = 0; i < d3d::MAX_FRAMES_IN_FLIGHT; ++i) {
+				m_GraphicsDevice->direct_command_queue()->flush();
+				for (int i = 0; i < sf::render::MAX_FRAMES_IN_FLIGHT; ++i) {
 					auto& offscreen_texture = m_OffscreenTextures[i];
 					offscreen_texture.allocation.reset();
-					offscreen_texture = m_GraphicsDevice.create_texture({
-						.usage = Sapfire::d3d::TextureUsage::RenderTarget,
+					offscreen_texture = m_GraphicsDevice->create_texture({
+						.usage = Sapfire::sf::render::TextureUsage::RenderTarget,
 						.width = static_cast<u32>(DOCK_SIZE.x),
 						.height = static_cast<u32>(DOCK_SIZE.y),
-						.format = DXGI_FORMAT_R16G16B16A16_FLOAT,
+						.format = sf::render::Format::RGBA16_FLOAT,
 						.optional_initial_state = D3D12_RESOURCE_STATE_COMMON,
 						.name = L"Scene View Offscreen Texture " + std::to_wstring(i),
 					});
 				}
 				m_DepthTexture.allocation.reset();
-				m_DepthTexture = m_GraphicsDevice.create_texture({
-					.usage = d3d::TextureUsage::DepthStencil,
+				m_DepthTexture = m_GraphicsDevice->create_texture({
+					.usage = sf::render::TextureUsage::DepthStencil,
 					.width = static_cast<u32>(DOCK_SIZE.x),
 					.height = static_cast<u32>(DOCK_SIZE.y),
 					.format = DXGI_FORMAT_D32_FLOAT,
@@ -290,8 +291,8 @@ namespace widgets {
 				ImGui::End();
 				return false;
 			}
-			ImGui::Image((ImTextureID)m_GraphicsDevice.cbv_srv_uav_descriptor_heap()
-							 ->descriptor_handle_from_index(m_OffscreenTextures[m_GraphicsDevice.current_frame_id()].srv_index)
+			ImGui::Image((ImTextureID)m_GraphicsDevice->cbv_srv_uav_descriptor_heap()
+							 ->descriptor_handle_from_index(m_OffscreenTextures[m_GraphicsDevice->current_frame_id()].srv_index)
 							 .gpu_descriptor_handle.ptr,
 						 ImVec2(DOCK_SIZE.x, DOCK_SIZE.y));
 		}
@@ -335,7 +336,7 @@ namespace widgets {
 
 	void SSceneView::update_materials() {
 		for (auto&& [path, asset] : editor()->asset_manager()->path_material_map()) {
-			d3d::MaterialConstants data{
+			sf::render::MaterialConstants data{
 				.diffuse_albedo = asset.material.diffuse_albedo,
 				.fresnel_r0 = asset.material.fresnel_r0,
 				.roughness = asset.material.roughness,

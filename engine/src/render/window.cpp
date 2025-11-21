@@ -11,7 +11,7 @@
 #include <SDL3/SDL_syswm.h>
 #endif
 
-namespace Sapfire {
+namespace sf {
 	Window::Window(const WindowParams& params) :
 		m_WindowExtent({params.width, params.height}), mf_EventCallback(params.callback), m_Resizing(false) {
 
@@ -162,8 +162,8 @@ namespace Sapfire {
 		case SDL_EVENT_MOUSE_MOTION:
 			{
 				MouseMovedEvent mouse_moved(
-					static_cast<s32>(event.motion.x),
-					static_cast<s32>(event.motion.y)
+					static_cast<i32>(event.motion.x),
+					static_cast<i32>(event.motion.y)
 				);
 				mf_EventCallback(mouse_moved);
 				break;
@@ -182,4 +182,4 @@ namespace Sapfire {
 			}
 		}
 	}
-} // namespace Sapfire
+} // namespace sf

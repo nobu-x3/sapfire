@@ -2,7 +2,7 @@
 
 #include "components/component.h"
 
-namespace Sapfire::components {
+namespace sf::components {
 	ComponentRegistry::ComponentRegistry() :
 		m_ComponentTypes(s_ComponentTypes), m_ComponentTypeNameMap(s_ComponentTypeNameMap), m_EngineComponentLists(s_EngineComponentLists),
 		m_CustomComponentLists(s_CustomComponentLists), m_NextComponentTypeNumber(s_NextComponentTypeNumber) {}
@@ -101,4 +101,4 @@ namespace Sapfire::components {
 				component_list->entity_destroyed(entity);
 		}
 	}
-} // namespace Sapfire::components
+} // namespace sf::components

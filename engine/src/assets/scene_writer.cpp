@@ -13,7 +13,7 @@
 #include "components/transform.h"
 #include "nlohmann/json.hpp"
 
-namespace Sapfire::assets {
+namespace sf::assets {
 
 	SceneWriter::SceneWriter(ECManager* ec, AssetManager* am) : m_ECManager(*ec), m_AssetManager(*am) {}
 
@@ -69,7 +69,7 @@ namespace Sapfire::assets {
 
 	void SceneWriter::deserealize(
 		const stl::string& scene_path,
-		stl::function<void(Sapfire::Entity entity, const Sapfire::RenderComponentResourcePaths& resource_paths)> render_component_setter) {
+		stl::function<void(sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths)> render_component_setter) {
 		auto full_path = fs::full_path(scene_path);
 		auto relative_path = fs::relative_path(scene_path);
 		std::ifstream file{relative_path};
@@ -185,4 +185,4 @@ namespace Sapfire::assets {
 			}
 		}
 	}
-} // namespace Sapfire::assets
+} // namespace sf::assets

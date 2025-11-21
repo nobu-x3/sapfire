@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 
-namespace Sapfire {
+namespace sf {
 
 	class SFAPI UUID {
 	public:
@@ -15,15 +15,15 @@ namespace Sapfire {
 		uint64_t m_UUID;
 	};
 
-} // namespace Sapfire
+} // namespace sf
 
 namespace std {
 	template <typename T>
 	struct hash;
 
 	template <>
-	struct hash<Sapfire::UUID> {
-		std::size_t operator()(const Sapfire::UUID& uuid) const { return (uint64_t)uuid; }
+	struct hash<sf::UUID> {
+		std::size_t operator()(const sf::UUID& uuid) const { return (uint64_t)uuid; }
 	};
 
 } // namespace std

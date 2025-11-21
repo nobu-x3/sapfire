@@ -3,7 +3,7 @@
 #include "core/core.h"
 #include "events/event.h"
 
-namespace Sapfire {
+namespace sf {
 
 	enum class MouseButton { LMB, RMB, MMB };
 
@@ -39,9 +39,9 @@ namespace Sapfire {
 
 	class MouseMovedEvent final : public Event {
 	public:
-		MouseMovedEvent(s32 new_x, s32 new_y) : m_X(new_x), m_Y(new_y) {}
-		s32 x() const { return m_X; }
-		s32 y() const { return m_Y; }
+		MouseMovedEvent(i32 new_x, i32 new_y) : m_X(new_x), m_Y(new_y) {}
+		i32 x() const { return m_X; }
+		i32 y() const { return m_Y; }
 		stl::string to_string() const final {
 			stl::stringstream ss;
 			ss << "MouseMovedEvent: delta x: " << m_X << ", delta y: " << m_Y;
@@ -51,7 +51,7 @@ namespace Sapfire {
 		EVENT_CLASS_TYPE(MouseMoved)
 		EVENT_CLASS_CATEGORY(EventCategory::EventCategoryMouse)
 	private:
-		s32 m_X;
-		s32 m_Y;
+		i32 m_X;
+		i32 m_Y;
 	};
-} // namespace Sapfire
+} // namespace sf
