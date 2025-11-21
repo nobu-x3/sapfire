@@ -2,7 +2,6 @@
 
 #include "assets/asset_manager.h"
 #include "nlohmann/json.hpp"
-#include "render/graphics_device.h"
 
 namespace Sapfire::assets {
 

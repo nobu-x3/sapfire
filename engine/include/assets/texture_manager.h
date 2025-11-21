@@ -2,7 +2,7 @@
 
 #include "core/core.h"
 #include "core/uuid.h"
-#include "render/resources.h"
+#include "render/render_compat.h"
 
 namespace Sapfire {
 	namespace d3d {

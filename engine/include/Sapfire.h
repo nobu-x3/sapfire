@@ -43,18 +43,9 @@
 /////////////////////////////////
 /////// RENDERING ///////////////
 #include "render/camera.h"
-#include "render/command_queue.h"
-#include "render/context.h"
-#include "render/d3d_primitives.h"
-#include "render/d3d_util.h"
-#include "render/descriptor_heap.h"
-#include "render/graphics_context.h"
-#include "render/graphics_device.h"
+#include "render/render_compat.h"
 #include "render/lights.h"
 #include "render/material.h"
-#include "render/memory_allocator.h"
-#include "render/pipeline_state.h"
-#include "render/resources.h"
 #include "render/upload_buffer.h"
 #include "render/window.h"
 /////////////////////////////////

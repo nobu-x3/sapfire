@@ -2,7 +2,7 @@
 #include <dxcapi.h>
 #include <wrl.h>
 #include "core/core.h"
-#include "render/resources.h"
+#include "render/deprecated/resources.h"
 
 namespace Sapfire::tools::shader_compiler {
 

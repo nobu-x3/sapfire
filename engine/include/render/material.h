@@ -2,7 +2,7 @@
 
 #include <DirectXMath.h>
 #include "core/core.h"
-#include "render/resources.h"
+#include "render/render_compat.h"
 
 namespace Sapfire::d3d {
 
