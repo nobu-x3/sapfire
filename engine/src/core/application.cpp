@@ -13,6 +13,7 @@
 
 namespace Sapfire {
 
+#ifdef SF_PLATFORM_WINDOWS
 	// Setting the Agility SDK parameters.
 	extern "C" {
 	__declspec(dllexport) extern const UINT D3D12SDKVersion = 614u;
@@ -20,6 +21,7 @@ namespace Sapfire {
 	extern "C" {
 	__declspec(dllexport) extern const char* D3D12SDKPath = ".\\";
 	}
+#endif
 
 	bool calculate_frame_stats(f32 delta, f32& out_fps);
 
@@ -32,7 +34,7 @@ namespace Sapfire {
 		fs::FileSystem::locate_root_directory();
 		m_Window = stl::make_unique<Window>(
 			mem::ENUM::Engine_Core,
-			WindowParams{desc.width, desc.height, stl::string(desc.name), BIND_EVENT_FN(Application::on_event), desc.window_proc});
+			WindowParams{desc.width, desc.height, stl::string(desc.name), BIND_EVENT_FN(Application::on_event)});
 	}
 
 	Application::~Application() { PROFILE_FUNCTION(); }

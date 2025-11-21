@@ -30,7 +30,7 @@ namespace Sapfire {
 
 	struct GameContextCreationDesc {
 		ClientExtent* client_extent;
-		HWND window_handle;
+		void* window_handle; // Native window handle (HWND on Windows, X11 Window on Linux, etc.)
 		stl::string mesh_registry_path{"mesh_registry.db"};
 		stl::string texture_registry_path{"texture_registry.db"};
 		stl::string material_registry_path{"material_registry.db"};

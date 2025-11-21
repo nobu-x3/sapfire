@@ -1,8 +1,11 @@
 #include "engpch.h"
 
 #include "math/math.h"
+#include "core/platform.h"
+#ifdef SF_PLATFORM_WINDOWS
 #include <windows.h>
 #include <winuser.h>
+#endif
 #include "core/core.h"
 #include "core/input.h"
 #include "tools/profiling.h"
@@ -49,7 +52,14 @@ namespace Sapfire::input {
 
 	u64 InputSystem::keyboard_state() { return s_Instance->m_KeyboardState; }
 
-	bool InputSystem::is_key_down(s32 scan_code) { return GetAsyncKeyState(scan_code); }
+	bool InputSystem::is_key_down(s32 scan_code) {
+#ifdef SF_PLATFORM_WINDOWS
+		return GetAsyncKeyState(scan_code);
+#else
+		// TODO: Implement SDL3-based keyboard input for Linux/macOS
+		return false;
+#endif
+	}
 
 	void InputSystem::update() {
 		PROFILE_FUNCTION();
@@ -64,6 +74,8 @@ namespace Sapfire::input {
 				comp.get().mouse_delta_y = 0.f;
 			}
 			sf::math::vec4 input_axis{0.f, 0.f, 0.f, 0.f};
+#ifdef SF_PLATFORM_WINDOWS
+			// TODO: Replace with SDL3 keyboard state polling for cross-platform support
 			if (is_key_down(VK_UP)) {
 				input_axis.x += 1;
 			}
@@ -76,6 +88,7 @@ namespace Sapfire::input {
 			if (is_key_down(VK_LEFT)) {
 				input_axis.y -= 1;
 			}
+#endif
 			comp.get().input_axis = input_axis;
 		}
 		mouse_position(s_Instance->m_MousePosition);

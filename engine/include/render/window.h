@@ -4,10 +4,9 @@
 #include "core/core.h"
 #include "events/event.h"
 
-#ifdef SF_PLATFORM_WINDOWS
-#include <windows.h>
-#include <wrl.h>
-#endif
+// Forward declare SDL types
+struct SDL_Window;
+union SDL_Event;
 
 namespace Sapfire {
 
@@ -18,7 +17,6 @@ namespace Sapfire {
         u64 height = 0;
 		stl::string name;
 		EventCallbackFn callback{nullptr};
-		LRESULT (*window_proc)(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) = nullptr;
 	};
 
 	struct SFAPI WindowExtent {
@@ -36,18 +34,19 @@ namespace Sapfire {
 		bool is_resizing() const { return m_Resizing; }
 		void is_minimized(bool val) { m_Minimized = val; }
 		bool is_minimized() const { return m_Minimized; }
-#ifdef SF_PLATFORM_WINDOWS
-		HWND handle() { return m_Hwnd; }
-		static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-#endif
+
+		// Get native window handle
+		SDL_Window* sdl_handle() { return m_Window; }
+		void* native_handle(); // Returns HWND on Windows, X11 Window on Linux, etc.
 
 	private:
+		void handle_sdl_event(const SDL_Event& event);
+
 		WindowExtent m_WindowExtent;
 		EventCallbackFn mf_EventCallback;
 		bool m_Resizing = false;
 		bool m_Minimized = false;
-#ifdef SF_PLATFORM_WINDOWS
-		HWND m_Hwnd;
-#endif
+		SDL_Window* m_Window = nullptr;
+		u32 m_WindowID = 0;
 	};
 } // namespace Sapfire

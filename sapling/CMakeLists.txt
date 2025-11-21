@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
 project(Sapling VERSION 0.1)
 
-add_subdirectory(vendor/json)
+# Note: json is provided by Engine, no need to add it again
 
 file(GLOB IMGUI_FILES "vendor/imgui/*.h"
     "vendor/imgui/*.cpp"
@@ -41,7 +41,7 @@ target_include_directories(Sapling PUBLIC
     include
     vendor/imgui
     vendor/ImGuiFileDialog
-    vendor/json/include
+    ${ROOT_PATH_ABS}/engine/vendor/json/include
     )
 
 target_link_libraries(Sapling

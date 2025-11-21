@@ -168,7 +168,7 @@ private:
     Format m_BackBufferFormat;
 
     // Window data
-    HWND m_WindowHandle = nullptr;
+    void* m_WindowHandle = nullptr;  // HWND on Windows
     u32 m_WindowWidth = 0;
     u32 m_WindowHeight = 0;
 

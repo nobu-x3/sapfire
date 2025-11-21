@@ -8,7 +8,7 @@
 namespace sf::render::dx12 {
 
 DX12GraphicsDevice::DX12GraphicsDevice(const SwapchainCreationDesc& desc) {
-    m_WindowHandle = static_cast<HWND>(desc.window_handle);
+    m_WindowHandle = desc.window_handle;
     m_WindowWidth = desc.width;
     m_WindowHeight = desc.height;
     m_BackBufferFormat = desc.format;
@@ -355,14 +355,14 @@ void DX12GraphicsDevice::init_swapchain_resources(const SwapchainCreationDesc& d
     Microsoft::WRL::ComPtr<IDXGISwapChain1> swapchain1;
     dx12_check(m_Factory->CreateSwapChainForHwnd(
         m_DirectQueue->get_d3d12_queue(),
-        m_WindowHandle,
+        static_cast<HWND>(m_WindowHandle),
         &swapchain_desc,
         nullptr,
         nullptr,
         &swapchain1
     ));
 
-    dx12_check(m_Factory->MakeWindowAssociation(m_WindowHandle, DXGI_MWA_NO_ALT_ENTER));
+    dx12_check(m_Factory->MakeWindowAssociation(static_cast<HWND>(m_WindowHandle), DXGI_MWA_NO_ALT_ENTER));
     dx12_check(swapchain1.As(&m_Swapchain));
 
     m_CurrentBackBufferIndex = m_Swapchain->GetCurrentBackBufferIndex();

@@ -13,3 +13,33 @@
 [submodule "sapling/vendor/json"]
 	path = sapling/vendor/json
 	url = https://github.com/nlohmann/json.git
+[submodule "engine/vendor/D3D12MemoryAllocator"]
+	path = engine/vendor/D3D12MemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator.git
+[submodule "engine/vendor/DirectX-Headers"]
+	path = engine/vendor/DirectX-Headers
+	url = https://github.com/microsoft/DirectX-Headers.git
+[submodule "engine/vendor/DirectXTK12"]
+	path = engine/vendor/DirectXTK12
+	url = https://github.com/microsoft/DirectXTK12.git
+[submodule "engine/vendor/dxc"]
+	path = engine/vendor/dxc
+	url = https://github.com/microsoft/DirectXShaderCompiler.git
+[submodule "engine/vendor/json"]
+	path = engine/vendor/json
+	url = https://github.com/nlohmann/json.git
+[submodule "engine/vendor/spdlog"]
+	path = engine/vendor/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "engine/vendor/stb"]
+	path = engine/vendor/stb
+	url = https://github.com/nothings/stb.git
+[submodule "engine/vendor/tinygltf"]
+	path = engine/vendor/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
+[submodule "engine/vendor/tinyobj"]
+	path = engine/vendor/tinyobj
+	url = https://github.com/tinyobjloader/tinyobjloader.git
+[submodule "engine/vendor/SDL3"]
+	path = engine/vendor/SDL3
+	url = https://github.com/libsdl-org/SDL.git

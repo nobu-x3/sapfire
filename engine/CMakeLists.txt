@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS True)
@@ -26,12 +26,13 @@ set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ${no_dev_warnings_backup} CACHE INTERNAL "
 ####### DirectX-Headers ##########
 # add_subdirectory(vendor/DirectX-Headers)
 ##################################
-####### DirectXTK12 ##############
-set(DIRECTX_DXC_PATH vendor/dxc/bin/x64/dxc.exe)
-add_subdirectory(vendor/DirectXTK12)
-##################################
-###### D3D12MemoryAllocator ######
-add_subdirectory(vendor/D3D12MemoryAllocator)
+####### DirectXTK12 (Windows only) ##
+if(WIN32)
+    set(DIRECTX_DXC_PATH vendor/dxc/bin/x64/dxc.exe)
+    add_subdirectory(vendor/DirectXTK12)
+    ###### D3D12MemoryAllocator ######
+    add_subdirectory(vendor/D3D12MemoryAllocator)
+endif()
 ##################################
 ###### json ######################
 add_subdirectory(vendor/json)
@@ -42,27 +43,49 @@ add_subdirectory(vendor/tinyobj)
 add_library(Engine STATIC ${SAPFIRE_TRANSLATION_UNITS})
 #target_compile_options(Engine PRIVATE -Wall -Wextra)
 target_compile_definitions(Engine PUBLIC SF_BUILD_DLL)
-target_include_directories(Engine PUBLIC include
-                                        vendor/DirectXAgilitySDK/include
-                                        vendor/DirectXAgilitySDK/include/d3dx12
-                                        vendor/DirectXTK12/Inc
-                                        vendor/D3D12MemoryAllocator/include
-                                        vendor/stb
-                                        vendor/json/include
-                                        vendor/tinyobj
-                                        )
-target_include_directories(Engine SYSTEM INTERFACE vendor/spdlog/include vendor/dxc/inc)
+
+# Common include directories
+target_include_directories(Engine PUBLIC
+    include
+    vendor/stb
+    vendor/json/include
+    vendor/tinyobj
+    vendor/SDL3/include
+)
+
+# Windows-specific (DX12) include directories
+if(WIN32)
+    target_include_directories(Engine PUBLIC
+        vendor/DirectXAgilitySDK/include
+        vendor/DirectXAgilitySDK/include/d3dx12
+        vendor/DirectXTK12/Inc
+        vendor/D3D12MemoryAllocator/include
+    )
+endif()
+target_include_directories(Engine SYSTEM INTERFACE vendor/spdlog/include)
+if(WIN32)
+    target_include_directories(Engine SYSTEM INTERFACE vendor/dxc/inc)
+endif()
 target_precompile_headers(Engine PRIVATE include/engpch.h)
+
+# Common libraries
 target_link_libraries(Engine PUBLIC
     spdlog::spdlog
-    D3D12.lib
-    dxgi.lib
-    d3dcompiler.lib
-    dxguid.lib
-    ${CMAKE_CURRENT_LIST_DIR}/vendor/dxc/lib/x64/dxcompiler.lib
-    DirectXTK12
-    D3D12MemoryAllocator
     tinyobjloader
+    SDL3::SDL3
     PRIVATE
     nlohmann_json::nlohmann_json
+)
+
+# Windows-specific (DX12) libraries
+if(WIN32)
+    target_link_libraries(Engine PUBLIC
+        D3D12.lib
+        dxgi.lib
+        d3dcompiler.lib
+        dxguid.lib
+        ${CMAKE_CURRENT_LIST_DIR}/vendor/dxc/lib/x64/dxcompiler.lib
+        DirectXTK12
+        D3D12MemoryAllocator
     )
+endif()

@@ -209,7 +209,7 @@ struct ComputePipelineStateDesc {
 // ============================================================================
 
 struct SwapchainCreationDesc {
-    void* window_handle = nullptr;  // HWND on Windows, SDL_Window* later
+    void* window_handle = nullptr;  // Native window handle (HWND on Windows, X11 Window on Linux, etc.)
     u32 width = 1920;
     u32 height = 1080;
     u32 buffer_count = 3;

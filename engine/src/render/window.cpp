@@ -1,153 +1,185 @@
 #include "engpch.h"
 
-#include <windowsx.h>
-#include <winuser.h>
+#include <SDL3/SDL.h>
 #include "events/application_event.h"
 #include "events/input_event.h"
 #include "events/keyboard_event.h"
 #include "render/window.h"
+#include "core/logger.h"
+
+#ifdef SF_PLATFORM_WINDOWS
+#include <SDL3/SDL_syswm.h>
+#endif
 
 namespace Sapfire {
 	Window::Window(const WindowParams& params) :
 		m_WindowExtent({params.width, params.height}), mf_EventCallback(params.callback), m_Resizing(false) {
-		WNDCLASSEX window_class{0};
-		window_class.cbSize = sizeof(WNDCLASSEX);
-		window_class.style = CS_HREDRAW | CS_VREDRAW;
-		window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-		window_class.lpszClassName = "SapfireApplicationClass";
-		window_class.hInstance = nullptr;
-		window_class.lpfnWndProc = params.window_proc == nullptr ? WindowProc : params.window_proc;
-		RegisterClassEx(&window_class);
-		RECT window_rect{0, 0, static_cast<LONG>(m_WindowExtent.width), static_cast<LONG>(m_WindowExtent.height)};
-		AdjustWindowRect(&window_rect, WS_OVERLAPPEDWINDOW, FALSE);
-		m_Hwnd = CreateWindow(window_class.lpszClassName, params.name.c_str(), WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-							  window_rect.right - window_rect.left, window_rect.bottom - window_rect.top, nullptr, nullptr, nullptr, this);
-		if (m_Hwnd == nullptr) {
-			CORE_CRITICAL("Failed to create window.");
-			MessageBox(NULL, "Window creation failed!", "Error!", MB_ICONERROR | MB_OK);
+
+		// Initialize SDL video subsystem
+		if (!SDL_Init(SDL_INIT_VIDEO)) {
+			CORE_CRITICAL("Failed to initialize SDL: {}", SDL_GetError());
+			return;
 		}
-		ShowWindow(m_Hwnd, SW_SHOWDEFAULT);
+
+		// Create SDL window
+		m_Window = SDL_CreateWindow(
+			params.name.c_str(),
+			static_cast<int>(params.width),
+			static_cast<int>(params.height),
+			SDL_WINDOW_RESIZABLE
+		);
+
+		if (!m_Window) {
+			CORE_CRITICAL("Failed to create SDL window: {}", SDL_GetError());
+			SDL_Quit();
+			return;
+		}
+
+		m_WindowID = SDL_GetWindowID(m_Window);
+		SDL_ShowWindow(m_Window);
 	}
 
-	Window::~Window() { DestroyWindow(m_Hwnd); }
+	Window::~Window() {
+		if (m_Window) {
+			SDL_DestroyWindow(m_Window);
+			m_Window = nullptr;
+		}
+		SDL_Quit();
+	}
+
+	void* Window::native_handle() {
+#ifdef SF_PLATFORM_WINDOWS
+		SDL_PropertiesID props = SDL_GetWindowProperties(m_Window);
+		return SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
+#elif defined(SF_PLATFORM_LINUX)
+		SDL_PropertiesID props = SDL_GetWindowProperties(m_Window);
+		// Try X11 first, then Wayland
+		void* x11_window = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_X11_WINDOW_POINTER, nullptr);
+		if (x11_window) return x11_window;
+		return SDL_GetPointerProperty(props, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, nullptr);
+#else
+		return m_Window;
+#endif
+	}
 
 	void Window::pump_messages() {
-		MSG msg{};
-		if (PeekMessage(&msg, m_Hwnd, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+		SDL_Event event;
+		while (SDL_PollEvent(&event)) {
+			handle_sdl_event(event);
 		}
 	}
 
-	LRESULT CALLBACK Window::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
-		Window* window = reinterpret_cast<Window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
-		switch (message) {
-		case WM_CREATE:
+	void Window::handle_sdl_event(const SDL_Event& event) {
+		switch (event.type) {
+		case SDL_EVENT_QUIT:
 			{
-				auto pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
-				SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+				WindowCloseEvent close_event;
+				mf_EventCallback(close_event);
+				break;
 			}
-			return 0;
-		case WM_CLOSE:
+		case SDL_EVENT_WINDOW_RESIZED:
 			{
-				WindowCloseEvent event;
-				window->event_callback(event);
-				return 0;
-			}
-		case WM_GETMINMAXINFO:
-			((MINMAXINFO*)lParam)->ptMinTrackSize.x = 200;
-			((MINMAXINFO*)lParam)->ptMinTrackSize.y = 200;
-			return 0;
-		case WM_ENTERSIZEMOVE:
-			window->m_Resizing = true;
-			return 0;
-		case WM_EXITSIZEMOVE:
-			{
-				window->m_Resizing = false;
-				WindowResizeFinishedEvent event{};
-				window->event_callback(event);
-				return 0;
-			}
-		case WM_SYSCOMMAND:
-			{
-				if (wParam == SC_MINIMIZE || wParam == SC_MAXIMIZE) {
-					WindowResizeFinishedEvent event{};
-					window->m_Minimized = wParam == SC_MINIMIZE;
-					window->event_callback(event);
+				if (event.window.windowID == m_WindowID) {
+					int width, height;
+					SDL_GetWindowSize(m_Window, &width, &height);
+					m_WindowExtent.width = static_cast<u64>(width);
+					m_WindowExtent.height = static_cast<u64>(height);
+					WindowResizeEvent resize_event(width, height);
+					if (width == 0 && height == 0) {
+						m_Minimized = true;
+					} else {
+						m_Minimized = false;
+					}
+					mf_EventCallback(resize_event);
 				}
+				break;
 			}
-			break;
-		case WM_SIZE:
+		case SDL_EVENT_WINDOW_MOVED:
 			{
-				WindowResizeEvent event(LOWORD(lParam), HIWORD(lParam));
-				if (event.width() == 0 && event.height() == 0) {
-					window->m_Minimized = true;
-				} else {
-					window->m_Minimized = false;
+				// Window moved - could trigger resize finished event
+				if (m_Resizing) {
+					m_Resizing = false;
+					WindowResizeFinishedEvent resize_finished;
+					mf_EventCallback(resize_finished);
 				}
-				window->event_callback(event);
-				return 0;
+				break;
 			}
-		case WM_LBUTTONDOWN:
-		case WM_MBUTTONDOWN:
-		case WM_RBUTTONDOWN:
+		case SDL_EVENT_WINDOW_MINIMIZED:
+			{
+				m_Minimized = true;
+				WindowResizeFinishedEvent resize_finished;
+				mf_EventCallback(resize_finished);
+				break;
+			}
+		case SDL_EVENT_WINDOW_RESTORED:
+		case SDL_EVENT_WINDOW_MAXIMIZED:
+			{
+				m_Minimized = false;
+				WindowResizeFinishedEvent resize_finished;
+				mf_EventCallback(resize_finished);
+				break;
+			}
+		case SDL_EVENT_MOUSE_BUTTON_DOWN:
 			{
 				MouseButton button;
-				switch (wParam) {
-				case MK_LBUTTON:
+				switch (event.button.button) {
+				case SDL_BUTTON_LEFT:
 					button = MouseButton::LMB;
 					break;
-				case MK_RBUTTON:
+				case SDL_BUTTON_RIGHT:
 					button = MouseButton::RMB;
 					break;
-				case MK_MBUTTON:
+				case SDL_BUTTON_MIDDLE:
 					button = MouseButton::MMB;
-					break;
-				}
-				MouseButtonEvent event(button, true);
-				window->event_callback(event);
-				return 0;
-			}
-		case WM_LBUTTONUP:
-		case WM_MBUTTONUP:
-		case WM_RBUTTONUP:
-			{
-				MouseButton button;
-				switch (wParam) {
-				case MK_LBUTTON:
-					button = MouseButton::LMB;
-					break;
-				case MK_RBUTTON:
-					button = MouseButton::RMB;
 					break;
 				default:
+					return;
+				}
+				MouseButtonEvent mouse_event(button, true);
+				mf_EventCallback(mouse_event);
+				break;
+			}
+		case SDL_EVENT_MOUSE_BUTTON_UP:
+			{
+				MouseButton button;
+				switch (event.button.button) {
+				case SDL_BUTTON_LEFT:
+					button = MouseButton::LMB;
+					break;
+				case SDL_BUTTON_RIGHT:
+					button = MouseButton::RMB;
+					break;
+				case SDL_BUTTON_MIDDLE:
 					button = MouseButton::MMB;
 					break;
+				default:
+					return;
 				}
-				MouseButtonEvent event(button, false);
-				window->event_callback(event);
-				return 0;
+				MouseButtonEvent mouse_event(button, false);
+				mf_EventCallback(mouse_event);
+				break;
 			}
-		case WM_MOUSEMOVE:
+		case SDL_EVENT_MOUSE_MOTION:
 			{
-				MouseMovedEvent event{GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-				window->event_callback(event);
-				return 0;
+				MouseMovedEvent mouse_moved(
+					static_cast<s32>(event.motion.x),
+					static_cast<s32>(event.motion.y)
+				);
+				mf_EventCallback(mouse_moved);
+				break;
 			}
-		case WM_KEYDOWN:
+		case SDL_EVENT_KEY_DOWN:
 			{
-				KeyPressedEvent event(wParam);
-				window->event_callback(event);
-				return 0;
+				KeyPressedEvent key_event(event.key.key);
+				mf_EventCallback(key_event);
+				break;
 			}
-		case WM_KEYUP:
+		case SDL_EVENT_KEY_UP:
 			{
-				KeyReleasedEvent event(wParam);
-				window->event_callback(event);
-				return 0;
+				KeyReleasedEvent key_event(event.key.key);
+				mf_EventCallback(key_event);
+				break;
 			}
 		}
-
-		return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 } // namespace Sapfire
