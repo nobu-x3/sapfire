@@ -11,7 +11,11 @@ namespace sf {
 		m_ClientExtent(desc.client_extent),
 		m_GraphicsDevice(nullptr) {
 		if (!sf::render::RenderBackend::is_initialized()) {
+#if defined(SF_PLATFORM_WINDOWS) && defined(SF_ENABLE_DX12)
 			sf::render::RenderBackend::initialize(sf::render::RenderAPI::DX12);
+#else
+			sf::render::RenderBackend::initialize(sf::render::RenderAPI::Vulkan);
+#endif
 		}
 
 		m_GraphicsDevice = sf::render::RenderBackend::create_device(sf::render::SwapchainCreationDesc{

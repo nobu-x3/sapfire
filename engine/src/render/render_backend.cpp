@@ -6,6 +6,8 @@
 #include "render/dx12/dx12_graphics_device.h"
 #endif
 
+#include "render/vulkan/vk_graphics_device.h"
+
 namespace sf::render {
 
 RenderAPI RenderBackend::s_CurrentAPI = RenderAPI::None;
@@ -20,7 +22,10 @@ void RenderBackend::initialize(RenderAPI api) {
     s_CurrentAPI = api;
     s_Initialized = true;
 
-    CORE_INFO("Render backend initialized: {}", api == RenderAPI::DX12 ? "DirectX 12" : "Unknown");
+    const char* api_name = "Unknown";
+    if (api == RenderAPI::DX12) api_name = "DirectX 12";
+    else if (api == RenderAPI::Vulkan) api_name = "Vulkan";
+    CORE_INFO("Render backend initialized: {}", api_name);
 }
 
 RenderAPI RenderBackend::get_api() {
@@ -47,8 +52,7 @@ IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc)
 #endif
 
         case RenderAPI::Vulkan:
-            CORE_ERROR("Vulkan backend not implemented yet");
-            return nullptr;
+            return new vk::VkGraphicsDevice(desc);
 
         default:
             CORE_ERROR("Unknown render API");

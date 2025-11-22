@@ -31,6 +31,8 @@ namespace sf {
 		PROFILE_FUNCTION();
 		input::InputSystem::init();
 		s_Instance = this;
+        m_ClientExtent.height = desc.height;
+        m_ClientExtent.width = desc.width;
 		fs::FileSystem::locate_root_directory();
 		m_Window = stl::make_unique<Window>(
 			mem::ENUM::Engine_Core,

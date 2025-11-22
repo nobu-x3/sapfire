@@ -2,6 +2,7 @@
 
 #include "tools/texture_loader.h"
 #define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_SIMD
 #include "stb_image.h"
 
 namespace sf::tools::texture_loader {

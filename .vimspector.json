@@ -5,7 +5,7 @@
       "filetypes": [ "cpp", "c", "objc", "rust" ], // optional
       "configuration": {
         "request": "launch",
-        "program": "${workspaceFolder}/build/Sandbox.exe",
+        "program": "${workspaceFolder}/build/Sandbox",
         "cwd": "${workspaceFolder}/build",
         "environment": [],
         "externalConsole": true,
