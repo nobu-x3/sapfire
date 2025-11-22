@@ -34,6 +34,10 @@ if(WIN32)
     add_subdirectory(vendor/D3D12MemoryAllocator)
 endif()
 ##################################
+###### VulkanMemoryAllocator #####
+find_package(Vulkan REQUIRED)
+add_subdirectory(vendor/VulkanMemoryAllocator)
+##################################
 ###### json ######################
 add_subdirectory(vendor/json)
 ##################################
@@ -68,6 +72,11 @@ if(WIN32)
         vendor/D3D12MemoryAllocator/include
     )
 endif()
+
+# Vulkan include directories
+target_include_directories(Engine PUBLIC
+    vendor/VulkanMemoryAllocator/include
+)
 target_include_directories(Engine SYSTEM INTERFACE vendor/spdlog/include)
 if(WIN32)
     target_include_directories(Engine SYSTEM INTERFACE vendor/dxc/inc)
@@ -79,6 +88,8 @@ target_link_libraries(Engine PUBLIC
     spdlog::spdlog
     tinyobjloader
     SDL3::SDL3
+    Vulkan::Vulkan
+    VulkanMemoryAllocator
     PRIVATE
     nlohmann_json::nlohmann_json
 )

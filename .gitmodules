@@ -43,3 +43,6 @@
 [submodule "engine/vendor/SDL3"]
 	path = engine/vendor/SDL3
 	url = https://github.com/libsdl-org/SDL.git
+[submodule "engine/vendor/VulkanMemoryAllocator"]
+	path = engine/vendor/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

@@ -50,6 +50,18 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
 )
 endif()
 
+# Vulkan backend (cross-platform)
+set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
+        engine/src/render/vulkan/vk_command_queue.cpp
+        engine/src/render/vulkan/vk_context.cpp
+        engine/src/render/vulkan/vk_descriptor_heap.cpp
+        engine/src/render/vulkan/vk_graphics_device.cpp
+        engine/src/render/vulkan/vk_memory_allocator.cpp
+        engine/src/render/vulkan/vk_pipeline_state.cpp
+        engine/src/render/vulkan/vk_shader_compiler.cpp
+        engine/src/render/vulkan/vk_type_conversions.cpp
+)
+
 foreach(TU ${RELATIVE_SAPFIRE_TRANSLATION_UNITS})
     set(TU ${CMAKE_CURRENT_SOURCE_DIR}/${TU})
     list(APPEND SAPFIRE_TRANSLATION_UNITS ${TU})
