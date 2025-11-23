@@ -481,8 +481,17 @@ namespace sf::render::vk {
 	}
 
 	void VkGraphicsDevice::init_bindless_pipeline_layout() {
+		// Define push constant range - 256 bytes (64 x 32-bit values)
+		// Available to all shader stages
+		VkPushConstantRange push_constant_range{};
+		push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
+		push_constant_range.offset = 0;
+		push_constant_range.size = vk::NUMBER_32_BIT_CONSTANTS * sizeof(u32); // 256 bytes
+
 		VkPipelineLayoutCreateInfo layout_info{};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		layout_info.pushConstantRangeCount = 1;
+		layout_info.pPushConstantRanges = &push_constant_range;
 
 		vkCreatePipelineLayout(m_Device, &layout_info, nullptr, &m_BindlessPipelineLayout);
 	}
@@ -617,12 +626,33 @@ namespace sf::render::vk {
 	}
 
 	void VkGraphicsDevice::resize_window(u32 width, u32 height) {
+		// Don't resize if dimensions are the same or invalid
+		if ((m_WindowWidth == width && m_WindowHeight == height) || width == 0 || height == 0) {
+			return;
+		}
+
 		m_WindowWidth = width;
 		m_WindowHeight = height;
 
+		// Wait for all operations to complete before recreating swapchain
 		wait_for_idle();
 
-		CORE_WARN("VkGraphicsDevice::resize_window - stub implementation");
+		// Clean up old swapchain resources
+		cleanup_swapchain();
+
+		// Recreate swapchain with new dimensions
+		SwapchainCreationDesc swapchain_desc{};
+		swapchain_desc.width = width;
+		swapchain_desc.height = height;
+		swapchain_desc.format = m_BackBufferFormat;
+		swapchain_desc.buffer_count = m_BackBufferCount;
+
+		init_swapchain(swapchain_desc);
+
+		// Recreate framebuffers for the new swapchain
+		create_swapchain_framebuffers();
+
+		CORE_INFO("Window resized to {}x{}", width, height);
 	}
 
 	Texture& VkGraphicsDevice::get_current_back_buffer() { return m_BackBuffers[m_CurrentBackBufferIndex]; }
@@ -636,8 +666,50 @@ namespace sf::render::vk {
 	}
 
 	Buffer VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
-		CORE_WARN("VkGraphicsDevice::create_buffer_with_data - stub implementation");
-		return create_buffer(desc);
+		// Create the target buffer
+		Buffer buffer = create_buffer(desc);
+
+		// Create staging buffer for upload
+		BufferCreationDesc staging_desc{};
+		staging_desc.usage = BufferUsage::Upload;
+		staging_desc.size_in_bytes = data_size;
+		staging_desc.name = L"Staging Buffer";
+
+		Buffer staging_buffer = create_buffer(staging_desc);
+
+		// Copy data to staging buffer
+		if (staging_buffer.mapped_data) {
+			memcpy(staging_buffer.mapped_data, data, data_size);
+		} else {
+			CORE_ERROR("Failed to map staging buffer for data upload");
+			m_MemoryAllocator->free_buffer(staging_buffer);
+			return buffer;
+		}
+
+		// Use copy context to transfer data
+		m_CopyContext->reset();
+		m_CopyContext->transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
+		m_CopyContext->execute_resource_barriers();
+		m_CopyContext->copy_buffer(buffer, staging_buffer, data_size);
+		m_CopyContext->transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
+		m_CopyContext->execute_resource_barriers();
+		m_CopyContext->close();
+
+		// Submit copy commands
+		VkSubmitInfo submit_info{};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
+		submit_info.pCommandBuffers = &cmd_buffer;
+
+		VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
+		vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
+		wait_for_idle();
+
+		// Clean up staging buffer
+		m_MemoryAllocator->free_buffer(staging_buffer);
+
+		return buffer;
 	}
 
 	Texture VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
@@ -647,8 +719,50 @@ namespace sf::render::vk {
 	}
 
 	Texture VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
-		CORE_WARN("VkGraphicsDevice::create_texture_with_data - stub implementation");
-		return create_texture(desc);
+		// Create the target texture
+		Texture texture = create_texture(desc);
+
+		// Create staging buffer for upload
+		BufferCreationDesc staging_desc{};
+		staging_desc.usage = BufferUsage::Upload;
+		staging_desc.size_in_bytes = data_size;
+		staging_desc.name = L"Texture Staging Buffer";
+
+		Buffer staging_buffer = create_buffer(staging_desc);
+
+		// Copy data to staging buffer
+		if (staging_buffer.mapped_data) {
+			memcpy(staging_buffer.mapped_data, data, data_size);
+		} else {
+			CORE_ERROR("Failed to map staging buffer for texture upload");
+			m_MemoryAllocator->free_buffer(staging_buffer);
+			return texture;
+		}
+
+		// Use copy context to transfer data
+		m_CopyContext->reset();
+		m_CopyContext->transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
+		m_CopyContext->execute_resource_barriers();
+		m_CopyContext->copy_buffer_to_texture(texture, staging_buffer, 0);
+		m_CopyContext->transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
+		m_CopyContext->execute_resource_barriers();
+		m_CopyContext->close();
+
+		// Submit and wait for completion
+		VkSubmitInfo submit_info{};
+		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submit_info.commandBufferCount = 1;
+		VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
+		submit_info.pCommandBuffers = &cmd_buffer;
+
+		VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
+		vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
+		wait_for_idle();
+
+		// Clean up staging buffer
+		m_MemoryAllocator->free_buffer(staging_buffer);
+
+		return texture;
 	}
 
 	IPipelineState* VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {

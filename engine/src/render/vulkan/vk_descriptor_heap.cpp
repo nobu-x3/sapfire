@@ -43,66 +43,198 @@ VkDescriptorHeap::~VkDescriptorHeap() {
 
 u32 VkDescriptorHeap::allocate_srv(Buffer& buffer) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_srv(Buffer) - stub implementation");
+
+    // For bindless rendering, this would write a descriptor to the descriptor set at the allocated index
+    // This requires a descriptor set layout with UPDATE_AFTER_BIND and descriptor arrays
+
+    // Basic implementation - write descriptor for storage buffer
+    VkDescriptorBufferInfo buffer_info{};
+    buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
+    buffer_info.offset = 0;
+    buffer_info.range = buffer.size_in_bytes;
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_DescriptorSet;
+    write.dstBinding = 0; // Binding for storage buffers
+    write.dstArrayElement = index;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    write.pBufferInfo = &buffer_info;
+
+    // Note: This requires the descriptor set to be created with the appropriate layout
+    // For now, this is a placeholder that shows the structure
+    CORE_WARN("VkDescriptorHeap::allocate_srv(Buffer) - descriptor set layout not fully configured");
+    // vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_srv(Texture& texture, const ShaderResourceViewDesc* desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_srv(Texture) - stub implementation");
+
+    // For bindless rendering, this would write a sampled image descriptor
+    VkDescriptorImageInfo image_info{};
+    image_info.imageView = reinterpret_cast<VkImageView>(texture.resource); // Should use actual image view
+    image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    image_info.sampler = VK_NULL_HANDLE; // For sampled images, not combined image samplers
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_DescriptorSet;
+    write.dstBinding = 1; // Binding for sampled images
+    write.dstArrayElement = index;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+    write.pImageInfo = &image_info;
+
+    CORE_WARN("VkDescriptorHeap::allocate_srv(Texture) - descriptor set layout not fully configured");
+    // vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_uav(Buffer& buffer) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_uav(Buffer) - stub implementation");
+
+    // UAV = Storage Buffer in Vulkan
+    VkDescriptorBufferInfo buffer_info{};
+    buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
+    buffer_info.offset = 0;
+    buffer_info.range = buffer.size_in_bytes;
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_DescriptorSet;
+    write.dstBinding = 2; // Binding for UAV storage buffers
+    write.dstArrayElement = index;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    write.pBufferInfo = &buffer_info;
+
+    CORE_WARN("VkDescriptorHeap::allocate_uav(Buffer) - descriptor set layout not fully configured");
+    // vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_uav(Texture& texture, const UnorderedAccessViewDesc* desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_uav(Texture) - stub implementation");
+
+    // UAV = Storage Image in Vulkan
+    VkDescriptorImageInfo image_info{};
+    image_info.imageView = reinterpret_cast<VkImageView>(texture.resource);
+    image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    image_info.sampler = VK_NULL_HANDLE;
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_DescriptorSet;
+    write.dstBinding = 3; // Binding for UAV storage images
+    write.dstArrayElement = index;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write.pImageInfo = &image_info;
+
+    CORE_WARN("VkDescriptorHeap::allocate_uav(Texture) - descriptor set layout not fully configured");
+    // vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_cbv(Buffer& buffer) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_cbv(Buffer) - stub implementation");
+
+    // CBV = Uniform Buffer in Vulkan
+    VkDescriptorBufferInfo buffer_info{};
+    buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
+    buffer_info.offset = 0;
+    buffer_info.range = buffer.size_in_bytes;
+
+    VkWriteDescriptorSet write{};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = m_DescriptorSet;
+    write.dstBinding = 4; // Binding for uniform buffers
+    write.dstArrayElement = index;
+    write.descriptorCount = 1;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write.pBufferInfo = &buffer_info;
+
+    CORE_WARN("VkDescriptorHeap::allocate_cbv(Buffer) - descriptor set layout not fully configured");
+    // vkUpdateDescriptorSets(m_Device, 1, &write, 0, nullptr);
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_cbv(const ConstantBufferViewDesc& desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_cbv(Desc) - stub implementation");
+
+    // This version uses a descriptor with explicit buffer location
+    // In Vulkan, we would need the buffer handle, which isn't provided here
+    CORE_WARN("VkDescriptorHeap::allocate_cbv(Desc) - requires buffer handle, use allocate_cbv(Buffer&) instead");
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_rtv(Texture& texture, const RenderTargetViewDesc* desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_rtv - stub implementation");
+
+    // RTV in Vulkan is an image view used as a framebuffer attachment, not a descriptor
+    // Store the index for tracking, but RTV creation happens during framebuffer creation
+    CORE_WARN("VkDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors");
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_dsv(Texture& texture, const DepthStencilViewDesc* desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_dsv - stub implementation");
+
+    // DSV in Vulkan is an image view used as a framebuffer attachment, not a descriptor
+    CORE_WARN("VkDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors");
+
     return index;
 }
 
 u32 VkDescriptorHeap::allocate_sampler(const SamplerDesc& desc) {
     u32 index = m_CurrentIndex++;
-    CORE_WARN("VkDescriptorHeap::allocate_sampler - stub implementation");
+
+    // Create a Vulkan sampler from the descriptor
+    VkSamplerCreateInfo sampler_info{};
+    sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_FALSE;
+    sampler_info.maxAnisotropy = 1.0f;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+    // TODO: Convert desc to proper Vulkan sampler settings
+    // TODO: Store created sampler for cleanup
+    // VkSampler sampler;
+    // vkCreateSampler(m_Device, &sampler_info, nullptr, &sampler);
+
+    CORE_WARN("VkDescriptorHeap::allocate_sampler - sampler creation not fully implemented");
+
     return index;
 }
 
 void* VkDescriptorHeap::get_cpu_handle(u32 index) {
-    CORE_WARN("VkDescriptorHeap::get_cpu_handle - stub implementation");
-    return nullptr;
+    // In Vulkan, there's no concept of CPU/GPU descriptor handles like in D3D12
+    // Descriptors are accessed through descriptor sets
+    // For compatibility, return the descriptor set (index is implicit in the binding)
+    return reinterpret_cast<void*>(m_DescriptorSet);
 }
 
 void* VkDescriptorHeap::get_gpu_handle(u32 index) {
-    CORE_WARN("VkDescriptorHeap::get_gpu_handle - stub implementation");
-    return nullptr;
+    // In Vulkan, GPU access to descriptors is through descriptor sets bound to the pipeline
+    // The index would be used as the array element when accessing the descriptor in shaders
+    return reinterpret_cast<void*>(m_DescriptorSet);
 }
 
 } // namespace sf::render::vk

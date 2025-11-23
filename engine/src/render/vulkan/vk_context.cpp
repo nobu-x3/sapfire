@@ -26,7 +26,29 @@ void VkContext::close() {
 }
 
 void VkContext::add_resource_barrier(const ResourceBarrier& barrier) {
-    CORE_WARN("VkContext::add_resource_barrier - stub implementation");
+    // Generic resource barrier - needs to determine if it's a buffer or texture
+    // This is difficult with the current API design since we only have a void* resource
+    // Users should prefer using the typed transition_barrier methods
+    CORE_WARN("VkContext::add_resource_barrier - generic barriers not fully supported. Use typed transition_barrier methods instead.");
+
+    // For now, assume it's an image barrier (most common case)
+    // In production code, you'd need resource type tracking or a different API design
+    VkImageMemoryBarrier image_barrier{};
+    image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    image_barrier.oldLayout = to_vk_image_layout(barrier.state_before);
+    image_barrier.newLayout = to_vk_image_layout(barrier.state_after);
+    image_barrier.srcAccessMask = to_vk_access_flags(barrier.state_before);
+    image_barrier.dstAccessMask = to_vk_access_flags(barrier.state_after);
+    image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    image_barrier.image = reinterpret_cast<VkImage>(barrier.resource);
+    image_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    image_barrier.subresourceRange.baseMipLevel = 0;
+    image_barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    image_barrier.subresourceRange.baseArrayLayer = 0;
+    image_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    m_ImageBarriers.push_back(image_barrier);
 }
 
 void VkContext::transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) {
@@ -163,15 +185,32 @@ void VkGraphicsContext::set_pipeline_state(IPipelineState* pipeline) {
 }
 
 void VkGraphicsContext::set_root_signature() {
-    CORE_WARN("VkGraphicsContext::set_root_signature - stub implementation");
+    // In Vulkan, the root signature (pipeline layout) is already bound via the pipeline
+    // This function is a no-op in Vulkan as the layout is part of the pipeline state
+    // If descriptor sets need to be bound, use set_descriptor_heaps() instead
 }
 
 void VkGraphicsContext::set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset) {
-    CORE_WARN("VkGraphicsContext::set_32_bit_constants - stub implementation");
+    if (num_32bit_values > NUMBER_32_BIT_CONSTANTS) {
+        CORE_ERROR("Attempting to set {} 32-bit constants, but max is {}", num_32bit_values, NUMBER_32_BIT_CONSTANTS);
+        return;
+    }
+
+    VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
+    u32 byte_offset = offset * sizeof(u32);
+    u32 byte_size = num_32bit_values * sizeof(u32);
+
+    vkCmdPushConstants(m_CommandBuffer, layout, VK_SHADER_STAGE_ALL, byte_offset, byte_size, data);
 }
 
 void VkGraphicsContext::set_descriptor_heaps() {
-    CORE_WARN("VkGraphicsContext::set_descriptor_heaps - stub implementation");
+    // In Vulkan, this would bind descriptor sets to the pipeline
+    // For now, this is a stub as the descriptor heap needs to create and manage descriptor sets
+    // When fully implemented, this would call:
+    // vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, count, descriptor_sets, 0, nullptr);
+
+    CORE_WARN("VkGraphicsContext::set_descriptor_heaps - descriptor set binding not yet implemented. "
+             "Requires descriptor set allocation and management.");
 }
 
 void VkGraphicsContext::set_viewport(const Viewport& viewport) {
@@ -248,7 +287,16 @@ void VkGraphicsContext::set_index_buffer(Buffer& buffer, Format format) {
 }
 
 void VkGraphicsContext::set_primitive_topology(PrimitiveTopology topology) {
-    CORE_WARN("VkGraphicsContext::set_primitive_topology - stub implementation");
+    // Note: This requires VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY to be enabled
+    // in the pipeline creation (VK_EXT_extended_dynamic_state or Vulkan 1.3+)
+    // Currently the pipeline is created with fixed topology
+
+    // For Vulkan 1.3 or with VK_EXT_extended_dynamic_state:
+    // vkCmdSetPrimitiveTopology(m_CommandBuffer, to_vk_primitive_topology(topology));
+
+    // For now, log a warning as the dynamic state is not enabled
+    CORE_WARN("VkGraphicsContext::set_primitive_topology - requires VK_DYNAMIC_STATE_PRIMITIVE_TOPOLOGY. "
+             "Topology should be set during pipeline creation instead.");
 }
 
 void VkGraphicsContext::draw(u32 vertex_count, u32 instance_count, u32 start_vertex, u32 start_instance) {
@@ -290,15 +338,32 @@ void VkComputeContext::set_pipeline_state(IPipelineState* pipeline) {
 }
 
 void VkComputeContext::set_root_signature() {
-    CORE_WARN("VkComputeContext::set_root_signature - stub implementation");
+    // In Vulkan, the root signature (pipeline layout) is already bound via the pipeline
+    // This function is a no-op in Vulkan as the layout is part of the pipeline state
+    // If descriptor sets need to be bound, use set_descriptor_heaps() instead
 }
 
 void VkComputeContext::set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset) {
-    CORE_WARN("VkComputeContext::set_32_bit_constants - stub implementation");
+    if (num_32bit_values > NUMBER_32_BIT_CONSTANTS) {
+        CORE_ERROR("Attempting to set {} 32-bit constants, but max is {}", num_32bit_values, NUMBER_32_BIT_CONSTANTS);
+        return;
+    }
+
+    VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
+    u32 byte_offset = offset * sizeof(u32);
+    u32 byte_size = num_32bit_values * sizeof(u32);
+
+    vkCmdPushConstants(m_CommandBuffer, layout, VK_SHADER_STAGE_ALL, byte_offset, byte_size, data);
 }
 
 void VkComputeContext::set_descriptor_heaps() {
-    CORE_WARN("VkComputeContext::set_descriptor_heaps - stub implementation");
+    // In Vulkan, this would bind descriptor sets to the pipeline
+    // For now, this is a stub as the descriptor heap needs to create and manage descriptor sets
+    // When fully implemented, this would call:
+    // vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, count, descriptor_sets, 0, nullptr);
+
+    CORE_WARN("VkComputeContext::set_descriptor_heaps - descriptor set binding not yet implemented. "
+             "Requires descriptor set allocation and management.");
 }
 
 void VkComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) {
@@ -337,11 +402,52 @@ void VkCopyContext::copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offs
 }
 
 void VkCopyContext::copy_texture(Texture& dst, Texture& src) {
-    CORE_WARN("VkCopyContext::copy_texture - stub implementation");
+    VkImageCopy copy_region{};
+
+    // Source
+    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.srcSubresource.mipLevel = 0;
+    copy_region.srcSubresource.baseArrayLayer = 0;
+    copy_region.srcSubresource.layerCount = 1;
+    copy_region.srcOffset = {0, 0, 0};
+
+    // Destination
+    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.dstSubresource.mipLevel = 0;
+    copy_region.dstSubresource.baseArrayLayer = 0;
+    copy_region.dstSubresource.layerCount = 1;
+    copy_region.dstOffset = {0, 0, 0};
+
+    // Extent
+    copy_region.extent.width = std::min(src.width, dst.width);
+    copy_region.extent.height = std::min(src.height, dst.height);
+    copy_region.extent.depth = 1;
+
+    vkCmdCopyImage(m_CommandBuffer,
+                   reinterpret_cast<VkImage>(src.resource), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                   reinterpret_cast<VkImage>(dst.resource), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                   1, &copy_region);
 }
 
 void VkCopyContext::copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource) {
-    CORE_WARN("VkCopyContext::copy_buffer_to_texture - stub implementation");
+    VkBufferImageCopy copy_region{};
+    copy_region.bufferOffset = 0;
+    copy_region.bufferRowLength = 0;   // Tightly packed
+    copy_region.bufferImageHeight = 0; // Tightly packed
+
+    copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copy_region.imageSubresource.mipLevel = subresource;
+    copy_region.imageSubresource.baseArrayLayer = 0;
+    copy_region.imageSubresource.layerCount = 1;
+
+    copy_region.imageOffset = {0, 0, 0};
+    copy_region.imageExtent = {dst.width, dst.height, 1};
+
+    vkCmdCopyBufferToImage(m_CommandBuffer,
+                          reinterpret_cast<VkBuffer>(src.resource),
+                          reinterpret_cast<VkImage>(dst.resource),
+                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                          1, &copy_region);
 }
 
 } // namespace sf::render::vk
