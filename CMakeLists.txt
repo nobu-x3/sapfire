@@ -70,3 +70,19 @@ endif()
 add_custom_command(TARGET Sandbox POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_CURRENT_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Sandbox>/assets
 )
+
+# ============================================================================
+# Optional: Shader Compilation Target
+# ============================================================================
+# Add custom target for compiling shaders to SPIR-V
+# Usage: cmake --build . --target compile_shaders
+add_custom_target(compile_shaders
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/compile_shaders.sh $<TARGET_FILE_DIR:Sandbox>/assets/shaders
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Compiling HLSL shaders to SPIR-V..."
+    VERBATIM
+)
+
+# Optional: Auto-compile shaders during build
+# Uncomment to automatically compile shaders when building Sandbox
+# add_dependencies(Sandbox compile_shaders)
