@@ -2,13 +2,14 @@
 
 #include "core/layer.h"
 #include "core/layer_stack.h"
+#include "memory/memory.h"
 
 namespace sf {
 
 	LayerStack::~LayerStack() {
 		for (auto* layer : m_Layers) {
 			layer->on_detach();
-			delete layer;
+			mem_delete(layer);
 		}
 	}
 

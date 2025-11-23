@@ -12,9 +12,7 @@ class DX12GraphicsDevice;
 
 constexpr u32 NUMBER_32_BIT_CONSTANTS = 64;
 
-// ============================================================================
 // Base DX12 Context
-// ============================================================================
 
 class DX12Context : public IContext {
 public:
@@ -39,12 +37,10 @@ public:
 protected:
     Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList1> m_CommandList;
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> m_CommandAllocator;
-    stl::vector<CD3DX12_RESOURCE_BARRIER> m_ResourceBarriers;
+    stl::tvector<CD3DX12_RESOURCE_BARRIER> m_ResourceBarriers;
 };
 
-// ============================================================================
 // DX12 Graphics Context
-// ============================================================================
 
 class DX12GraphicsContext : public DX12Context, public IGraphicsContext {
 public:
@@ -90,9 +86,7 @@ private:
     DX12GraphicsDevice* m_Device;
 };
 
-// ============================================================================
 // DX12 Compute Context
-// ============================================================================
 
 class DX12ComputeContext : public DX12Context, public IComputeContext {
 public:
@@ -123,9 +117,7 @@ private:
     DX12GraphicsDevice* m_Device;
 };
 
-// ============================================================================
 // DX12 Copy Context
-// ============================================================================
 
 class DX12CopyContext : public DX12Context, public ICopyContext {
 public:

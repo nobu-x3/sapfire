@@ -1,7 +1,7 @@
 #include "engpch.h"
 
-#include "render/vulkan/vk_graphics_device.h"
 #include "core/logger.h"
+#include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 #include <SDL3/SDL.h>
@@ -149,9 +149,9 @@ namespace sf::render::vk {
 		u32 sdl_extension_count = 0;
 		const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
 
-		stl::vector<const char*> extensions;
+		stl::vector<const char*> extensions{mem::MemTag::Temp, sdl_extension_count};
 		for (u32 i = 0; i < sdl_extension_count; ++i) {
-			extensions.push_back(sdl_extensions[i]);
+			extensions[i] = sdl_extensions[i];
 		}
 
 		// SDL already provides the correct platform surface extension (e.g., VK_KHR_wayland_surface,
@@ -162,12 +162,11 @@ namespace sf::render::vk {
 			CORE_INFO("  - {}", sdl_extensions[i]);
 		}
 
-		// Check if validation layers are available
-		stl::vector<const char*> validation_layers;
+		stl::vector<const char*> validation_layers{mem::MemTag::Temp};
 #if defined(DEBUG) || defined(_DEBUG)
 		u32 layer_count;
 		vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-		stl::vector<VkLayerProperties> available_layers(layer_count);
+		stl::vector<VkLayerProperties> available_layers(mem::MemTag::Temp, layer_count);
 		vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 
 		bool validation_layer_available = false;
@@ -243,7 +242,7 @@ namespace sf::render::vk {
 			return;
 		}
 
-		stl::vector<VkPhysicalDevice> devices(device_count);
+		stl::vector<VkPhysicalDevice> devices{mem::MemTag::Temp, device_count};
 		vkEnumeratePhysicalDevices(m_Instance, &device_count, devices.data());
 
 		m_PhysicalDevice = devices[0];
@@ -259,7 +258,7 @@ namespace sf::render::vk {
 		m_ComputeQueueFamily = find_queue_family(VK_QUEUE_COMPUTE_BIT);
 		m_TransferQueueFamily = find_queue_family(VK_QUEUE_TRANSFER_BIT);
 
-		stl::vector<VkDeviceQueueCreateInfo> queue_create_infos;
+		stl::vector<VkDeviceQueueCreateInfo> queue_create_infos{mem::MemTag::Temp};
 		std::set<u32> unique_queue_families = {m_GraphicsQueueFamily, m_ComputeQueueFamily, m_TransferQueueFamily};
 
 		f32 queue_priority = 1.0f;
@@ -275,27 +274,28 @@ namespace sf::render::vk {
 		VkPhysicalDeviceFeatures device_features{};
 		device_features.samplerAnisotropy = VK_TRUE;
 
-		// Query available device extensions
 		u32 available_ext_count = 0;
 		vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &available_ext_count, nullptr);
-		stl::vector<VkExtensionProperties> available_extensions(available_ext_count);
+		stl::vector<VkExtensionProperties> available_extensions{mem::MemTag::Temp, available_ext_count};
 		vkEnumerateDeviceExtensionProperties(m_PhysicalDevice, nullptr, &available_ext_count, available_extensions.data());
 
 		// Required extensions (following vk-bootstrap defaults)
-		stl::vector<const char*> required_extensions = {
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		};
+		stl::vector<const char*> required_extensions = {mem::MemTag::Temp,
+														1,
+														{
+															VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+														}};
 
 		// Optional extensions (will be enabled if available, following vk-bootstrap pattern)
-		stl::vector<const char*> optional_extensions = {
-			// Add commonly used optional extensions here as needed
-			// Example: VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
-		};
+		stl::vector<const char*> optional_extensions = {mem::MemTag::Temp,
+														1,
+														{
+															// Add commonly used optional extensions here as needed
+															// Example: VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+														}};
 
-		// Build final extension list
-		stl::vector<const char*> device_extensions;
+		stl::vector<const char*> device_extensions{mem::MemTag::Temp};
 
-		// Add all required extensions (fail if not available)
 		for (const auto* ext : required_extensions) {
 			if (!check_extension_supported(available_extensions, ext)) {
 				CORE_CRITICAL("Required device extension not available: {}", ext);
@@ -304,7 +304,6 @@ namespace sf::render::vk {
 			device_extensions.push_back(ext);
 		}
 
-		// Add optional extensions if available
 		for (const auto* ext : optional_extensions) {
 			if (check_extension_supported(available_extensions, ext)) {
 				device_extensions.push_back(ext);
@@ -340,7 +339,7 @@ namespace sf::render::vk {
 
 		u32 format_count;
 		vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &format_count, nullptr);
-		stl::vector<VkSurfaceFormatKHR> formats(format_count);
+		stl::vector<VkSurfaceFormatKHR> formats{mem::MemTag::Temp, format_count};
 		vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &format_count, formats.data());
 
 		VkSurfaceFormatKHR surface_format = formats[0];
@@ -353,7 +352,6 @@ namespace sf::render::vk {
 			image_count = capabilities.maxImageCount;
 		}
 
-		// Select composite alpha mode (following vk-bootstrap pattern)
 		// Try modes in order of preference, use first supported one
 		VkCompositeAlphaFlagBitsKHR composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		VkCompositeAlphaFlagBitsKHR composite_alpha_flags[4] = {
@@ -377,7 +375,6 @@ namespace sf::render::vk {
 		create_info.imageColorSpace = surface_format.colorSpace;
 		create_info.imageExtent = {desc.width, desc.height};
 		create_info.imageArrayLayers = 1;
-		// Use COLOR_ATTACHMENT_BIT + TRANSFER_DST_BIT like vk-bootstrap and SDL3
 		create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 		create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 		create_info.preTransform = capabilities.currentTransform;
@@ -393,18 +390,16 @@ namespace sf::render::vk {
 
 		u32 swapchain_image_count;
 		vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &swapchain_image_count, nullptr);
-		stl::vector<VkImage> swapchain_images(swapchain_image_count);
+		stl::vector<VkImage> swapchain_images{mem::MemTag::Temp, swapchain_image_count};
 		vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &swapchain_image_count, swapchain_images.data());
 
 		m_BackBufferCount = static_cast<u32>(swapchain_images.size());
 		for (u32 i = 0; i < m_BackBufferCount && i < MAX_FRAMES_IN_FLIGHT; ++i) {
-			// Store the VkImage
 			m_BackBuffers[i].resource = reinterpret_cast<void*>(swapchain_images[i]);
 			m_BackBuffers[i].format = from_vk_format(surface_format.format);
 			m_BackBuffers[i].width = desc.width;
 			m_BackBuffers[i].height = desc.height;
 
-			// Create VkImageView for this swapchain image
 			VkImageViewCreateInfo view_info{};
 			view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			view_info.image = swapchain_images[i];
@@ -455,34 +450,32 @@ namespace sf::render::vk {
 		vkGetDeviceQueue(m_Device, m_ComputeQueueFamily, 0, &compute_queue);
 		vkGetDeviceQueue(m_Device, m_TransferQueueFamily, 0, &transfer_queue);
 
-		m_GraphicsQueue = stl::make_unique<VkCommandQueue>(sf::mem::Engine_Rendering, m_Device, graphics_queue, CommandQueueType::Direct,
-														   "Graphics Queue");
-		m_ComputeQueue = stl::make_unique<VkCommandQueue>(sf::mem::Engine_Rendering, m_Device, compute_queue, CommandQueueType::Compute,
-														  "Compute Queue");
+		m_GraphicsQueue =
+			stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
+		m_ComputeQueue =
+			stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
 		m_TransferQueue =
-			stl::make_unique<VkCommandQueue>(sf::mem::Engine_Rendering, m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
+			stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
 	}
 
 	void VkGraphicsDevice::init_descriptor_heaps() {
-		m_DescriptorHeap = stl::make_unique<VkDescriptorHeap>(sf::mem::Engine_Rendering, m_Device, 10000, "Main Descriptor Heap");
-		m_SamplerHeap = stl::make_unique<VkDescriptorHeap>(sf::mem::Engine_Rendering, m_Device, 256, "Sampler Heap");
+		m_DescriptorHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 10000, "Main Descriptor Heap");
+		m_SamplerHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 256, "Sampler Heap");
 	}
 
 	void VkGraphicsDevice::init_memory_allocator() {
-		m_MemoryAllocator = stl::make_unique<VkMemoryAllocator>(sf::mem::Engine_Rendering, m_Instance, m_PhysicalDevice, m_Device);
+		m_MemoryAllocator = stl::make_unique<VkMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
 	}
 
 	void VkGraphicsDevice::init_contexts() {
 		for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-			m_GraphicsContexts[i] = stl::make_unique<VkGraphicsContext>(sf::mem::Engine_Rendering, this);
+			m_GraphicsContexts[i] = stl::make_unique<VkGraphicsContext>(mem::MemTag::Render, this);
 		}
-		m_ComputeContext = stl::make_unique<VkComputeContext>(sf::mem::Engine_Rendering, this);
-		m_CopyContext = stl::make_unique<VkCopyContext>(sf::mem::Engine_Rendering, this);
+		m_ComputeContext = stl::make_unique<VkComputeContext>(mem::MemTag::Render, this);
+		m_CopyContext = stl::make_unique<VkCopyContext>(mem::MemTag::Render, this);
 	}
 
 	void VkGraphicsDevice::init_bindless_pipeline_layout() {
-		// Define push constant range - 256 bytes (64 x 32-bit values)
-		// Available to all shader stages
 		VkPushConstantRange push_constant_range{};
 		push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
 		push_constant_range.offset = 0;
@@ -566,7 +559,7 @@ namespace sf::render::vk {
 		u32 queue_family_count = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queue_family_count, nullptr);
 
-		stl::vector<VkQueueFamilyProperties> queue_families(queue_family_count);
+		stl::vector<VkQueueFamilyProperties> queue_families(mem::MemTag::Temp, queue_family_count);
 		vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queue_family_count, queue_families.data());
 
 		for (u32 i = 0; i < queue_family_count; ++i) {
@@ -626,7 +619,6 @@ namespace sf::render::vk {
 	}
 
 	void VkGraphicsDevice::resize_window(u32 width, u32 height) {
-		// Don't resize if dimensions are the same or invalid
 		if ((m_WindowWidth == width && m_WindowHeight == height) || width == 0 || height == 0) {
 			return;
 		}
@@ -634,13 +626,10 @@ namespace sf::render::vk {
 		m_WindowWidth = width;
 		m_WindowHeight = height;
 
-		// Wait for all operations to complete before recreating swapchain
 		wait_for_idle();
 
-		// Clean up old swapchain resources
 		cleanup_swapchain();
 
-		// Recreate swapchain with new dimensions
 		SwapchainCreationDesc swapchain_desc{};
 		swapchain_desc.width = width;
 		swapchain_desc.height = height;
@@ -649,7 +638,6 @@ namespace sf::render::vk {
 
 		init_swapchain(swapchain_desc);
 
-		// Recreate framebuffers for the new swapchain
 		create_swapchain_framebuffers();
 
 		CORE_INFO("Window resized to {}x{}", width, height);
@@ -666,10 +654,8 @@ namespace sf::render::vk {
 	}
 
 	Buffer VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
-		// Create the target buffer
 		Buffer buffer = create_buffer(desc);
 
-		// Create staging buffer for upload
 		BufferCreationDesc staging_desc{};
 		staging_desc.usage = BufferUsage::Upload;
 		staging_desc.size_in_bytes = data_size;
@@ -677,7 +663,6 @@ namespace sf::render::vk {
 
 		Buffer staging_buffer = create_buffer(staging_desc);
 
-		// Copy data to staging buffer
 		if (staging_buffer.mapped_data) {
 			memcpy(staging_buffer.mapped_data, data, data_size);
 		} else {
@@ -686,7 +671,6 @@ namespace sf::render::vk {
 			return buffer;
 		}
 
-		// Use copy context to transfer data
 		m_CopyContext->reset();
 		m_CopyContext->transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
 		m_CopyContext->execute_resource_barriers();
@@ -695,7 +679,6 @@ namespace sf::render::vk {
 		m_CopyContext->execute_resource_barriers();
 		m_CopyContext->close();
 
-		// Submit copy commands
 		VkSubmitInfo submit_info{};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit_info.commandBufferCount = 1;
@@ -706,7 +689,6 @@ namespace sf::render::vk {
 		vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
 		wait_for_idle();
 
-		// Clean up staging buffer
 		m_MemoryAllocator->free_buffer(staging_buffer);
 
 		return buffer;
@@ -719,10 +701,8 @@ namespace sf::render::vk {
 	}
 
 	Texture VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
-		// Create the target texture
 		Texture texture = create_texture(desc);
 
-		// Create staging buffer for upload
 		BufferCreationDesc staging_desc{};
 		staging_desc.usage = BufferUsage::Upload;
 		staging_desc.size_in_bytes = data_size;
@@ -730,7 +710,6 @@ namespace sf::render::vk {
 
 		Buffer staging_buffer = create_buffer(staging_desc);
 
-		// Copy data to staging buffer
 		if (staging_buffer.mapped_data) {
 			memcpy(staging_buffer.mapped_data, data, data_size);
 		} else {
@@ -739,7 +718,6 @@ namespace sf::render::vk {
 			return texture;
 		}
 
-		// Use copy context to transfer data
 		m_CopyContext->reset();
 		m_CopyContext->transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
 		m_CopyContext->execute_resource_barriers();
@@ -748,7 +726,6 @@ namespace sf::render::vk {
 		m_CopyContext->execute_resource_barriers();
 		m_CopyContext->close();
 
-		// Submit and wait for completion
 		VkSubmitInfo submit_info{};
 		submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		submit_info.commandBufferCount = 1;
@@ -759,14 +736,13 @@ namespace sf::render::vk {
 		vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
 		wait_for_idle();
 
-		// Clean up staging buffer
 		m_MemoryAllocator->free_buffer(staging_buffer);
 
 		return texture;
 	}
 
 	IPipelineState* VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
-		auto pipeline = stl::make_unique<VkPipelineState>(sf::mem::Engine_Rendering);
+		auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
 		pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
 
 		auto* ptr = pipeline.get();
@@ -775,7 +751,7 @@ namespace sf::render::vk {
 	}
 
 	IPipelineState* VkGraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
-		auto pipeline = stl::make_unique<VkPipelineState>(sf::mem::Engine_Rendering);
+		auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
 		pipeline->create_compute(m_Device, desc, m_BindlessPipelineLayout);
 
 		auto* ptr = pipeline.get();

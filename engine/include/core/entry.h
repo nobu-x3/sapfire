@@ -1,19 +1,20 @@
 #include "engpch.h"
 
 #include "components/component.h"
+#include "memory/memory.h"
+
 namespace sf {
-	stl::unordered_map<const char*, components::ComponentType> components::ComponentRegistry::s_ComponentTypes = {};
-	stl::unordered_map<components::ComponentType, const char*> components::ComponentRegistry::s_ComponentTypeNameMap = {};
-	stl::unordered_map<const char*, stl::shared_ptr<components::IComponentList>> components::ComponentRegistry::s_EngineComponentLists = {};
-	stl::unordered_map<const char*, stl::shared_ptr<components::CustomComponentList>>
+	std::unordered_map<const char*, components::ComponentType> components::ComponentRegistry::s_ComponentTypes = {};
+	std::unordered_map<components::ComponentType, const char*> components::ComponentRegistry::s_ComponentTypeNameMap = {};
+	std::unordered_map<const char*, stl::shared_ptr<components::IComponentList>> components::ComponentRegistry::s_EngineComponentLists =
+		{};
+	std::unordered_map<const char*, stl::shared_ptr<components::CustomComponentList>>
 		components::ComponentRegistry::s_CustomComponentLists{};
 	components::ComponentType components::ComponentRegistry::s_NextComponentTypeNumber = 0;
 } // namespace sf
 
 #include <exception>
 #include "core/application.h"
-#include "core/memory.h"
-#include "core/stl/unique_ptr.h"
 
 #ifdef SF_PLATFORM_WINDOWS
 #include <crtdbg.h>
@@ -23,11 +24,14 @@ namespace sf {
 extern sf::Application* sf::create_application();
 
 int main(int argc, char* argv[]) {
-#if defined(DEBUG) | defined(_DEBUG)
+#if (defined(DEBUG) | defined(_DEBUG)) && defined(SF_PLATFORM_WINDOWS)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
+	sf::mem::MemoryManager memory_manager{{}};
 	try {
 		sf::Log::Init();
+		sf::mem::MemoryManager memory_manager{{}};
+		CORE_INFO("MemoryManager initialized with total budget: {} MB", sf::mem::Budgets{}.total() / (1024 * 1024));
 		PROFILE_BEGIN_SESSION("Startup", "SapfireProfile_Startup.json");
 		sf::Application* application = sf::create_application();
 		PROFILE_END_SESSION();
@@ -50,6 +54,6 @@ int main(int argc, char* argv[]) {
 		CORE_CRITICAL(e.what());
 		return 0;
 	}
-	sf::mem::memdump();
+	memory_manager.report(std::cout);
 	return 0;
 }

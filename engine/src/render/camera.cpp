@@ -1,7 +1,8 @@
 #include "engpch.h"
 
-#include "render/camera.h"
 #include "math/math.h"
+#include "memory/memory.h"
+#include "render/camera.h"
 
 namespace sf {
 
@@ -12,8 +13,8 @@ namespace sf {
 
 	sf::math::mat4 Camera::view() const {
 		PROFILE_FUNCTION();
-		auto translation_rotation =
-			sf::math::mat4::identity() * transform.rotation_matrix() * sf::math::mat4::translation(sf::math::vec3(transform.position().x, transform.position().y, transform.position().z));
+		auto translation_rotation = sf::math::mat4::identity() * transform.rotation_matrix() *
+			sf::math::mat4::translation(sf::math::vec3(transform.position().x, transform.position().y, transform.position().z));
 		return translation_rotation.inversed();
 	}
 
@@ -31,7 +32,7 @@ namespace sf {
 		auto position = transform.position();
 		position = position + sf::math::vec4(velocity * delta_time, 0.0f);
 		transform.position(position);
-		stl::vector<components::Transform> t{};
+		stl::vector<components::Transform> t{mem::MemTag::Temp};
 		transform.update(t);
 	}
 } // namespace sf

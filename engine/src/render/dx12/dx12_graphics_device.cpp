@@ -24,9 +24,7 @@ DX12GraphicsDevice::~DX12GraphicsDevice() {
     }
 }
 
-// ============================================================================
 // Frame Management
-// ============================================================================
 
 void DX12GraphicsDevice::begin_frame() {
     m_GraphicsContexts[m_CurrentFrameIndex]->reset();
@@ -48,21 +46,17 @@ void DX12GraphicsDevice::wait_for_idle() {
     if (m_CopyQueue) m_CopyQueue->wait_for_idle();
 }
 
-// ============================================================================
 // Window / Swapchain Management
-// ============================================================================
 
 void DX12GraphicsDevice::resize_window(u32 width, u32 height) {
     m_DirectQueue->wait_for_idle();
     m_CopyQueue->wait_for_idle();
 
-    // Release backbuffer resources
     for (u32 i = 0; i < m_BackBufferCount; ++i) {
         m_BackBuffers[i].resource = nullptr;
         m_FenceValues[i] = m_DirectQueue->get_last_completed_fence_value();
     }
 
-    // Resize swapchain
     DXGI_SWAP_CHAIN_DESC swapchain_desc{};
     dx12_check(m_Swapchain->GetDesc(&swapchain_desc));
     dx12_check(m_Swapchain->ResizeBuffers(
@@ -88,15 +82,12 @@ Texture& DX12GraphicsDevice::get_back_buffer(u32 index) {
     return m_BackBuffers[index];
 }
 
-// ============================================================================
 // Resource Creation
-// ============================================================================
 
 Buffer DX12GraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
     Buffer buffer{};
     m_MemoryAllocator->allocate_buffer(buffer, desc);
 
-    // Create descriptors
     if (desc.usage == BufferUsage::Structured) {
         buffer.srv_index = m_CbvSrvUavHeap->allocate_srv(buffer);
         buffer.uav_index = m_CbvSrvUavHeap->allocate_uav(buffer);
@@ -108,12 +99,10 @@ Buffer DX12GraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
 }
 
 Buffer DX12GraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
-    // Create the destination buffer
     BufferCreationDesc buffer_desc = desc;
     buffer_desc.size_in_bytes = data_size;
     Buffer buffer = create_buffer(buffer_desc);
 
-    // Create upload buffer
     BufferCreationDesc upload_desc = {
         .usage = BufferUsage::Upload,
         .size_in_bytes = data_size,
@@ -121,19 +110,16 @@ Buffer DX12GraphicsDevice::create_buffer_with_data(const BufferCreationDesc& des
     };
     Buffer upload_buffer = create_buffer(upload_desc);
 
-    // Copy data to upload buffer
     if (upload_buffer.mapped_data) {
         memcpy(upload_buffer.mapped_data, data, data_size);
     }
 
-    // Copy from upload to destination
     m_CopyContext->reset();
     m_CopyContext->copy_buffer(buffer, upload_buffer, data_size);
     m_CopyContext->close();
     m_CopyQueue->execute_command_list(m_CopyContext.get());
     m_CopyQueue->wait_for_idle();
 
-    // Clean up upload buffer
     m_MemoryAllocator->free_buffer(upload_buffer);
 
     return buffer;
@@ -143,7 +129,6 @@ Texture DX12GraphicsDevice::create_texture(const TextureCreationDesc& desc) {
     Texture texture{};
     m_MemoryAllocator->allocate_texture(texture, desc);
 
-    // Create descriptors based on usage
     if (has_flag(desc.resource_usage, ResourceUsage::ShaderResource) || desc.usage == TextureUsage::ShaderResource) {
         texture.srv_index = m_CbvSrvUavHeap->allocate_srv(texture);
     }
@@ -167,7 +152,6 @@ Texture DX12GraphicsDevice::create_texture_with_data(const TextureCreationDesc& 
     Texture texture = create_texture(desc);
 
     if (data && data_size > 0) {
-        // Create upload buffer
         BufferCreationDesc upload_desc = {
             .usage = BufferUsage::Upload,
             .size_in_bytes = data_size,
@@ -175,19 +159,16 @@ Texture DX12GraphicsDevice::create_texture_with_data(const TextureCreationDesc& 
         };
         Buffer upload_buffer = create_buffer(upload_desc);
 
-        // Copy data to upload buffer
         if (upload_buffer.mapped_data) {
             memcpy(upload_buffer.mapped_data, data, data_size);
         }
 
-        // Copy from upload to texture
         m_CopyContext->reset();
         m_CopyContext->copy_buffer_to_texture(texture, upload_buffer, 0);
         m_CopyContext->close();
         m_CopyQueue->execute_command_list(m_CopyContext.get());
         m_CopyQueue->wait_for_idle();
 
-        // Clean up upload buffer
         m_MemoryAllocator->free_buffer(upload_buffer);
     }
 
@@ -195,7 +176,7 @@ Texture DX12GraphicsDevice::create_texture_with_data(const TextureCreationDesc& 
 }
 
 IPipelineState* DX12GraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
-    auto pipeline = stl::make_unique<DX12PipelineState>();
+    auto pipeline = stl::make_tunique<DX12PipelineState>();
     pipeline->create_graphics(m_Device.Get(), m_BindlessRootSignature.Get(), desc);
 
     IPipelineState* result = pipeline.get();
@@ -204,7 +185,7 @@ IPipelineState* DX12GraphicsDevice::create_graphics_pipeline(const GraphicsPipel
 }
 
 IPipelineState* DX12GraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
-    auto pipeline = stl::make_unique<DX12PipelineState>();
+    auto pipeline = stl::make_tunique<DX12PipelineState>();
     pipeline->create_compute(m_Device.Get(), m_BindlessRootSignature.Get(), desc);
 
     IPipelineState* result = pipeline.get();
@@ -212,9 +193,7 @@ IPipelineState* DX12GraphicsDevice::create_compute_pipeline(const ComputePipelin
     return result;
 }
 
-// ============================================================================
 // Context Access
-// ============================================================================
 
 IGraphicsContext& DX12GraphicsDevice::get_current_graphics_context() {
     return *m_GraphicsContexts[m_CurrentFrameIndex];
@@ -232,9 +211,7 @@ ICopyContext& DX12GraphicsDevice::get_copy_context() {
     return *m_CopyContext;
 }
 
-// ============================================================================
 // Initialization
-// ============================================================================
 
 void DX12GraphicsDevice::init_device_resources() {
     init_directx();
@@ -246,21 +223,18 @@ void DX12GraphicsDevice::init_device_resources() {
 }
 
 void DX12GraphicsDevice::init_directx() {
-    // Enable debug layer
 #ifdef _DEBUG
     dx12_check(D3D12GetDebugInterface(IID_PPV_ARGS(&m_Debug)));
     m_Debug->EnableDebugLayer();
     m_Debug->SetEnableGPUBasedValidation(TRUE);
 #endif
 
-    // Create DXGI factory
     UINT dxgi_factory_flags = 0;
 #ifdef _DEBUG
     dxgi_factory_flags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
     dx12_check(CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&m_Factory)));
 
-    // Find hardware adapter
     Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter1;
     for (UINT adapter_index = 0; DXGI_ERROR_NOT_FOUND != m_Factory->EnumAdapters1(adapter_index, &adapter1); ++adapter_index) {
         DXGI_ADAPTER_DESC1 desc;
@@ -270,7 +244,6 @@ void DX12GraphicsDevice::init_directx() {
             continue;
         }
 
-        // Check if adapter supports D3D12
         if (SUCCEEDED(D3D12CreateDevice(adapter1.Get(), D3D_FEATURE_LEVEL_12_0, __uuidof(ID3D12Device), nullptr))) {
             break;
         }
@@ -278,7 +251,6 @@ void DX12GraphicsDevice::init_directx() {
 
     adapter1.As(&m_Adapter);
 
-    // Create device
     dx12_check(D3D12CreateDevice(m_Adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_Device)));
     m_Device->SetName(L"Main D3D12 Device");
 
@@ -288,32 +260,31 @@ void DX12GraphicsDevice::init_directx() {
 }
 
 void DX12GraphicsDevice::init_command_queues() {
-    m_DirectQueue = stl::make_unique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Direct, L"Direct Queue");
-    m_ComputeQueue = stl::make_unique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Compute, L"Compute Queue");
-    m_CopyQueue = stl::make_unique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Copy, L"Copy Queue");
+    m_DirectQueue = stl::make_tunique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Direct, L"Direct Queue");
+    m_ComputeQueue = stl::make_tunique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Compute, L"Compute Queue");
+    m_CopyQueue = stl::make_tunique<DX12CommandQueue>(m_Device.Get(), CommandQueueType::Copy, L"Copy Queue");
 }
 
 void DX12GraphicsDevice::init_descriptor_heaps() {
-    m_CbvSrvUavHeap = stl::make_unique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, L"CBV_SRV_UAV Heap");
-    m_RtvHeap = stl::make_unique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 50, L"RTV Heap");
-    m_DsvHeap = stl::make_unique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 50, L"DSV Heap");
-    m_SamplerHeap = stl::make_unique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1024, L"Sampler Heap");
+    m_CbvSrvUavHeap = stl::make_tunique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 10000, L"CBV_SRV_UAV Heap");
+    m_RtvHeap = stl::make_tunique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 50, L"RTV Heap");
+    m_DsvHeap = stl::make_tunique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 50, L"DSV Heap");
+    m_SamplerHeap = stl::make_tunique<DX12DescriptorHeap>(m_Device.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1024, L"Sampler Heap");
 }
 
 void DX12GraphicsDevice::init_memory_allocator() {
-    m_MemoryAllocator = stl::make_unique<DX12MemoryAllocator>(m_Device.Get(), m_Adapter.Get());
+    m_MemoryAllocator = stl::make_tunique<DX12MemoryAllocator>(m_Device.Get(), m_Adapter.Get());
 }
 
 void DX12GraphicsDevice::init_contexts() {
     for (u32 i = 0; i < m_FramesInFlight; ++i) {
-        m_GraphicsContexts[i] = stl::make_unique<DX12GraphicsContext>(this);
+        m_GraphicsContexts[i] = stl::make_tunique<DX12GraphicsContext>(this);
     }
-    m_ComputeContext = stl::make_unique<DX12ComputeContext>(this);
-    m_CopyContext = stl::make_unique<DX12CopyContext>(this);
+    m_ComputeContext = stl::make_tunique<DX12ComputeContext>(this);
+    m_CopyContext = stl::make_tunique<DX12CopyContext>(this);
 }
 
 void DX12GraphicsDevice::init_bindless_root_signature() {
-    // Compile root signature from shader
     auto shader_result = sf::render::dx12::compile(
         sf::render::dx12::ShaderType::RootSignature,
         L"assets/shaders/bindless_rs.hlsl",
@@ -337,7 +308,6 @@ void DX12GraphicsDevice::init_bindless_root_signature() {
 }
 
 void DX12GraphicsDevice::init_swapchain_resources(const SwapchainCreationDesc& desc) {
-    // Create swapchain
     DXGI_SWAP_CHAIN_DESC1 swapchain_desc = {
         .Width = desc.width,
         .Height = desc.height,

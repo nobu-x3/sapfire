@@ -8,9 +8,7 @@ class VkGraphicsDevice;
 
 constexpr u32 NUMBER_32_BIT_CONSTANTS = 64;
 
-// ============================================================================
 // Base Vulkan Context
-// ============================================================================
 
 class VkContext : public IContext {
 public:
@@ -38,9 +36,7 @@ protected:
     stl::vector<VkBufferMemoryBarrier> m_BufferBarriers;
 };
 
-// ============================================================================
 // Vulkan Graphics Context
-// ============================================================================
 
 class VkGraphicsContext : public VkContext, public IGraphicsContext {
 public:
@@ -86,9 +82,7 @@ private:
     VkFramebuffer m_CurrentFramebuffer = VK_NULL_HANDLE;
 };
 
-// ============================================================================
 // Vulkan Compute Context
-// ============================================================================
 
 class VkComputeContext : public VkContext, public IComputeContext {
 public:
@@ -117,9 +111,7 @@ private:
     VkGraphicsDevice* m_DevicePtr;
 };
 
-// ============================================================================
 // Vulkan Copy Context
-// ============================================================================
 
 class VkCopyContext : public VkContext, public ICopyContext {
 public:

@@ -1,11 +1,12 @@
 #pragma once
 
-#include "core/stl/shared_ptr.h"
 
 #pragma warning(push, 0)
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
 #pragma warning(pop)
+
+#include "core/core.h"
 
 namespace spdlog {
 	class logger;

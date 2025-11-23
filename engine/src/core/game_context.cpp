@@ -3,7 +3,7 @@
 #include "components/render_component.h"
 #include "core/application.h"
 #include "core/game_context.h"
-#include "core/memory.h"
+#include "memory/memory.h"
 
 namespace sf {
 
@@ -27,14 +27,14 @@ namespace sf {
 			.refresh_rate = 120
 		});
 
-		m_AssetManager = stl::make_unique<assets::AssetManager>(mem::ENUM::Engine_Scene, assets::AssetManagerCreationDesc{
+		m_AssetManager = stl::make_unique<assets::AssetManager>(mem::MemTag::Logic, assets::AssetManagerCreationDesc{
 			.device = m_GraphicsDevice,
 			.mesh_registry_path = desc.mesh_registry_path,
 			.texture_registry_path = desc.texture_registry_path,
 			.material_registry_path = desc.material_registry_path,
 		});
 
-		m_PhysicsEngine = stl::make_unique<physics::PhysicsEngine>(mem::ENUM::Engine_Scene, &m_ECManager);
+		m_PhysicsEngine = stl::make_unique<physics::PhysicsEngine>(mem::MemTag::Physics, &m_ECManager);
 	}
 
 	void GameContext::init() { load_contents(); }
@@ -68,15 +68,15 @@ namespace sf {
 				m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer({
 					.usage = sf::render::BufferUsage::Constant,
 					.size_in_bytes = sizeof(ObjectConstants),
-					.name = L"Transform buffer " + sf::stl::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
+					.name = L"Transform buffer " + std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
 				}));
 			}
 			bool should_add_tangent = false;
 			const bool should_allocate_mesh = !m_AssetManager->mesh_resource_exists(resource_paths.mesh_path);
 			if (should_allocate_mesh) {
-				const stl::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
+				const std::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
 					? L"Default Mesh"
-					: sf::stl::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
+					: std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
 				m_RTIndexBuffers.push_back(m_GraphicsDevice->create_buffer<u16>(
 					sf::render::BufferCreationDesc{
 						.usage = sf::render::BufferUsage::Index,

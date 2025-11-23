@@ -21,7 +21,7 @@ namespace sf::assets {
             "assets" : []
         }
         )"_json;
-		std::ofstream file{filepath};
+		std::ofstream file{filepath.c_str()};
 		file << std::setw(4) << j << std::endl;
 		file.close();
 	}
@@ -139,7 +139,7 @@ namespace sf::assets {
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}, {"description", desc_j}};
 			j["assets"].push_back(j_obj);
 		}
-		std::ofstream file{m_RegistryFilePath};
+		std::ofstream file{m_RegistryFilePath.c_str()};
 		file.clear();
 		file << std::setw(4) << j << std::endl;
 		file.close();
@@ -182,7 +182,7 @@ namespace sf::assets {
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}, {"description", desc_j}};
 			j.push_back(j_obj);
 		}
-		return j.dump();
+		return stl::string(mem::MemTag::Strings, j.dump());
 	}
 
 	void TextureRegistry::deserialize(sf::render::IGraphicsDevice* device, const stl::string& data) {

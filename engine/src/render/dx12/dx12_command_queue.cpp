@@ -25,7 +25,7 @@ DX12CommandQueue::DX12CommandQueue(ID3D12Device* device, CommandQueueType type, 
 }
 
 void DX12CommandQueue::execute_command_lists(IContext** contexts, u32 count) {
-    stl::vector<ID3D12CommandList*> command_lists;
+    stl::tvector<ID3D12CommandList*> command_lists;
     command_lists.reserve(count);
 
     for (u32 i = 0; i < count; ++i) {

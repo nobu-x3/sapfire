@@ -2,7 +2,6 @@
 
 #include "math/math.h"
 #include "core/core.h"
-#include "core/stl/unique_ptr.h"
 
 namespace sf::input {
 
@@ -16,6 +15,12 @@ namespace sf::input {
 
 	struct SFAPI InputComponent {
 		InputComponent();
+		~InputComponent();
+		InputComponent(const InputComponent& other);
+		InputComponent(InputComponent&& other) noexcept;
+		InputComponent& operator=(const InputComponent& other);
+		InputComponent& operator=(InputComponent&& other) noexcept;
+
 		sf::math::vec4 input_axis;
 		float sens_v = 0.002f;
 		float sens_h = 0.002f;
@@ -37,15 +42,16 @@ namespace sf::input {
 		static void mouse_state(MouseState state);
 		static void keyboard_state(u64 state);
 		static void update();
-		static void register_component(InputComponent& component);
+		static void register_component(InputComponent* component);
+		static void unregister_component(InputComponent* component);
 		static MousePosition mouse_position();
 		static MouseState mouse_state();
 		static u64 keyboard_state();
 		static bool is_key_down(i32 scan_code);
 
 	private:
-		static stl::unique_ptr<InputSystem> s_Instance;
-		stl::vector<std::reference_wrapper<InputComponent>> m_InputComponents;
+		static std::unique_ptr<InputSystem> s_Instance;
+		stl::vector<InputComponent*> m_InputComponents {mem::MemTag::Logic};
 		MousePosition m_MousePosition{};
 		MousePosition m_LastMousePosition{};
 		MouseState m_MouseState{};

@@ -14,7 +14,7 @@ namespace sf::assets {
 	constexpr f32 DEFAULT_MATERIAL_ROUGHTNESS = 0.f;
 	constexpr sf::math::vec4 DEFAULT_MATERIAL_ALBEDO = {1.f, 0.f, 1.f, 1.f};
 	constexpr sf::math::vec3 DEFAULT_MATERIAL_FRESNEL = {1.f, 1.f, 1.f};
-	const stl::string DEFAULT_MATERIAL_NAME = "Default Material";
+	const char* DEFAULT_MATERIAL_NAME = "Default Material";
 
 	void MaterialManager::add(const sf::stl::string& path, sf::UUID uuid, MaterialResource resource) {
 		material_resources[path] = resource;
@@ -29,7 +29,7 @@ namespace sf::assets {
             "assets" : []
         }
         )"_json;
-		std::ofstream file{filepath};
+		std::ofstream file{filepath.c_str()};
 		file << std::setw(4) << j << std::endl;
 		file.close();
 	}
@@ -37,7 +37,7 @@ namespace sf::assets {
 	void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path) {
 		if (m_PathToMaterialAssetMap.contains(path))
 			return;
-		std::ifstream file{path};
+		std::ifstream file{path.c_str()};
 		if (!file.is_open()) {
 			CORE_ERROR("Material at path {} could not be open.", path);
 			return;
@@ -87,7 +87,7 @@ namespace sf::assets {
 	void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid) {
 		if (m_PathToMaterialAssetMap.contains(path))
 			return;
-		std::ifstream file{path};
+		std::ifstream file{path.c_str()};
 		if (!file.is_open()) {
 			CORE_ERROR("Material at path {} could not be open.", path);
 			return;
@@ -174,7 +174,7 @@ namespace sf::assets {
 			};
 			{
 				// @TODO: this is super slow because opening files in a loop. Rework this.
-				std::ofstream file{path};
+				std::ofstream file{path.c_str()};
 				file.clear();
 				file << std::setw(4) << j_obj << std::endl;
 				file.close();
@@ -184,7 +184,7 @@ namespace sf::assets {
 				j["assets"].push_back(path_jobj);
 			}
 		}
-		std::ofstream file{m_RegistryFilePath};
+		std::ofstream file{m_RegistryFilePath.c_str()};
 		file.clear();
 		file << std::setw(4) << j << std::endl;
 		file.close();
@@ -209,7 +209,7 @@ namespace sf::assets {
 		};
 		{
 			// @TODO: this is super slow because opening files in a loop. Rework this.
-			std::ofstream file{fs::full_path(path)};
+			std::ofstream file{fs::full_path(path).c_str()};
 			file.clear();
 			file << std::setw(4) << j_obj << std::endl;
 			file.close();
@@ -254,7 +254,7 @@ namespace sf::assets {
 			const nlohmann::json path_jobj = {{"path", path}};
 			j.push_back(path_jobj);
 		}
-		return j.dump();
+		return stl::string(mem::MemTag::Strings, j.dump());
 	}
 
 	MaterialAsset* MaterialRegistry::get(const stl::string& path) const {
@@ -278,7 +278,7 @@ namespace sf::assets {
 	}
 
 	MaterialAsset* MaterialRegistry::default_material(sf::render::IGraphicsDevice* device) {
-		const static stl::wstring name = sf::string_utils::to_wstring(DEFAULT_MATERIAL_NAME);
+		const static std::wstring name = sf::string_utils::to_wstring(DEFAULT_MATERIAL_NAME);
 		static sf::render::MaterialConstants default_material_constants{
 			.diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
 			.fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,

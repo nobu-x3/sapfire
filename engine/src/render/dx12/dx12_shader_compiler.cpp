@@ -30,7 +30,7 @@ namespace sf::render::dx12 {
 			CORE_INFO("Shader base directory: {}", wstring_to_ansi(shader_directory));
 		}
 		CORE_INFO("Compiling shader at path: {}", path);
-		std::wstring shader_path = ansi_to_wstring(stl::string{path});
+		std::wstring shader_path = ansi_to_wstring(stl::tstring{path});
 		// Setup compilation arguments.
 		const std::wstring target_profile = [=]() {
 			switch (type) {
@@ -56,8 +56,8 @@ namespace sf::render::dx12 {
 				break;
 			}
 		}();
-		std::wstring entry = ansi_to_wstring(stl::string{entry_point});
-		stl::vector<LPCWSTR> compilation_arguments = {
+		std::wstring entry = ansi_to_wstring(stl::tstring{entry_point});
+		stl::tvector<LPCWSTR> compilation_arguments = {
 			L"-HV",
 			L"2021",
 			L"-E",
@@ -123,7 +123,7 @@ namespace sf::render::dx12 {
 			}
 			CORE_INFO("Shader base directory: {}", wstring_to_ansi(shader_directory));
 		}
-        stl::wstring full_path = shader_directory + L"/" + stl::wstring{path};
+        std::wstring full_path = shader_directory + L"/" + std::wstring{path};
         std::string path_str = wstring_to_ansi(full_path);
 		CORE_INFO("Compiling shader at path: {}", path_str);
 		// Setup compilation arguments.
@@ -151,7 +151,7 @@ namespace sf::render::dx12 {
 				break;
 			}
 		}();
-		stl::vector<LPCWSTR> compilation_arguments = {
+		stl::tvector<LPCWSTR> compilation_arguments = {
 			L"-HV",
 			L"2021",
 			L"-E",

@@ -19,7 +19,7 @@ namespace sf::assets {
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}};
 			j["assets"].push_back(j_obj);
 		}
-		std::ofstream file{m_RegistryFilePath};
+		std::ofstream file{m_RegistryFilePath.c_str()};
 		file.clear();
 		file << std::setw(4) << j << std::endl;
 		file.close();
@@ -150,8 +150,8 @@ namespace sf::assets {
 		return uvs;
 	}
 
-	std::vector<u16> MeshRegistry::all_indices16() {
-		stl::vector<u16> indices{};
+	stl::vector<u16> MeshRegistry::all_indices16() {
+		stl::vector<u16> indices = stl::vector<u16>(mem::MemTag::Mesh);
 		for (auto&& [path, asset] : m_PathToMeshAssetMap) {
 			if (!asset.data.has_value())
 				continue;
@@ -168,7 +168,7 @@ namespace sf::assets {
             "assets" : []
         }
         )"_json;
-		std::ofstream file{filepath};
+		std::ofstream file{filepath.c_str()};
 		file << std::setw(4) << j << std::endl;
 		file.close();
 	}
@@ -179,7 +179,7 @@ namespace sf::assets {
 			const nlohmann::json j_obj = {{"UUID", static_cast<u64>(asset.uuid)}, {"path", path}};
 			j.push_back(j_obj);
 		}
-		return j.dump();
+		return stl::string(mem::MemTag::Strings, j.dump());
 	}
 
 	void MeshRegistry::deserialize(const stl::string& data) {

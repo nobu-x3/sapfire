@@ -8,7 +8,7 @@ namespace sf::render::vk {
 
 // Helper function to read binary SPIR-V file
 static stl::vector<u32> read_spirv_file(const stl::string& path) {
-    std::ifstream file(path, std::ios::ate | std::ios::binary);
+    std::ifstream file(path.c_str(), std::ios::ate | std::ios::binary);
 
     if (!file.is_open()) {
         CORE_ERROR("Failed to open SPIR-V shader file: {}", path);
@@ -21,7 +21,7 @@ static stl::vector<u32> read_spirv_file(const stl::string& path) {
         return {};
     }
 
-    stl::vector<u32> buffer(file_size / 4);
+    stl::vector<u32> buffer(mem::MemTag::Temp, file_size / 4);
     file.seekg(0);
     file.read(reinterpret_cast<char*>(buffer.data()), file_size);
     file.close();

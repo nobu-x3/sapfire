@@ -44,7 +44,7 @@ namespace sf::assets {
 		stl::vector<sf::math::vec3> all_normals() const;
 		stl::vector<sf::math::vec3> all_tangents() const;
 		stl::vector<sf::math::vec2> all_texture_coordinates() const;
-		std::vector<u16> all_indices16();
+		stl::vector<u16> all_indices16();
 		stl::string to_string();
 
 		static MeshAsset* default_mesh();

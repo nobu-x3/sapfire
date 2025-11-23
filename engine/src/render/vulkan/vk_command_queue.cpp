@@ -18,10 +18,10 @@ VkCommandQueue::VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType 
 }
 
 void VkCommandQueue::execute_command_lists(IContext** contexts, u32 count) {
-    stl::vector<VkCommandBuffer> command_buffers(count);
+    stl::vector<VkCommandBuffer> command_buffers{mem::MemTag::Temp, count};
     for (u32 i = 0; i < count; ++i) {
         auto* vk_ctx = static_cast<VkContext*>(contexts[i]);
-        command_buffers[i] = vk_ctx->get_vk_command_buffer();
+        command_buffers.push_back(vk_ctx->get_vk_command_buffer());
     }
 
     VkSubmitInfo submit_info{};

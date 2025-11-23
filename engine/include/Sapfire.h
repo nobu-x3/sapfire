@@ -6,15 +6,14 @@
 #include "core/layer.h"
 #include "core/layer_stack.h"
 #include "core/logger.h"
-#include "core/memory.h"
+#include "memory/memory.h"
+#include "memory/allocators.h"
 #include "core/rtti.h"
 #include "core/uuid.h"
 #include "core/file_system.h"
 /////////////////////////////////
 
 ///////// STL ///////////////////
-#include "core/stl/unique_ptr.h"
-#include "core/stl/shared_ptr.h"
 /////////////////////////////////
 
 ///////// COMPONENTS ////////////

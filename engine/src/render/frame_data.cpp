@@ -24,17 +24,17 @@ namespace sf::d3d {
 	}
 
 	void FrameData::init_object_cb() {
-		object_cb = stl::make_unique<UploadBuffer<ObjectConstants>>(m_Device, m_ObjectCount, true,
+		object_cb = stl::make_tunique<UploadBuffer<ObjectConstants>>(m_Device, m_ObjectCount, true,
 																	L"Object Constants " + std::to_wstring(m_FrameNumber));
 	}
 
 	void FrameData::init_pass_cb() {
 		pass_cb =
-			stl::make_unique<UploadBuffer<PassConstants>>(m_Device, m_PassCount, true, L"Pass Constants " + std::to_wstring(m_FrameNumber));
+			stl::make_tunique<UploadBuffer<PassConstants>>(m_Device, m_PassCount, true, L"Pass Constants " + std::to_wstring(m_FrameNumber));
 	}
 
 	void FrameData::init_materials_cb() {
-		materials_cb = stl::make_unique<UploadBuffer<MaterialConstants>>(m_Device, m_MaterialCount, true,
+		materials_cb = stl::make_tunique<UploadBuffer<MaterialConstants>>(m_Device, m_MaterialCount, true,
 																		 L"Material Constants " + std::to_wstring(m_FrameNumber));
 	}
 } // namespace sf::d3d

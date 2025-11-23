@@ -61,7 +61,7 @@ namespace sf::assets {
 			j["entities"].push_back(entity_json);
 		}
 		j["assets"] = nlohmann::json::parse(m_AssetManager.to_string());
-		std::ofstream file{relative_path};
+		std::ofstream file{relative_path.c_str()};
 		file.clear();
 		file << std::setw(4) << j << std::endl;
 		file.close();
@@ -72,7 +72,7 @@ namespace sf::assets {
 		stl::function<void(sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths)> render_component_setter) {
 		auto full_path = fs::full_path(scene_path);
 		auto relative_path = fs::relative_path(scene_path);
-		std::ifstream file{relative_path};
+		std::ifstream file{relative_path.c_str()};
 		if (!file.is_open()) {
 			CORE_CRITICAL("Scene at path {} could not be open.", full_path);
             if(file.fail()){
@@ -92,7 +92,7 @@ namespace sf::assets {
 			CORE_CRITICAL("Broken scene at path {}. Missing mesh registry.", full_path);
 			return;
 		}
-		m_AssetManager.deserialize(j.dump());
+		m_AssetManager.deserialize(stl::string(mem::MemTag::Strings, j.dump()));
 		for (auto&& entity : j["entities"]) {
 			if (!entity.is_object()) {
 				CORE_CRITICAL("Broken scene at path {}. Serialization formatting error. No entity was created.", full_path);

@@ -9,9 +9,7 @@ namespace sf::render::dx12 {
 
 constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
-// ============================================================================
 // String Conversion Utilities
-// ============================================================================
 
 inline std::wstring ansi_to_wstring(const std::string& str) {
     WCHAR buffer[512];
@@ -30,9 +28,7 @@ inline std::string wstring_to_ansi(const std::wstring_view input_wstring) {
     return result;
 }
 
-// ============================================================================
 // DX12 Exception Handling
-// ============================================================================
 
 class DxException {
 public:
@@ -69,9 +65,7 @@ public:
     }
 #endif
 
-// ============================================================================
 // Utility Functions
-// ============================================================================
 
 inline u32 calculate_constant_buffer_byte_size(u32 byte_size) {
     return (byte_size + 255) & ~255;

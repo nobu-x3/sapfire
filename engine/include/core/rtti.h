@@ -23,7 +23,7 @@ namespace sf::rtti {
 
 	struct rtti_object {
 		void* head{nullptr};
-		stl::vector<rtti_field> fields{1};
+		stl::vector<rtti_field> fields {mem::MemTag::RTTI, 1};
 	};
 
 	void set_rtti_field_value(rtti_object* obj, rtti_field* field, void* value);

@@ -8,15 +8,15 @@ namespace sf {
 	namespace render {
 		class IGraphicsDevice;
 	}
-}
+} // namespace sf
 
 namespace sf::assets {
 
 	struct SFAPI AssetManagerCreationDesc {
 		sf::render::IGraphicsDevice* device{nullptr};
-		stl::string mesh_registry_path{"mesh_registry.db"};
-		stl::string texture_registry_path{"texture_registry.db"};
-		stl::string material_registry_path{"material_registry.db"};
+		stl::string mesh_registry_path = stl::string(mem::MemTag::Mesh, "mesh_registry.db");
+		stl::string texture_registry_path = stl::string(mem::MemTag::Texture, "texture_registry.db");
+		stl::string material_registry_path = stl::string(mem::MemTag::Material, "material_registry.db");
 	};
 
 	// Asset manager is a wrapper class for mesh, material and texture managers.
@@ -42,7 +42,9 @@ namespace sf::assets {
 		inline bool texture_resource_exists(const stl::string& path) {
 			return m_TextureManager.texture_resources.contains(fs::relative_path(path));
 		}
-		inline const stl::unordered_map<stl::string, TextureAsset>& path_texture_map() const { return m_TextureRegistry.path_asset_map(); }
+		inline const stl::unordered_map<stl::string, TextureAsset>& path_texture_map() const {
+			return m_TextureRegistry.path_asset_map();
+		}
 		inline void import_mesh(const stl::string& path) { return m_MeshRegistry.import_mesh(fs::relative_path(path)); }
 		inline void import_mesh(const stl::string& path, UUID uuid) { return m_MeshRegistry.import_mesh(fs::relative_path(path), uuid); }
 		inline void move_mesh(const stl::string& old_path, const stl::string& new_path) {

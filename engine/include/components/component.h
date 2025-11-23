@@ -2,9 +2,10 @@
 
 #include <memory>
 #include "components/entity.h"
-#include "core/memory.h"
+#include "core/core.h"
+#include "core/logger.h"
 #include "core/rtti.h"
-#include "core/stl/shared_ptr.h"
+#include "memory/memory.h"
 
 namespace sf::components {
 
@@ -14,7 +15,7 @@ namespace sf::components {
 	public:
 		virtual ~IComponent() = default;
 		virtual void update(f32 delta_time) = 0;
-		virtual const stl::string& to_string() const = 0;
+		virtual stl::string to_string() const = 0;
 		virtual rtti::rtti_object& get_rtti() = 0;
 		virtual ComponentType component_type() = 0;
 		virtual void copy(stl::shared_ptr<IComponent>&) = 0;
@@ -24,13 +25,13 @@ namespace sf::components {
 	public:
 		virtual ~IComponentList() = default;
 		virtual void entity_destroyed(Entity entity) = 0;
-		virtual stl::string to_string() = 0;
+		virtual stl::string to_tstring() = 0;
 	};
 
 	template <typename T>
 	class EngineComponentList : public IComponentList {
 	public:
-		stl::string to_string() override { return T::to_string(); }
+		stl::string to_tstring() override { return T::to_tstring(); }
 
 		void insert(Entity entity, T component) {
 			if (m_EntityToIndexMap.contains(entity)) {
@@ -74,7 +75,7 @@ namespace sf::components {
 
 		Entity entity(size_t index) { return m_IndexToEntityMap[index]; }
 
-		Entity get_owner(const T& component) { 
+		Entity get_owner(const T& component) {
 			// We assume the give component is in the list
 			size_t index = m_Components.size();
 			for (u32 i = 0; i < m_Components.size(); ++i) {
@@ -107,7 +108,7 @@ namespace sf::components {
 		CustomComponentList& operator=(const CustomComponentList&) = default;
 		CustomComponentList& operator=(CustomComponentList&&) noexcept = default;
 		stl::shared_ptr<IComponent> default_component;
-		stl::string to_string() override;
+		stl::string to_tstring() override;
 		void insert(Entity entity, stl::shared_ptr<IComponent>& component);
 		void remove(Entity entity);
 		stl::shared_ptr<IComponent> get(Entity entity);
@@ -115,9 +116,9 @@ namespace sf::components {
 		const stl::vector<stl::shared_ptr<IComponent>>& components() const { return m_Components; }
 
 	private:
-		stl::vector<stl::shared_ptr<IComponent>> m_Components{};
-		stl::unordered_map<Entity, size_t> m_EntityToIndexMap{};
-		stl::unordered_map<size_t, Entity> m_IndexToEntityMap{};
+		stl::vector<stl::shared_ptr<IComponent>> m_Components{mem::MemTag::Logic};
+		stl::unordered_map<Entity, size_t> m_EntityToIndexMap{mem::MemTag::Logic};
+		stl::unordered_map<size_t, Entity> m_IndexToEntityMap{mem::MemTag::Logic};
 	};
 
 	class ComponentRegistry {
@@ -129,7 +130,7 @@ namespace sf::components {
 			const char* type_name = typeid(T).name();
 			s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
 			s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-			s_EngineComponentLists[type_name] = stl::make_shared<EngineComponentList<T>>(mem::ENUM::Engine_Components);
+			s_EngineComponentLists[type_name] = std::make_shared<EngineComponentList<T>>();
 			s_NextComponentTypeNumber++;
 		}
 
@@ -138,7 +139,7 @@ namespace sf::components {
 			const char* type_name = type_str.c_str();
 			s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
 			s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-			s_CustomComponentLists[type_name] = stl::make_shared<CustomComponentList>(mem::ENUM::Game_Components, component);
+			s_CustomComponentLists[type_name] = std::make_shared<CustomComponentList>(component);
 			s_NextComponentTypeNumber++;
 		}
 
@@ -148,7 +149,7 @@ namespace sf::components {
 			const char* type_name = typeid(T).name();
 			m_ComponentTypes[type_name] = m_NextComponentTypeNumber;
 			m_ComponentTypeNameMap[m_NextComponentTypeNumber] = type_name;
-			m_EngineComponentLists[type_name] = stl::make_shared<EngineComponentList<T>>(mem::ENUM::Engine_Components);
+			m_EngineComponentLists[type_name] = stl::make_shared<EngineComponentList<T>>(mem::MemTag::Logic);
 			m_NextComponentTypeNumber++;
 		}
 
@@ -231,45 +232,43 @@ namespace sf::components {
 		ComponentType m_NextComponentTypeNumber{};
 
 	public:
-		static stl::unordered_map<const char*, ComponentType> s_ComponentTypes;
-		static stl::unordered_map<ComponentType, const char*> s_ComponentTypeNameMap;
-		static stl::unordered_map<const char*, stl::shared_ptr<IComponentList>> s_EngineComponentLists;
-		static stl::unordered_map<const char*, stl::shared_ptr<CustomComponentList>> s_CustomComponentLists;
+		static std::unordered_map<const char*, ComponentType> s_ComponentTypes;
+		static std::unordered_map<ComponentType, const char*> s_ComponentTypeNameMap;
+		static std::unordered_map<const char*, stl::shared_ptr<IComponentList>> s_EngineComponentLists;
+		static std::unordered_map<const char*, stl::shared_ptr<CustomComponentList>> s_CustomComponentLists;
 		static ComponentType s_NextComponentTypeNumber;
 	};
 
 #define COMPONENT(type)                                                                                                                    \
 public:                                                                                                                                    \
-	inline const ::sf::stl::string& to_string() const override { return s_ComponentName; }                                            \
-	inline ::sf::components::ComponentType component_type() override { return s_ComponentType; }                                      \
-	inline void copy(::sf::stl::shared_ptr<IComponent>& dest) override {                                                              \
-		dest = ::sf::stl::make_shared<type>(::sf::mem::ENUM::Game_Components, *this);                                            \
+	inline ::sf::stl::string to_string() const override { return ::sf::stl::string(::sf::mem::MemTag::Strings, s_ComponentName); }      \
+	inline ::sf::components::ComponentType component_type() override { return s_ComponentType; }                                           \
+	inline void copy(::sf::stl::shared_ptr<IComponent>& dest) override {                                                                  \
+		dest = ::sf::stl::make_shared<type>(::sf::mem::MemTag::Logic, *this);                                                             \
 	}                                                                                                                                      \
                                                                                                                                            \
 private:                                                                                                                                   \
-	static ::sf::stl::string s_ComponentName;                                                                                         \
+	static const char* s_ComponentName;                                                                                                    \
 	static ::sf::components::ComponentType s_ComponentType;
 
 #define COMPONENT_IMPL(type)                                                                                                               \
-	::sf::stl::string type::s_ComponentName = #type;                                                                                  \
-	::sf::components::ComponentType type::s_ComponentType = ::sf::components::ComponentRegistry::s_NextComponentTypeNumber;      \
-	::sf::stl::shared_ptr<type> default_component_##type = ::sf::stl::make_shared<type>(::sf::mem::ENUM::Game_Components);  \
+	const char* type::s_ComponentName = #type;                                                                                             \
+	::sf::components::ComponentType type::s_ComponentType = ::sf::components::ComponentRegistry::s_NextComponentTypeNumber;                \
+	::sf::stl::shared_ptr<type> default_component_##type = ::sf::stl::make_shared<type>(::sf::mem::MemTag::Logic);                       \
 	struct RegisteredComponent##type {                                                                                                     \
-		RegisteredComponent##type() {                                                                                                      \
-			::sf::components::ComponentRegistry::global_register_custom_component(default_component_##type);                          \
-		}                                                                                                                                  \
+		RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_custom_component(default_component_##type); }   \
 	};                                                                                                                                     \
 	inline RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT_IMPL(type)                                                                                                        \
 	struct RegisteredComponent##type {                                                                                                     \
-		RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_engine_component<type>(); }                \
+		RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_engine_component<type>(); }                     \
 	};                                                                                                                                     \
 	inline RegisteredComponent##type _registered_component;
 
 #define ENGINE_COMPONENT(type)                                                                                                             \
 public:                                                                                                                                    \
-	static ::sf::stl::string to_string() { return #type; }                                                                            \
+	static ::sf::stl::string to_tstring() { return #type; }                                                                               \
                                                                                                                                            \
 private:
 } // namespace sf::components

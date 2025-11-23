@@ -1,6 +1,7 @@
 #include "engpch.h"
 #include "render/render_backend.h"
 #include "core/logger.h"
+#include "memory/memory.h"
 
 #ifdef SF_PLATFORM_WINDOWS
 #include "render/dx12/dx12_graphics_device.h"
@@ -45,14 +46,14 @@ IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc)
     switch (s_CurrentAPI) {
         case RenderAPI::DX12:
 #ifdef SF_PLATFORM_WINDOWS
-            return new dx12::DX12GraphicsDevice(desc);
+            return mem_new(mem::MemTag::Render) dx12::DX12GraphicsDevice(desc);
 #else
             CORE_ERROR("DX12 is only available on Windows");
             return nullptr;
 #endif
 
         case RenderAPI::Vulkan:
-            return new vk::VkGraphicsDevice(desc);
+            return mem_new(mem::MemTag::Render) vk::VkGraphicsDevice(desc);
 
         default:
             CORE_ERROR("Unknown render API");

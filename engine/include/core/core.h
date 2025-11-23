@@ -18,23 +18,22 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-#include <filesystem>
-#include "core/platform.h"
+#include "memory/memory.h"
 
 // Platform-specific DLL export/import
 #ifdef SF_PLATFORM_WINDOWS
-    #ifdef SF_BUILD_DLL
-        #define SFAPI __declspec(dllexport)
-    #else
-        #define SFAPI __declspec(dllimport)
-    #endif
+#ifdef SF_BUILD_DLL
+#define SFAPI __declspec(dllexport)
 #else
-    // Linux/macOS: use visibility attributes for shared libraries
-    #ifdef SF_BUILD_DLL
-        #define SFAPI __attribute__((visibility("default")))
-    #else
-        #define SFAPI
-    #endif
+#define SFAPI __declspec(dllimport)
+#endif
+#else
+// Linux/macOS: use visibility attributes for shared libraries
+#ifdef SF_BUILD_DLL
+#define SFAPI __attribute__((visibility("default")))
+#else
+#define SFAPI
+#endif
 #endif
 
 #ifdef _MSC_VER
@@ -62,45 +61,298 @@ namespace sf {
 #define BIND_EVENT_FN_FOR_OBJ(o, x) std::bind(&x, o, std::placeholders::_1)
 
 	namespace stl {
+		// Standard STL type aliases (non-allocating types only)
 		template <class _This, class... _Rest>
-		using tuple = SFAPI std::tuple<_This, _Rest...>;
+		using tuple = std::tuple<_This, _Rest...>;
 		template <class _Ty>
-		using reference_wrapper = SFAPI std::reference_wrapper<_Ty>;
+		using reference_wrapper = std::reference_wrapper<_Ty>;
 		template <typename _Ty, class _Container = std::deque<_Ty>>
-		using queue = SFAPI std::queue<_Ty, _Container>;
+		using queue = std::queue<_Ty, _Container>;
 
 		template <typename T>
-		using function = SFAPI std::function<T>;
-		using string = SFAPI std::string;
-		using string_view = SFAPI std::string_view;
-		using stringstream = SFAPI std::stringstream;
+		using function = std::function<T>;
+		using string_view = std::string_view;
+		using mutex = std::mutex;
+		template <typename Mutex>
+		using lock_guard = std::lock_guard<Mutex>;
+		template <typename Mutex>
+		using unique_lock = std::unique_lock<Mutex>;
+		template <typename Mutex>
+		using scoped_lock = std::scoped_lock<Mutex>;
+		using thread = std::thread;
+		using jthread = std::jthread;
 		template <typename T>
-		using vector = SFAPI std::vector<T>;
-		using mutex = SFAPI std::mutex;
-		template <typename Mutex>
-		using lock_guard = SFAPI std::lock_guard<Mutex>;
-		template <typename Mutex>
-		using unique_lock = SFAPI std::unique_lock<Mutex>;
-		template <typename Mutex>
-		using scoped_lock = SFAPI std::scoped_lock<Mutex>;
-		using thread = SFAPI std::thread;
-		using jthread = SFAPI std::jthread;
-		template <typename T>
-		using optional = SFAPI std::optional<T>;
+		using optional = std::optional<T>;
 		template <typename T, std::size_t Extent = std::dynamic_extent>
-		using span = SFAPI std::span<T, Extent>;
-		template <class _Kty, class _Ty, class _Hasher = std::hash<_Kty>, class _Keyeq = std::equal_to<_Kty>,
-				  class _Alloc = std::allocator<std::pair<const _Kty, _Ty>>>
-		using unordered_map = SFAPI std::unordered_map<_Kty, _Ty, _Hasher, _Keyeq, _Alloc>;
-		template <class Key, class T, class Compare = std::less<Key>, class Allocator = std::allocator<std::pair<const Key, T>>>
-		using map = SFAPI std::map<Key, T, Compare, Allocator>;
+		using span = std::span<T, Extent>;
 		template <class _Ty, size_t _Size>
-		using array = SFAPI std::array<_Ty, _Size>;
-		using wstring = SFAPI std::wstring;
-		using wstring_view = SFAPI std::wstring_view;
-		using recursive_mutex = SFAPI std::recursive_mutex;
+		using array = std::array<_Ty, _Size>;
+		using wstring_view = std::wstring_view;
+		using recursive_mutex = std::recursive_mutex;
 		template <size_t Size>
-		using bitset = SFAPI std::bitset<Size>;
+		using bitset = std::bitset<Size>;
+
+		// Tagged allocator versions (using underworld memory system)
+		// These use LinearTaggedAllocator for vectors and strings
+		template <class T>
+		class vector : public std::vector<T, mem::LinearTaggedAllocator<T>> {
+		public:
+			using base_type = std::vector<T, mem::LinearTaggedAllocator<T>>;
+			using allocator_type = mem::LinearTaggedAllocator<T>;
+
+			explicit vector(mem::MemTag tag) : base_type(allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			vector(mem::MemTag tag, typename base_type::size_type count) :
+				base_type(count, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			vector(mem::MemTag tag, typename base_type::size_type count, const T& value) :
+				base_type(count, value, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			vector(const vector& other) : base_type(other) {}
+
+			vector(vector&& other) noexcept : base_type(std::move(other)) {}
+
+			vector& operator=(const vector& other) {
+				base_type::operator=(other);
+				return *this;
+			}
+
+			vector& operator=(vector&& other) noexcept {
+				base_type::operator=(std::move(other));
+				return *this;
+			}
+
+			using base_type::base_type;
+		};
+
+		template <typename T>
+		using unique_ptr = std::unique_ptr<T, TaggedDeleter<T>>;
+
+		template <typename T, typename... Args>
+		unique_ptr<T> make_unique(mem::MemTag tag, Args&&... args) {
+			auto* mm = mem::MemoryManager::get();
+			assert(mm && "MemoryManager not initialized");
+
+			auto& arena = mm->arena(tag);
+			void* mem = arena.allocate(sizeof(T), alignof(T));
+			T* ptr = new (mem) T(std::forward<Args>(args)...);
+
+			return unique_ptr<T>(ptr, TaggedDeleter<T>(tag));
+		}
+
+		template <typename T>
+		using shared_ptr = std::shared_ptr<T>;
+
+		template <typename T, typename... Args>
+		shared_ptr<T> make_shared(mem::MemTag tag, Args&&... args) {
+			auto* mm = mem::MemoryManager::get();
+			assert(mm && "MemoryManager not initialized");
+
+			// Use allocate_shared with custom allocator
+			return std::allocate_shared<T>(mem::LinearTaggedAllocator<T>(&mm->arena(tag)), std::forward<Args>(args)...);
+		}
+
+		// String hash and equality for transparent lookup
+		struct TStringHash {
+			using is_transparent = void;
+			size_t operator()(std::string_view sv) const { return std::hash<std::string_view>{}(sv); }
+		};
+
+		struct TStringEqual {
+			using is_transparent = void;
+			bool operator()(std::string_view a, std::string_view b) const { return a == b; }
+		};
+
+		class string : public std::basic_string<char, std::char_traits<char>, mem::LinearTaggedAllocator<char>> {
+		public:
+			using base_type = std::basic_string<char, std::char_traits<char>, mem::LinearTaggedAllocator<char>>;
+			using allocator_type = mem::LinearTaggedAllocator<char>;
+
+			explicit string(mem::MemTag tag) : base_type(allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			string() : base_type(allocator_type(&mem::MemoryManager::get()->arena(mem::MemTag::Strings))) {
+			assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+		}
+
+			string(mem::MemTag tag, const char* str) : base_type(str, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			string(mem::MemTag tag, const std::string& str) :
+				base_type(str.c_str(), allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			string(mem::MemTag tag, std::string_view sv) :
+				base_type(sv.data(), sv.size(), allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			string(const string& other) : base_type(other) {}
+
+			string(const base_type& other) : base_type(other) {}
+
+			string(string&& other) noexcept : base_type(std::move(other)) {}
+
+			string(base_type&& other) noexcept : base_type(std::move(other)) {}
+
+			string(const char* str)
+			: base_type(str, allocator_type(&mem::MemoryManager::get()->arena(mem::MemTag::Strings))) {
+			assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+		}
+
+		string(std::string_view sv)
+			: base_type(sv.data(), sv.size(), allocator_type(&mem::MemoryManager::get()->arena(mem::MemTag::Strings))) {
+			assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+		}
+
+			string& operator=(const string& other) {
+				base_type::operator=(other);
+				return *this;
+			}
+
+			string& operator=(string&& other) noexcept {
+				base_type::operator=(std::move(other));
+				return *this;
+			}
+
+			string& operator=(const char* str) {
+				base_type::operator=(str);
+				return *this;
+			}
+
+			string& operator=(const std::string& str) {
+				base_type::operator=(str.c_str());
+				return *this;
+			}
+
+			string& operator=(const base_type& other) {
+				base_type::operator=(other);
+				return *this;
+			}
+
+			string& operator=(std::string_view sv) {
+				base_type::assign(sv.data(), sv.size());
+				return *this;
+			}
+
+			using base_type::base_type;
+		};
+
+		using tstringstream = std::basic_stringstream<char, std::char_traits<char>, mem::LinearTaggedAllocator<char>>;
+
+		template <typename... Args>
+		[[nodiscard]] string make_string(mem::MemTag tag, Args&&... args) {
+			auto* mm = mem::MemoryManager::get();
+			assert(mm);
+			if (!mm) {
+				throw std::runtime_error("Memory Manager not initialized.");
+			}
+			auto* arena = &mm->arena(tag);
+			assert(arena);
+			return string(std::forward<Args>(args)..., mem::LinearTaggedAllocator<char>(arena));
+		}
+
+		using tmp_string = std::basic_string<char, std::char_traits<char>, mem::TempAllocator<char>>;
+
+		template <class K, class V>
+		class unordered_map : public std::unordered_map<K, V, std::conditional_t<std::is_same_v<K, string>, TStringHash, std::hash<K>>,
+														std::conditional_t<std::is_same_v<K, string>, TStringEqual, std::equal_to<K>>,
+														mem::PoolTaggedAllocator<std::pair<const K, V>>> {
+		public:
+			using base_type = std::unordered_map<K, V, std::conditional_t<std::is_same_v<K, string>, TStringHash, std::hash<K>>,
+												 std::conditional_t<std::is_same_v<K, string>, TStringEqual, std::equal_to<K>>,
+												 mem::PoolTaggedAllocator<std::pair<const K, V>>>;
+			using allocator_type = mem::PoolTaggedAllocator<std::pair<const K, V>>;
+			using hasher = std::conditional_t<std::is_same_v<K, string>, TStringHash, std::hash<K>>;
+			using key_equal = std::conditional_t<std::is_same_v<K, string>, TStringEqual, std::equal_to<K>>;
+
+			explicit unordered_map(mem::MemTag tag) :
+				base_type(0, hasher{}, key_equal{}, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			unordered_map(mem::MemTag tag, typename base_type::size_type bucket_count) :
+				base_type(bucket_count, hasher{}, key_equal{}, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			unordered_map(const unordered_map& other) : base_type(other) {}
+
+			unordered_map(unordered_map&& other) noexcept : base_type(std::move(other)) {}
+
+			unordered_map& operator=(const unordered_map& other) {
+				base_type::operator=(other);
+				return *this;
+			}
+
+			unordered_map& operator=(unordered_map&& other) noexcept {
+				base_type::operator=(std::move(other));
+				return *this;
+			}
+
+			using base_type::base_type;
+		};
+
+		// Tagged map using PoolTaggedAllocator
+		template <class Key, class T, class Compare = std::less<Key>>
+		class map : public std::map<Key, T, Compare, mem::PoolTaggedAllocator<std::pair<const Key, T>>> {
+		public:
+			using base_type = std::map<Key, T, Compare, mem::PoolTaggedAllocator<std::pair<const Key, T>>>;
+			using allocator_type = mem::PoolTaggedAllocator<std::pair<const Key, T>>;
+
+			explicit map(mem::MemTag tag) : base_type(Compare{}, allocator_type(&mem::MemoryManager::get()->arena(tag))) {
+				assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			}
+
+			map(const map& other) : base_type(other) {}
+
+			map(map&& other) noexcept : base_type(std::move(other)) {}
+
+			map& operator=(const map& other) {
+				base_type::operator=(other);
+				return *this;
+			}
+
+			map& operator=(map&& other) noexcept {
+				base_type::operator=(std::move(other));
+				return *this;
+			}
+
+			using base_type::base_type;
+		};
+
+		// Factory functions for creating tagged containers
+		template <class T>
+		[[nodiscard]] inline vector<T> make_vector(mem::MemTag tag) {
+			auto* mm = mem::MemoryManager::get();
+			assert(mm && "MemoryManager not initialized");
+			return vector<T>(mem::LinearTaggedAllocator<T>(&mm->arena(tag)));
+		}
+
+		template <class K, class V>
+		[[nodiscard]] inline unordered_map<K, V> make_unordered_map(mem::MemTag tag) {
+			auto& mm = *mem::MemoryManager::get();
+			assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			return unordered_map<K, V>(0, std::conditional_t<std::is_same_v<K, string>, TStringHash, std::hash<K>>{},
+									   std::conditional_t<std::is_same_v<K, string>, TStringEqual, std::equal_to<K>>{},
+									   mem::PoolTaggedAllocator<std::pair<const K, V>>(&mm.arena(tag)));
+		}
+
+		template <class Key, class T, class Compare = std::less<Key>>
+		[[nodiscard]] inline map<Key, T, Compare> make_map(mem::MemTag tag) {
+			auto& mm = *mem::MemoryManager::get();
+			assert(mem::MemoryManager::get() && "MemoryManager not initialized");
+			return map<Key, T, Compare>(Compare{}, mem::PoolTaggedAllocator<std::pair<const Key, T>>(&mm.arena(tag)));
+		}
 
 		struct SFAPI generational_index {
 			u32 index = 0;
@@ -138,8 +390,8 @@ namespace sf {
 				bool is_alive = false;
 				u32 generation = 0;
 			};
-			stl::vector<entry> m_Entries{};
-			stl::vector<u32> m_FreeIndices{};
+			std::vector<entry> m_Entries{};
+			std::vector<u32> m_FreeIndices{};
 		};
 
 		template <typename T>
@@ -184,8 +436,8 @@ namespace sf {
 				return nullptr;
 			}
 
-			vector<generational_index> get_all_valid_indices(const generational_index_allocator& allocator) const {
-				vector<generational_index> result;
+			stl::vector<generational_index> get_all_valid_indices(const generational_index_allocator& allocator) const {
+				stl::vector<generational_index> result(mem::MemTag::Logic);
 				for (u32 i = 0; i < m_Entries.size(); ++i) {
 					const auto& entry = m_Entries[i];
 					if (!entry)
@@ -222,7 +474,7 @@ namespace sf {
 			auto end() const { return m_Entries.end(); }
 
 		private:
-			stl::vector<stl::optional<entry>> m_Entries;
+			std::vector<stl::optional<entry>> m_Entries;
 		};
 
 	} // namespace stl

@@ -45,7 +45,6 @@ namespace sf{
 		stl::generational_vector<Entity> m_Entities{};
 	};
 } // namespace sf
-  //
 namespace std {
 	template <typename T>
 	struct hash;

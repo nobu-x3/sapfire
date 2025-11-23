@@ -14,7 +14,7 @@ namespace sf {
 		MouseButton button() const { return m_Button; }
 
 		stl::string to_string() const final {
-			stl::stringstream ss;
+			stl::tstringstream ss;
 			ss << "MouseButtonEvent: ";
 			switch (m_Button) {
 			case MouseButton::RMB:
@@ -43,7 +43,7 @@ namespace sf {
 		i32 x() const { return m_X; }
 		i32 y() const { return m_Y; }
 		stl::string to_string() const final {
-			stl::stringstream ss;
+			stl::tstringstream ss;
 			ss << "MouseMovedEvent: delta x: " << m_X << ", delta y: " << m_Y;
 			return ss.str();
 		}

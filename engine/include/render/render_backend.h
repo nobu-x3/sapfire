@@ -7,9 +7,7 @@
 
 namespace sf::render {
 
-// ============================================================================
 // Render Backend Factory
-// ============================================================================
 
 class RenderBackend {
 public:
@@ -19,7 +17,6 @@ public:
     // Get current API
     static RenderAPI get_api();
 
-    // Check if backend is initialized
     static bool is_initialized();
 
     // Create graphics device

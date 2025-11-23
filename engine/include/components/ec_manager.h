@@ -3,7 +3,6 @@
 #include "components/component.h"
 #include "components/entity.h"
 #include "core/core.h"
-#include "core/stl/unique_ptr.h"
 
 namespace sf {
 	class SFAPI ECManager {

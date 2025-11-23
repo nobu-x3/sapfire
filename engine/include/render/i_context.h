@@ -9,9 +9,7 @@ namespace sf::render {
 
 class IPipelineState;
 
-// ============================================================================
 // Base Context Interface (Command List Wrapper)
-// ============================================================================
 
 class IContext {
 public:
@@ -31,9 +29,7 @@ public:
     virtual void* get_native_command_list() = 0;
 };
 
-// ============================================================================
 // Graphics Context Interface
-// ============================================================================
 
 class IGraphicsContext : public IContext {
 public:
@@ -71,9 +67,7 @@ public:
     virtual void draw_indexed_instanced(u32 index_count_per_instance, u32 instance_count, u32 start_index = 0, i32 base_vertex = 0, u32 start_instance = 0) = 0;
 };
 
-// ============================================================================
 // Compute Context Interface
-// ============================================================================
 
 class IComputeContext : public IContext {
 public:
@@ -91,9 +85,7 @@ public:
     virtual void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) = 0;
 };
 
-// ============================================================================
 // Copy Context Interface
-// ============================================================================
 
 class ICopyContext : public IContext {
 public:

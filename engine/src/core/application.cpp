@@ -4,10 +4,10 @@
 #include "core/core.h"
 #include "core/input.h"
 #include "core/layer.h"
-#include "core/memory.h"
 #include "core/timer.h"
 #include "events/input_event.h"
 #include "events/keyboard_event.h"
+#include "memory/memory.h"
 #include "render/window.h"
 #include "tools/profiling.h"
 
@@ -27,16 +27,16 @@ namespace sf {
 
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application(const ApplicationCreationDesc& desc) : m_Name(desc.name), m_Minimized(false) {
+	Application::Application(const ApplicationCreationDesc& desc) :
+		m_Name(mem::MemTag::Strings, desc.name), m_Minimized(false) {
 		PROFILE_FUNCTION();
 		input::InputSystem::init();
 		s_Instance = this;
-        m_ClientExtent.height = desc.height;
-        m_ClientExtent.width = desc.width;
+		m_ClientExtent.height = desc.height;
+		m_ClientExtent.width = desc.width;
 		fs::FileSystem::locate_root_directory();
 		m_Window = stl::make_unique<Window>(
-			mem::ENUM::Engine_Core,
-			WindowParams{desc.width, desc.height, stl::string(desc.name), BIND_EVENT_FN(Application::on_event)});
+			mem::MemTag::Logic, WindowParams{desc.width, desc.height, stl::string(mem::MemTag::Strings, desc.name), BIND_EVENT_FN(Application::on_event)});
 	}
 
 	Application::~Application() { PROFILE_FUNCTION(); }

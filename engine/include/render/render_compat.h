@@ -3,7 +3,6 @@
 //==============================================================================
 // DEPRECATED: This header is deprecated and will be removed in a future version
 //==============================================================================
-//
 // Migration Guide:
 // - Replace d3d::AnsiToWString()    → sf::string_utils::to_wstring()
 // - Replace d3d::WStringToANSI()    → sf::string_utils::to_string()
@@ -15,14 +14,12 @@
 // - Replace d3d::GraphicsDevice     → sf::render::IGraphicsDevice*
 // - Replace d3d::Buffer             → sf::render::Buffer
 // - Replace d3d::Texture            → sf::render::Texture
-//
 // New includes:
 // - #include "core/string_utils.h"    for string conversion
 // - #include "render/render_backend.h" for IGraphicsDevice
 // - #include "render/resource_types.h" for Buffer, Texture, etc.
 // - #include "render/material.h"       for Material types
 // - #include "render/lights.h"         for Light type
-//
 //==============================================================================
 
 #warning "render_compat.h is deprecated. Please migrate to sf::render:: and sf::string_utils:: namespaces. See header for migration guide."

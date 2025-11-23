@@ -91,7 +91,7 @@ void VkPipelineState::create_graphics(VkDevice device, const GraphicsPipelineSta
     depth_stencil.stencilTestEnable = desc.depth_stencil.stencil_enable ? VK_TRUE : VK_FALSE;
 
     // Color blend attachments
-    stl::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments;
+    stl::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments{mem::MemTag::Temp};
     for (u32 i = 0; i < desc.rtv_count && i < desc.blend_states.size(); ++i) {
         const auto& blend = desc.blend_states[i];
         VkPipelineColorBlendAttachmentState attachment{};

@@ -4,9 +4,7 @@
 
 namespace sf::render::vk {
 
-// ============================================================================
 // Format Conversions
-// ============================================================================
 
 inline VkFormat to_vk_format(Format format) {
     switch (format) {
@@ -75,13 +73,11 @@ inline VkFormat to_vk_format(Format format) {
         case Format::RGBA32_UINT: return VK_FORMAT_R32G32B32A32_UINT;
         case Format::RGBA32_SINT: return VK_FORMAT_R32G32B32A32_SINT;
 
-        // Depth-stencil formats
         case Format::D16_UNORM: return VK_FORMAT_D16_UNORM;
         case Format::D32_FLOAT: return VK_FORMAT_D32_SFLOAT;
         case Format::D24_UNORM_S8_UINT: return VK_FORMAT_D24_UNORM_S8_UINT;
         case Format::D32_FLOAT_S8X24_UINT: return VK_FORMAT_D32_SFLOAT_S8_UINT;
 
-        // Compressed formats
         case Format::BC1_UNORM: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
         case Format::BC1_UNORM_SRGB: return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
         case Format::BC2_UNORM: return VK_FORMAT_BC2_UNORM_BLOCK;
@@ -171,9 +167,7 @@ inline Format from_vk_format(VkFormat format) {
     }
 }
 
-// ============================================================================
 // Resource State (Image Layout) Conversions
-// ============================================================================
 
 inline VkImageLayout to_vk_image_layout(ResourceState state) {
     switch (state) {
@@ -236,9 +230,7 @@ inline VkPipelineStageFlags to_vk_pipeline_stage(ResourceState state) {
     }
 }
 
-// ============================================================================
 // Primitive Topology Conversions
-// ============================================================================
 
 inline VkPrimitiveTopology to_vk_primitive_topology(PrimitiveTopology topology) {
     switch (topology) {
@@ -251,9 +243,7 @@ inline VkPrimitiveTopology to_vk_primitive_topology(PrimitiveTopology topology) 
     }
 }
 
-// ============================================================================
 // Cull Mode Conversions
-// ============================================================================
 
 inline VkCullModeFlags to_vk_cull_mode(CullMode mode) {
     switch (mode) {
@@ -264,9 +254,7 @@ inline VkCullModeFlags to_vk_cull_mode(CullMode mode) {
     }
 }
 
-// ============================================================================
 // Fill Mode Conversions
-// ============================================================================
 
 inline VkPolygonMode to_vk_polygon_mode(FillMode mode) {
     switch (mode) {
@@ -276,9 +264,7 @@ inline VkPolygonMode to_vk_polygon_mode(FillMode mode) {
     }
 }
 
-// ============================================================================
 // Blend Conversions
-// ============================================================================
 
 inline VkBlendFactor to_vk_blend_factor(Blend blend) {
     switch (blend) {
@@ -314,9 +300,7 @@ inline VkBlendOp to_vk_blend_op(BlendOp op) {
     }
 }
 
-// ============================================================================
 // Comparison Function Conversions
-// ============================================================================
 
 inline VkCompareOp to_vk_compare_op(CompareFunc func) {
     switch (func) {
@@ -332,9 +316,7 @@ inline VkCompareOp to_vk_compare_op(CompareFunc func) {
     }
 }
 
-// ============================================================================
 // Stencil Op Conversions
-// ============================================================================
 
 inline VkStencilOp to_vk_stencil_op(StencilOp op) {
     switch (op) {
@@ -350,9 +332,7 @@ inline VkStencilOp to_vk_stencil_op(StencilOp op) {
     }
 }
 
-// ============================================================================
 // Texture Address Mode Conversions
-// ============================================================================
 
 inline VkSamplerAddressMode to_vk_sampler_address_mode(TextureAddressMode mode) {
     switch (mode) {
@@ -365,9 +345,7 @@ inline VkSamplerAddressMode to_vk_sampler_address_mode(TextureAddressMode mode) 
     }
 }
 
-// ============================================================================
 // Filter Conversions
-// ============================================================================
 
 inline void to_vk_sampler_filter(Filter filter, VkFilter& minFilter, VkFilter& magFilter, VkSamplerMipmapMode& mipMode, bool& anisotropyEnable) {
     anisotropyEnable = false;
@@ -423,9 +401,7 @@ inline void to_vk_sampler_filter(Filter filter, VkFilter& minFilter, VkFilter& m
     }
 }
 
-// ============================================================================
 // Command Queue Type Conversions
-// ============================================================================
 
 inline VkQueueFlags to_vk_queue_flags(CommandQueueType type) {
     switch (type) {

@@ -8,7 +8,9 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/core/game_context.cpp
         engine/src/core/uuid.cpp
         engine/src/core/rtti.cpp
-        engine/src/core/memory.cpp
+        engine/src/memory/linear_allocator.cpp
+        engine/src/memory/fixed_block_pool.cpp
+        engine/src/memory/memory.cpp
         engine/src/math/quat.cpp
         engine/src/math/mat4.cpp
         engine/src/assets/mesh_manager.cpp

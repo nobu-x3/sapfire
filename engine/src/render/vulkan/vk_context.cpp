@@ -6,9 +6,7 @@
 
 namespace sf::render::vk {
 
-// ============================================================================
 // Base VkContext
-// ============================================================================
 
 void VkContext::reset() {
     m_ImageBarriers.clear();
@@ -101,9 +99,7 @@ void VkContext::execute_resource_barriers() {
     }
 }
 
-// ============================================================================
 // VkGraphicsContext
-// ============================================================================
 
 VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device)
     : m_DevicePtr(device) {
@@ -111,7 +107,6 @@ VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device)
 }
 
 void VkGraphicsContext::reset() {
-    // End any active render pass
     if (m_CurrentRenderPass != VK_NULL_HANDLE) {
         vkCmdEndRenderPass(m_CommandBuffer);
         m_CurrentRenderPass = VK_NULL_HANDLE;
@@ -234,18 +229,15 @@ void VkGraphicsContext::set_scissor_rect(const ScissorRect& scissor) {
 }
 
 void VkGraphicsContext::set_render_target(Texture& render_target, Texture* depth_stencil) {
-    // End current render pass if active
     if (m_CurrentRenderPass != VK_NULL_HANDLE) {
         vkCmdEndRenderPass(m_CommandBuffer);
         m_CurrentRenderPass = VK_NULL_HANDLE;
         m_CurrentFramebuffer = VK_NULL_HANDLE;
     }
 
-    // For swapchain rendering, get the framebuffer from the device
     // This is a simplified version that works with the main render pass
     VkRenderPass render_pass = m_DevicePtr->get_main_render_pass();
 
-    // Get the current back buffer index to find the right framebuffer
     u32 back_buffer_index = m_DevicePtr->get_current_back_buffer_index();
     VkFramebuffer framebuffer = m_DevicePtr->get_vk_swapchain_framebuffer(back_buffer_index);
 
@@ -254,7 +246,6 @@ void VkGraphicsContext::set_render_target(Texture& render_target, Texture* depth
         return;
     }
 
-    // Begin render pass
     VkRenderPassBeginInfo begin_info{};
     begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     begin_info.renderPass = render_pass;
@@ -262,7 +253,6 @@ void VkGraphicsContext::set_render_target(Texture& render_target, Texture* depth
     begin_info.renderArea.offset = {0, 0};
     begin_info.renderArea.extent = {render_target.width, render_target.height};
 
-    // Clear values (optional, can be set by user before beginning)
     VkClearValue clear_value{};
     clear_value.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
     begin_info.clearValueCount = 1;
@@ -311,9 +301,7 @@ void VkGraphicsContext::draw_indexed_instanced(u32 index_count_per_instance, u32
     draw_indexed(index_count_per_instance, instance_count, start_index, base_vertex, start_instance);
 }
 
-// ============================================================================
 // VkComputeContext
-// ============================================================================
 
 VkComputeContext::VkComputeContext(VkGraphicsDevice* device)
     : m_DevicePtr(device) {
@@ -370,9 +358,7 @@ void VkComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_count
     vkCmdDispatch(m_CommandBuffer, thread_group_count_x, thread_group_count_y, thread_group_count_z);
 }
 
-// ============================================================================
 // VkCopyContext
-// ============================================================================
 
 VkCopyContext::VkCopyContext(VkGraphicsDevice* device)
     : m_DevicePtr(device) {
@@ -404,21 +390,18 @@ void VkCopyContext::copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offs
 void VkCopyContext::copy_texture(Texture& dst, Texture& src) {
     VkImageCopy copy_region{};
 
-    // Source
     copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.srcSubresource.mipLevel = 0;
     copy_region.srcSubresource.baseArrayLayer = 0;
     copy_region.srcSubresource.layerCount = 1;
     copy_region.srcOffset = {0, 0, 0};
 
-    // Destination
     copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     copy_region.dstSubresource.mipLevel = 0;
     copy_region.dstSubresource.baseArrayLayer = 0;
     copy_region.dstSubresource.layerCount = 1;
     copy_region.dstOffset = {0, 0, 0};
 
-    // Extent
     copy_region.extent.width = std::min(src.width, dst.width);
     copy_region.extent.height = std::min(src.height, dst.height);
     copy_region.extent.depth = 1;

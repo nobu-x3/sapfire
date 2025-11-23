@@ -1,15 +1,34 @@
+#include "core/core.h"
 #include "engpch.h"
 
 #include "components/component.h"
 
 namespace sf::components {
 	ComponentRegistry::ComponentRegistry() :
-		m_ComponentTypes(s_ComponentTypes), m_ComponentTypeNameMap(s_ComponentTypeNameMap), m_EngineComponentLists(s_EngineComponentLists),
-		m_CustomComponentLists(s_CustomComponentLists), m_NextComponentTypeNumber(s_NextComponentTypeNumber) {}
+		m_ComponentTypes(mem::MemTag::Logic),
+		m_ComponentTypeNameMap(mem::MemTag::Logic),
+		m_EngineComponentLists(mem::MemTag::Logic),
+		m_CustomComponentLists(mem::MemTag::Logic) {
+		// Copy from static members to instance members
+		// Cannot use copy constructors due to different allocators
+		for (const auto& [key, value] : s_ComponentTypes) {
+			m_ComponentTypes[key] = value;
+		}
+		for (const auto& [key, value] : s_ComponentTypeNameMap) {
+			m_ComponentTypeNameMap[key] = value;
+		}
+		for (const auto& [key, value] : s_EngineComponentLists) {
+			m_EngineComponentLists[key] = value;
+		}
+		for (const auto& [key, value] : s_CustomComponentLists) {
+			m_CustomComponentLists[key] = value;
+		}
+		m_NextComponentTypeNumber = s_NextComponentTypeNumber;
+	}
 
 	CustomComponentList::CustomComponentList(const stl::shared_ptr<IComponent>& def_comp) : default_component(def_comp) {}
 
-	stl::string CustomComponentList::to_string() { return default_component->to_string(); }
+	stl::string CustomComponentList::to_tstring() { return default_component->to_string(); }
 
 	void CustomComponentList::insert(Entity entity, stl::shared_ptr<IComponent>& component) {
 		if (m_EntityToIndexMap.size() > 0 && m_EntityToIndexMap.contains(entity)) {
@@ -48,7 +67,7 @@ namespace sf::components {
 		const char* type_name = m_ComponentTypeNameMap[component->component_type()];
 		stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
 		if (!component_list)
-			component_list = stl::make_shared<CustomComponentList>(mem::ENUM::Game_Components);
+			component_list = stl::make_shared<CustomComponentList>(mem::MemTag::Logic);
 		component_list->insert(entity, component);
 	}
 
@@ -56,7 +75,7 @@ namespace sf::components {
 		const char* type_name = m_ComponentTypeNameMap[component_type];
 		stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
 		if (!component_list)
-			component_list = stl::make_shared<CustomComponentList>(mem::ENUM::Game_Components);
+			component_list = stl::make_shared<CustomComponentList>(mem::MemTag::Logic);
 		stl::shared_ptr<IComponent> component;
 		component_list->default_component->copy(component);
 		component_list->insert(entity, component);

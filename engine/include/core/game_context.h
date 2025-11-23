@@ -3,12 +3,11 @@
 #include "assets/asset_manager.h"
 #include "components/ec_manager.h"
 #include "core/core.h"
-#include "core/stl/unique_ptr.h"
 #include "math/math.h"
 #include "physics/physics_engine.h"
 #include "render/camera.h"
-#include "render/render_backend.h"
 #include "render/material.h"
+#include "render/render_backend.h"
 
 namespace sf {
 
@@ -31,9 +30,9 @@ namespace sf {
 	struct GameContextCreationDesc {
 		ClientExtent* client_extent;
 		void* window_handle; // Native window handle (HWND on Windows, X11 Window on Linux, etc.)
-		stl::string mesh_registry_path{"mesh_registry.db"};
-		stl::string texture_registry_path{"texture_registry.db"};
-		stl::string material_registry_path{"material_registry.db"};
+		stl::string mesh_registry_path = stl::string(mem::MemTag::Mesh, "mesh_registry.db");
+		stl::string texture_registry_path = stl::string(mem::MemTag::Texture, "texture_registry.db");
+		stl::string material_registry_path = stl::string(mem::MemTag::Material, "material_registry.db");
 	};
 
 	struct SFAPI RenderComponentResourcePaths {

@@ -17,7 +17,7 @@ namespace sf::anim {
 
 		void interp(f32 t, sf::math::mat4& M) const;
 
-		stl::vector<Keyframe> keyframes;
+		stl::vector<Keyframe> keyframes{mem::MemTag::Animation};
 	};
 
 	struct SFAPI AnimationClip {
@@ -26,7 +26,7 @@ namespace sf::anim {
 
 		void interp(f32 t, stl::vector<sf::math::mat4>& bone_transform) const;
 
-		stl::vector<BoneAnimation> bone_animations;
+		stl::vector<BoneAnimation> bone_animations{mem::MemTag::Animation};
 		UUID uuid;
 	};
 

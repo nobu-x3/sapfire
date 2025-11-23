@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/core.h"
 #include "core/logger.h"
 
 #include <chrono>
@@ -14,7 +13,7 @@ namespace sf {
 	using FloatingPointMicroseconds = std::chrono::duration<double, std::micro>;
 
 	struct ProfileResult {
-		stl::string Name;
+		std::string Name;
 
 		FloatingPointMicroseconds Start;
 		std::chrono::microseconds ElapsedTime;
@@ -22,7 +21,7 @@ namespace sf {
 	};
 
 	struct InstrumentationSession {
-		stl::string Name;
+		std::string Name;
 	};
 
 	class Instrumentor {
@@ -30,7 +29,7 @@ namespace sf {
 		Instrumentor(const Instrumentor&) = delete;
 		Instrumentor(Instrumentor&&) = delete;
 
-		void BeginSession(const stl::string& name, const std::string& filepath = "results.json") {
+		void BeginSession(const std::string& name, const std::string& filepath = "results.json") {
 			std::lock_guard lock(m_Mutex);
 			if (m_CurrentSession) {
 				// If there is already a current session, then close it before
@@ -67,7 +66,7 @@ namespace sf {
 		}
 
 		void WriteProfile(const ProfileResult& result) {
-			stl::stringstream json;
+			std::stringstream json;
 
 			json << std::setprecision(3) << std::fixed;
 			json << ",{";

@@ -6,16 +6,18 @@
 namespace sf::components {
 	ENGINE_COMPONENT_IMPL(NameComponent);
 
-	stl::unordered_map<stl::string, u32> g_Names{{"Entity", 0}};
+	std::unordered_map<std::string, u32> g_Names{{"Entity", 0}};
 
 	NameComponent::NameComponent() : m_Name("Entity") {
-		if (g_Names.contains(m_Name)) {
-			auto old_name = m_Name;
-			if (g_Names[old_name] > 0)
-				m_Name = m_Name + " (" + std::to_string(g_Names[old_name]) + ")";
-			g_Names[old_name]++;
+		if (g_Names.contains(m_Name.c_str())) {
+			auto& old_name = m_Name;
+			if (g_Names[old_name.c_str()] > 0) {
+				std::string temp = std::string(old_name.c_str()) + " (" + std::to_string(g_Names[old_name.c_str()]) + ")";
+				m_Name = stl::string(mem::MemTag::Strings, temp);
+			}
+			g_Names[old_name.c_str()]++;
 		} else {
-			g_Names[m_Name] = 0;
+			g_Names[m_Name.c_str()] = 0;
 		}
 		register_rtti();
 	}
@@ -51,13 +53,15 @@ namespace sf::components {
 	}
 
 	NameComponent::NameComponent(stl::string_view name) : m_Name(name) {
-		if (g_Names.contains(m_Name)) {
+		if (g_Names.contains(m_Name.c_str())) {
 			auto old_name = m_Name;
-			if (g_Names[old_name] > 0)
-				m_Name = m_Name + " (" + std::to_string(g_Names[old_name]) + ")";
-			g_Names[old_name]++;
+			if (g_Names[old_name.c_str()] > 0) {
+				std::string temp = std::string(old_name.c_str()) + " (" + std::to_string(g_Names[old_name.c_str()]) + ")";
+				m_Name = stl::string(mem::MemTag::Strings, temp);
+			}
+			g_Names[old_name.c_str()]++;
 		} else {
-			g_Names[m_Name] = 0;
+			g_Names[m_Name.c_str()] = 0;
 		}
 	}
 } // namespace sf

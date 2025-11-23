@@ -13,7 +13,6 @@ struct aabb {
     aabb() = default;
     aabb(const vec3& center, const vec3& extents) : center(center), extents(extents) {}
 
-    // Create AABB from a list of points
     static aabb create_from_points(const vec3* points, size_t count) {
         if (count == 0) {
             return aabb();

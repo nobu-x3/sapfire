@@ -76,14 +76,14 @@ namespace sf::anim {
 	void SkinnedData::final_transform(UUID clip_uuid, f32 time_pos, stl::vector<sf::math::mat4>& final_transforms) {
 
 		u32 numBones = m_BoneOffsets.size();
-		std::vector<sf::math::mat4> toParentTransforms(numBones);
+		stl::vector<sf::math::mat4> toParentTransforms = stl::vector<sf::math::mat4>(mem::MemTag::Animation);
+		toParentTransforms.resize(numBones);
 		// Interpolate all the bones of this clip at the given time instance.
 		auto clip = m_Animations.find(clip_uuid);
 		clip->second.interp(time_pos, toParentTransforms);
-		//
 		// Traverse the hierarchy and transform all the bones to the root space.
-		//
-		std::vector<sf::math::mat4> toRootTransforms(numBones);
+		stl::vector<sf::math::mat4> toRootTransforms = stl::vector<sf::math::mat4>(mem::MemTag::Animation);
+		toRootTransforms.resize(numBones);
 		// The root bone has index 0.  The root bone has no parent, so its toRootTransform
 		// is just its local bone transform.
 		toRootTransforms[0] = toParentTransforms[0];

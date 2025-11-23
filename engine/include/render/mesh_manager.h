@@ -9,7 +9,7 @@ namespace sf::d3d {
             bool import_mesh();
 
         private:
-            stl::unordered_map<UUID, primitives::MeshData> m_NameToMeshDataMap{};
+            stl::tunordered_map<UUID, primitives::MeshData> m_NameToMeshDataMap{};
 
     };
 }

@@ -15,18 +15,14 @@ public:
     explicit VkGraphicsDevice(const SwapchainCreationDesc& desc);
     ~VkGraphicsDevice() override;
 
-    // ========================================================================
     // Frame Management
-    // ========================================================================
 
     void begin_frame() override;
     void end_frame() override;
     void present() override;
     void wait_for_idle() override;
 
-    // ========================================================================
     // Window / Swapchain Management
-    // ========================================================================
 
     void resize_window(u32 width, u32 height) override;
     u32 get_window_width() const override { return m_WindowWidth; }
@@ -36,9 +32,7 @@ public:
     u32 get_current_back_buffer_index() const override { return m_CurrentBackBufferIndex; }
     u32 get_back_buffer_count() const override { return m_BackBufferCount; }
 
-    // ========================================================================
     // Resource Creation
-    // ========================================================================
 
     Buffer create_buffer(const BufferCreationDesc& desc) override;
     Buffer create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
@@ -49,56 +43,42 @@ public:
     IPipelineState* create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
     IPipelineState* create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
 
-    // ========================================================================
     // Context Access
-    // ========================================================================
 
     IGraphicsContext& get_current_graphics_context() override;
     IGraphicsContext& get_graphics_context(u32 frame_index) override;
     IComputeContext& get_compute_context() override;
     ICopyContext& get_copy_context() override;
 
-    // ========================================================================
     // Command Queue Access
-    // ========================================================================
 
     ICommandQueue* get_direct_queue() override { return m_GraphicsQueue.get(); }
     ICommandQueue* get_compute_queue() override { return m_ComputeQueue.get(); }
     ICommandQueue* get_copy_queue() override { return m_TransferQueue.get(); }
 
-    // ========================================================================
     // Descriptor Heap Access
-    // ========================================================================
 
     IDescriptorHeap* get_cbv_srv_uav_heap() override { return m_DescriptorHeap.get(); }
     IDescriptorHeap* get_rtv_heap() override { return m_DescriptorHeap.get(); }
     IDescriptorHeap* get_dsv_heap() override { return m_DescriptorHeap.get(); }
     IDescriptorHeap* get_sampler_heap() override { return m_SamplerHeap.get(); }
 
-    // ========================================================================
     // Memory Allocator Access
-    // ========================================================================
 
     IMemoryAllocator* get_memory_allocator() override { return m_MemoryAllocator.get(); }
 
-    // ========================================================================
     // Frame Timing
-    // ========================================================================
 
     u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
     u32 get_frames_in_flight() const override { return m_FramesInFlight; }
 
-    // ========================================================================
     // Backend Information
-    // ========================================================================
 
     RenderAPI get_api() const override { return RenderAPI::Vulkan; }
     const char* get_api_name() const override { return "Vulkan"; }
     void* get_native_device() override { return reinterpret_cast<void*>(m_Device); }
 
-    // ========================================================================
     // Vulkan-specific accessors
-    // ========================================================================
 
     VkInstance get_vk_instance() const { return m_Instance; }
     VkPhysicalDevice get_vk_physical_device() const { return m_PhysicalDevice; }
@@ -157,7 +137,7 @@ private:
 
     stl::unique_ptr<VkMemoryAllocator> m_MemoryAllocator;
 
-    stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates;
+    stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates {mem::MemTag::Render};
 
     stl::array<Texture, MAX_FRAMES_IN_FLIGHT> m_BackBuffers;
     stl::array<VkImageView, MAX_FRAMES_IN_FLIGHT> m_SwapchainImageViews = {VK_NULL_HANDLE};

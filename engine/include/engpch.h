@@ -27,9 +27,7 @@
 
 #include "core/file_system.h"
 #include "core/logger.h"
-#include "core/memory.h"
 #include "core/platform.h"
-#include "core/stl/shared_ptr.h"
-#include "core/stl/unique_ptr.h"
 #include "core/uuid.h"
 #include "tools/profiling.h"
+#include "core/core.h"

@@ -4,9 +4,7 @@
 
 namespace sf::render {
 
-// ============================================================================
 // Render API Selection
-// ============================================================================
 
 enum class RenderAPI : u8 {
     None = 0,
@@ -14,15 +12,11 @@ enum class RenderAPI : u8 {
     Vulkan
 };
 
-// ============================================================================
 // Rendering Constants
-// ============================================================================
 
 constexpr u32 MAX_FRAMES_IN_FLIGHT = 3;
 
-// ============================================================================
 // Resource Formats
-// ============================================================================
 
 enum class Format : u32 {
     Unknown = 0,
@@ -90,13 +84,11 @@ enum class Format : u32 {
     RGBA32_UINT,
     RGBA32_SINT,
 
-    // Depth-stencil formats
     D16_UNORM,
     D32_FLOAT,
     D24_UNORM_S8_UINT,
     D32_FLOAT_S8X24_UINT,
 
-    // Compressed formats
     BC1_UNORM,
     BC1_UNORM_SRGB,
     BC2_UNORM,
@@ -113,9 +105,7 @@ enum class Format : u32 {
     BC7_UNORM_SRGB,
 };
 
-// ============================================================================
 // Resource States
-// ============================================================================
 
 enum class ResourceState : u32 {
     Common = 0,
@@ -139,9 +129,7 @@ enum class ResourceState : u32 {
     Predication,
 };
 
-// ============================================================================
 // Resource Usage Flags
-// ============================================================================
 
 enum class ResourceUsage : u32 {
     None = 0,
@@ -163,9 +151,7 @@ inline bool has_flag(ResourceUsage flags, ResourceUsage flag) {
     return (static_cast<u32>(flags) & static_cast<u32>(flag)) != 0;
 }
 
-// ============================================================================
 // Texture Types
-// ============================================================================
 
 enum class TextureType : u8 {
     Texture1D,
@@ -174,9 +160,7 @@ enum class TextureType : u8 {
     TextureCube,
 };
 
-// ============================================================================
 // Primitive Topology
-// ============================================================================
 
 enum class PrimitiveTopology : u8 {
     Undefined = 0,
@@ -187,9 +171,7 @@ enum class PrimitiveTopology : u8 {
     TriangleStrip,
 };
 
-// ============================================================================
 // Cull Mode
-// ============================================================================
 
 enum class CullMode : u8 {
     None = 0,
@@ -197,18 +179,14 @@ enum class CullMode : u8 {
     Back,
 };
 
-// ============================================================================
 // Fill Mode
-// ============================================================================
 
 enum class FillMode : u8 {
     Solid = 0,
     Wireframe,
 };
 
-// ============================================================================
 // Blend Mode
-// ============================================================================
 
 enum class Blend : u8 {
     Zero = 0,
@@ -238,9 +216,7 @@ enum class BlendOp : u8 {
     Max,
 };
 
-// ============================================================================
 // Comparison Function
-// ============================================================================
 
 enum class CompareFunc : u8 {
     Never = 0,
@@ -253,9 +229,7 @@ enum class CompareFunc : u8 {
     Always,
 };
 
-// ============================================================================
 // Stencil Operation
-// ============================================================================
 
 enum class StencilOp : u8 {
     Keep = 0,
@@ -268,9 +242,7 @@ enum class StencilOp : u8 {
     Decr,
 };
 
-// ============================================================================
 // Texture Addressing Mode
-// ============================================================================
 
 enum class TextureAddressMode : u8 {
     Wrap = 0,
@@ -280,9 +252,7 @@ enum class TextureAddressMode : u8 {
     MirrorOnce,
 };
 
-// ============================================================================
 // Filter Mode
-// ============================================================================
 
 enum class Filter : u8 {
     MinMagMipPoint = 0,
@@ -323,9 +293,7 @@ enum class Filter : u8 {
     MaximumAnisotropic,
 };
 
-// ============================================================================
 // Color Write Mask
-// ============================================================================
 
 enum class ColorWriteMask : u8 {
     None = 0,
@@ -344,9 +312,7 @@ inline ColorWriteMask operator&(ColorWriteMask a, ColorWriteMask b) {
     return static_cast<ColorWriteMask>(static_cast<u8>(a) & static_cast<u8>(b));
 }
 
-// ============================================================================
 // Shader Stage
-// ============================================================================
 
 enum class ShaderStage : u8 {
     Vertex = 1 << 0,
@@ -367,9 +333,7 @@ inline ShaderStage operator&(ShaderStage a, ShaderStage b) {
     return static_cast<ShaderStage>(static_cast<u8>(a) & static_cast<u8>(b));
 }
 
-// ============================================================================
 // Command Queue Type
-// ============================================================================
 
 enum class CommandQueueType : u8 {
     Direct = 0,  // Graphics + Compute + Copy
@@ -377,9 +341,7 @@ enum class CommandQueueType : u8 {
     Copy,        // Copy only
 };
 
-// ============================================================================
 // Agnostic Structures
-// ============================================================================
 
 struct Viewport {
     f32 x = 0.0f;

@@ -63,7 +63,7 @@ namespace sf::d3d {
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> descriptor_heaps_cbv_uav_srv;
 		stl::unique_ptr<UploadBuffer<ObjectConstants>> object_cb = nullptr;
 		stl::unique_ptr<UploadBuffer<PassConstants>> pass_cb = nullptr;
-		stl::unique_ptr<UploadBuffer<MaterialConstants>> materials_cb = nullptr;
+		stl::tunique_ptr<UploadBuffer<MaterialConstants>> materials_cb = nullptr;
 		u64 fence = 0;
 
 		void init_object_cb();

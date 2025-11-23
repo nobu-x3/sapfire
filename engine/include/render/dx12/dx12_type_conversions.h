@@ -6,9 +6,7 @@
 
 namespace sf::render::dx12 {
 
-// ============================================================================
 // Format Conversions
-// ============================================================================
 
 inline DXGI_FORMAT to_dxgi_format(Format format) {
     switch (format) {
@@ -77,13 +75,11 @@ inline DXGI_FORMAT to_dxgi_format(Format format) {
         case Format::RGBA32_UINT: return DXGI_FORMAT_R32G32B32A32_UINT;
         case Format::RGBA32_SINT: return DXGI_FORMAT_R32G32B32A32_SINT;
 
-        // Depth-stencil formats
         case Format::D16_UNORM: return DXGI_FORMAT_D16_UNORM;
         case Format::D32_FLOAT: return DXGI_FORMAT_D32_FLOAT;
         case Format::D24_UNORM_S8_UINT: return DXGI_FORMAT_D24_UNORM_S8_UINT;
         case Format::D32_FLOAT_S8X24_UINT: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 
-        // Compressed formats
         case Format::BC1_UNORM: return DXGI_FORMAT_BC1_UNORM;
         case Format::BC1_UNORM_SRGB: return DXGI_FORMAT_BC1_UNORM_SRGB;
         case Format::BC2_UNORM: return DXGI_FORMAT_BC2_UNORM;
@@ -173,9 +169,7 @@ inline Format from_dxgi_format(DXGI_FORMAT format) {
     }
 }
 
-// ============================================================================
 // Resource State Conversions
-// ============================================================================
 
 inline D3D12_RESOURCE_STATES to_d3d12_resource_state(ResourceState state) {
     switch (state) {
@@ -202,9 +196,7 @@ inline D3D12_RESOURCE_STATES to_d3d12_resource_state(ResourceState state) {
     }
 }
 
-// ============================================================================
 // Primitive Topology Conversions
-// ============================================================================
 
 inline D3D_PRIMITIVE_TOPOLOGY to_d3d12_primitive_topology(PrimitiveTopology topology) {
     switch (topology) {
@@ -228,9 +220,7 @@ inline D3D12_PRIMITIVE_TOPOLOGY_TYPE to_d3d12_primitive_topology_type(PrimitiveT
     }
 }
 
-// ============================================================================
 // Cull Mode Conversions
-// ============================================================================
 
 inline D3D12_CULL_MODE to_d3d12_cull_mode(CullMode mode) {
     switch (mode) {
@@ -241,9 +231,7 @@ inline D3D12_CULL_MODE to_d3d12_cull_mode(CullMode mode) {
     }
 }
 
-// ============================================================================
 // Fill Mode Conversions
-// ============================================================================
 
 inline D3D12_FILL_MODE to_d3d12_fill_mode(FillMode mode) {
     switch (mode) {
@@ -253,9 +241,7 @@ inline D3D12_FILL_MODE to_d3d12_fill_mode(FillMode mode) {
     }
 }
 
-// ============================================================================
 // Blend Conversions
-// ============================================================================
 
 inline D3D12_BLEND to_d3d12_blend(Blend blend) {
     switch (blend) {
@@ -291,9 +277,7 @@ inline D3D12_BLEND_OP to_d3d12_blend_op(BlendOp op) {
     }
 }
 
-// ============================================================================
 // Comparison Function Conversions
-// ============================================================================
 
 inline D3D12_COMPARISON_FUNC to_d3d12_comparison_func(CompareFunc func) {
     switch (func) {
@@ -309,9 +293,7 @@ inline D3D12_COMPARISON_FUNC to_d3d12_comparison_func(CompareFunc func) {
     }
 }
 
-// ============================================================================
 // Stencil Op Conversions
-// ============================================================================
 
 inline D3D12_STENCIL_OP to_d3d12_stencil_op(StencilOp op) {
     switch (op) {
@@ -327,9 +309,7 @@ inline D3D12_STENCIL_OP to_d3d12_stencil_op(StencilOp op) {
     }
 }
 
-// ============================================================================
 // Texture Address Mode Conversions
-// ============================================================================
 
 inline D3D12_TEXTURE_ADDRESS_MODE to_d3d12_texture_address_mode(TextureAddressMode mode) {
     switch (mode) {
@@ -342,9 +322,7 @@ inline D3D12_TEXTURE_ADDRESS_MODE to_d3d12_texture_address_mode(TextureAddressMo
     }
 }
 
-// ============================================================================
 // Filter Conversions
-// ============================================================================
 
 inline D3D12_FILTER to_d3d12_filter(Filter filter) {
     switch (filter) {
@@ -388,9 +366,7 @@ inline D3D12_FILTER to_d3d12_filter(Filter filter) {
     }
 }
 
-// ============================================================================
 // Command Queue Type Conversions
-// ============================================================================
 
 inline D3D12_COMMAND_LIST_TYPE to_d3d12_command_list_type(CommandQueueType type) {
     switch (type) {

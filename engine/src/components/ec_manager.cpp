@@ -3,17 +3,17 @@
 #include "components/ec_manager.h"
 #include "components/name_component.h"
 #include "components/transform.h"
-#include "core/memory.h"
+#include "memory/memory.h"
 
 namespace sf {
 
 	ECManager::ECManager() :
-		m_ComponentRegistry(stl::make_unique<components::ComponentRegistry>(mem::ENUM::Engine_Components)),
-		m_EntityRegistry(stl::make_unique<EntityRegistry>(mem::ENUM::Engine_Components)) {}
+		m_ComponentRegistry(stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic)),
+		m_EntityRegistry(stl::make_unique<EntityRegistry>(mem::MemTag::Logic)) {}
 
 	void ECManager::reset() {
-		m_ComponentRegistry = stl::make_unique<components::ComponentRegistry>(mem::ENUM::Engine_Components);
-		m_EntityRegistry = stl::make_unique<EntityRegistry>(mem::ENUM::Engine_Components);
+		m_ComponentRegistry = stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic);
+		m_EntityRegistry = stl::make_unique<EntityRegistry>(mem::MemTag::Logic);
 	}
 
 	Entity ECManager::create_entity(UUID uuid) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "events/event.h"
+#include "core/core.h"
 
 namespace sf {
 
@@ -10,7 +11,7 @@ namespace sf {
 		u64 width() const { return m_Width; }
 		u64 height() const { return m_Height; }
 		stl::string to_string() const final {
-			stl::stringstream ss;
+			stl::tstringstream ss;
 			ss << "WindowResizeEvent: " << m_Width << ", " << m_Height;
 			return ss.str();
 		}

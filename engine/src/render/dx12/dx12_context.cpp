@@ -8,9 +8,7 @@
 
 namespace sf::render::dx12 {
 
-// ============================================================================
 // DX12Context Implementation
-// ============================================================================
 
 void DX12Context::reset() {
     dx12_check(m_CommandAllocator->Reset());
@@ -49,9 +47,7 @@ void DX12Context::execute_resource_barriers() {
     }
 }
 
-// ============================================================================
 // DX12GraphicsContext Implementation
-// ============================================================================
 
 DX12GraphicsContext::DX12GraphicsContext(DX12GraphicsDevice* device)
     : m_Device(device) {
@@ -133,7 +129,7 @@ void DX12GraphicsContext::set_render_target(Texture& render_target, Texture* dep
 }
 
 void DX12GraphicsContext::set_render_targets(stl::span<Texture*> render_targets, Texture* depth_stencil) {
-    stl::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtv_handles;
+    stl::tvector<D3D12_CPU_DESCRIPTOR_HANDLE> rtv_handles;
     rtv_handles.reserve(render_targets.size());
 
     for (Texture* rt : render_targets) {
@@ -173,9 +169,7 @@ void DX12GraphicsContext::draw_indexed_instanced(u32 index_count_per_instance, u
     m_CommandList->DrawIndexedInstanced(index_count_per_instance, instance_count, start_index, base_vertex, start_instance);
 }
 
-// ============================================================================
 // DX12ComputeContext Implementation
-// ============================================================================
 
 DX12ComputeContext::DX12ComputeContext(DX12GraphicsDevice* device)
     : m_Device(device) {
@@ -217,9 +211,7 @@ void DX12ComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_cou
     m_CommandList->Dispatch(thread_group_count_x, thread_group_count_y, thread_group_count_z);
 }
 
-// ============================================================================
 // DX12CopyContext Implementation
-// ============================================================================
 
 DX12CopyContext::DX12CopyContext(DX12GraphicsDevice* device)
     : m_Device(device) {

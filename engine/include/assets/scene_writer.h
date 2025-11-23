@@ -1,5 +1,6 @@
 #pragma once
 
+#include "components/entity.h"
 namespace sf {
 	class ECManager;
 	struct RenderComponentResourcePaths;

@@ -24,7 +24,7 @@ namespace sf {
 		inline stl::vector<Layer*>::const_reverse_iterator rend() const { return m_Layers.rend(); }
 
 	private:
-		stl::vector<Layer*> m_Layers;
+		stl::vector<Layer*> m_Layers{mem::MemTag::Application};
 		u32 m_LayerInsertIndex = 0;
 	};
 } // namespace sf

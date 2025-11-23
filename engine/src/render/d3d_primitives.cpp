@@ -9,9 +9,7 @@ namespace sf::render::primitives {
 
 	MeshData create_box(float width, float height, float depth, u32 num_subdivisions) {
 		MeshData meshData;
-		//
 		// Create the vertices.
-		//
 		Vertex v[24];
 		const float w2 = 0.5f * width;
 		const float h2 = 0.5f * height;
@@ -57,9 +55,7 @@ namespace sf::render::primitives {
 			meshData.texcs.push_back(vertex.texc);
 		}
 		meshData.aabb = sf::math::aabb::create_from_points(meshData.positions.data(), meshData.positions.size());
-		//
 		// Create the indices.
-		//
 		u32 i[36];
 		// Fill in the front face index data
 		i[0] = 0;
@@ -113,7 +109,7 @@ namespace sf::render::primitives {
 
 	MeshData create_quad(float x, float y, float w, float h, float depth) {
 		MeshData meshData;
-		stl::vector<Vertex> vertices{4};
+		stl::vector<Vertex> vertices{mem::MemTag::Temp, 4};
 		meshData.indices32.resize(6);
 		// Position coordinates specified in NDC space.
 		vertices[0] = Vertex(x, y - h, depth, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f);

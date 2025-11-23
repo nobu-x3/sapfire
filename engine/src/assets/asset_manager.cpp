@@ -79,7 +79,7 @@ namespace sf::assets {
 		j["texture_registry"] = nlohmann::json::parse(m_TextureRegistry.to_string());
 		j["mesh_registry"] = nlohmann::json::parse(m_MeshRegistry.to_string());
 		j["material_registry"] = nlohmann::json::parse(m_MaterialRegistry.to_string());
-		return j.dump();
+		return stl::string(mem::MemTag::Strings, j.dump());
 	}
 
 	void AssetManager::deserialize(const stl::string& data) {
