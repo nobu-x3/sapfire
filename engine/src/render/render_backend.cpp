@@ -1,6 +1,6 @@
-#include "engpch.h"
 #include "render/render_backend.h"
 #include "core/logger.h"
+#include "engpch.h"
 #include "memory/memory.h"
 
 #ifdef SF_PLATFORM_WINDOWS
@@ -10,40 +10,32 @@
 #include "render/vulkan/vk_graphics_device.h"
 
 namespace sf::render {
+    RenderAPI RenderBackend::s_CurrentAPI = RenderAPI::None;
+    bool RenderBackend::s_Initialized = false;
 
-RenderAPI RenderBackend::s_CurrentAPI = RenderAPI::None;
-bool RenderBackend::s_Initialized = false;
-
-void RenderBackend::initialize(RenderAPI api) {
-    if (s_Initialized) {
-        CORE_WARN("RenderBackend already initialized");
-        return;
+    void RenderBackend::initialize(RenderAPI api) {
+        if (s_Initialized) {
+            CORE_WARN("RenderBackend already initialized");
+            return;
+        }
+        s_CurrentAPI = api;
+        s_Initialized = true;
+        const char* api_name = "Unknown";
+        if (api == RenderAPI::DX12)
+            api_name = "DirectX 12";
+        else if (api == RenderAPI::Vulkan)
+            api_name = "Vulkan";
+        CORE_INFO("Render backend initialized: {}", api_name);
     }
+    RenderAPI RenderBackend::get_api() { return s_CurrentAPI; }
 
-    s_CurrentAPI = api;
-    s_Initialized = true;
-
-    const char* api_name = "Unknown";
-    if (api == RenderAPI::DX12) api_name = "DirectX 12";
-    else if (api == RenderAPI::Vulkan) api_name = "Vulkan";
-    CORE_INFO("Render backend initialized: {}", api_name);
-}
-
-RenderAPI RenderBackend::get_api() {
-    return s_CurrentAPI;
-}
-
-bool RenderBackend::is_initialized() {
-    return s_Initialized;
-}
-
-IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc) {
-    if (!s_Initialized) {
-        CORE_ERROR("RenderBackend not initialized! Call RenderBackend::initialize() first.");
-        return nullptr;
-    }
-
-    switch (s_CurrentAPI) {
+    bool RenderBackend::is_initialized() { return s_Initialized; }
+    IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc) {
+        if (!s_Initialized) {
+            CORE_ERROR("RenderBackend not initialized! Call RenderBackend::initialize() first.");
+            return nullptr;
+        }
+        switch (s_CurrentAPI) {
         case RenderAPI::DX12:
 #ifdef SF_PLATFORM_WINDOWS
             return mem_new(mem::MemTag::Render) dx12::DX12GraphicsDevice(desc);
@@ -51,19 +43,16 @@ IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc)
             CORE_ERROR("DX12 is only available on Windows");
             return nullptr;
 #endif
-
         case RenderAPI::Vulkan:
             return mem_new(mem::MemTag::Render) vk::VkGraphicsDevice(desc);
-
         default:
             CORE_ERROR("Unknown render API");
             return nullptr;
+        }
     }
-}
 
-void RenderBackend::shutdown() {
-    s_Initialized = false;
-    s_CurrentAPI = RenderAPI::None;
-}
-
+    void RenderBackend::shutdown() {
+        s_Initialized = false;
+        s_CurrentAPI = RenderAPI::None;
+    }
 } // namespace sf::render

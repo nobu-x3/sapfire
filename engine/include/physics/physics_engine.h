@@ -8,12 +8,12 @@ namespace sf {
 
 namespace sf::physics {
 
-	class SFAPI PhysicsEngine {
-	public:
+    class SFAPI PhysicsEngine {
+    public:
         PhysicsEngine(ECManager* ec_manager);
-		void simulate(f32 delta_time);
+        void simulate(f32 delta_time);
 
-	private:
+    private:
         ECManager& m_ECManager;
-	};
+    };
 } // namespace sf::physics

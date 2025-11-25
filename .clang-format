@@ -46,7 +46,7 @@ SpacesInAngles: false
 PointerAlignment: Left
 ReferenceAlignment: Pointer
 TabWidth: 4
-UseTab: Always
+UseTab: Never
 SortIncludes: true
 
 ...

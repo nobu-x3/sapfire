@@ -5,11 +5,10 @@
 
 namespace sf::d3d {
     class MeshManager {
-        public:
-            bool import_mesh();
+    public:
+        bool import_mesh();
 
-        private:
-            stl::tunordered_map<UUID, primitives::MeshData> m_NameToMeshDataMap{};
-
+    private:
+        stl::tunordered_map<UUID, primitives::MeshData> m_NameToMeshDataMap{};
     };
-}
+} // namespace sf::d3d

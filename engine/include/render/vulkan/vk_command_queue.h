@@ -1,35 +1,35 @@
 #pragma once
-#include "render/i_command_queue.h"
 #include <vulkan/vulkan.h>
+#include "render/i_command_queue.h"
 
 namespace sf::render::vk {
 
-class VkCommandQueue : public ICommandQueue {
-public:
-    explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
-    ~VkCommandQueue() override = default;
+    class VkCommandQueue : public ICommandQueue {
+    public:
+        explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
+        ~VkCommandQueue() override = default;
 
-    void execute_command_lists(IContext** contexts, u32 count) override;
-    void execute_command_list(IContext* context) override;
+        void execute_command_lists(IContext** contexts, u32 count) override;
+        void execute_command_list(IContext* context) override;
 
-    u64 signal() override;
-    void wait_for_fence_value(u64 fence_value) override;
-    void wait_for_idle() override;
-    u64 get_last_completed_fence_value() const override;
+        u64 signal() override;
+        void wait_for_fence_value(u64 fence_value) override;
+        void wait_for_idle() override;
+        u64 get_last_completed_fence_value() const override;
 
-    CommandQueueType get_type() const override { return m_Type; }
-    void* get_native_handle() override { return reinterpret_cast<void*>(m_Queue); }
+        CommandQueueType get_type() const override { return m_Type; }
+        void* get_native_handle() override { return reinterpret_cast<void*>(m_Queue); }
 
-    VkQueue get_vk_queue() const { return m_Queue; }
-    VkFence get_vk_fence() const { return m_Fence; }
-    bool is_fence_complete(u64 fence_value) const;
+        VkQueue get_vk_queue() const { return m_Queue; }
+        VkFence get_vk_fence() const { return m_Fence; }
+        bool is_fence_complete(u64 fence_value) const;
 
-private:
-    VkDevice m_Device;
-    VkQueue m_Queue;
-    VkFence m_Fence;
-    u64 m_FenceValue = 0;
-    CommandQueueType m_Type;
-};
+    private:
+        VkDevice m_Device;
+        VkQueue m_Queue;
+        VkFence m_Fence;
+        u64 m_FenceValue = 0;
+        CommandQueueType m_Type;
+    };
 
 } // namespace sf::render::vk

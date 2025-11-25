@@ -25,35 +25,31 @@
 #warning "render_compat.h is deprecated. Please migrate to sf::render:: and sf::string_utils:: namespaces. See header for migration guide."
 
 // Temporary includes for backward compatibility
+#include "core/string_utils.h"
+#include "render/lights.h"
+#include "render/material.h"
 #include "render/render_api.h"
 #include "render/resource_types.h"
-#include "render/material.h"
-#include "render/lights.h"
-#include "core/string_utils.h"
 
 namespace sf::d3d {
 
-// DEPRECATED: Use sf::render:: types directly
-using Buffer = sf::render::Buffer;
-using Texture = sf::render::Texture;
-using Material = sf::render::Material;
-using MaterialConstants = sf::render::MaterialConstants;
-using Light = sf::render::Light;
+    // DEPRECATED: Use sf::render:: types directly
+    using Buffer = sf::render::Buffer;
+    using Texture = sf::render::Texture;
+    using Material = sf::render::Material;
+    using MaterialConstants = sf::render::MaterialConstants;
+    using Light = sf::render::Light;
 
-// DEPRECATED: Use sf::render::MAX_FRAMES_IN_FLIGHT
-constexpr u32 MAX_FRAMES_IN_FLIGHT = sf::render::MAX_FRAMES_IN_FLIGHT;
+    // DEPRECATED: Use sf::render::MAX_FRAMES_IN_FLIGHT
+    constexpr u32 MAX_FRAMES_IN_FLIGHT = sf::render::MAX_FRAMES_IN_FLIGHT;
 
-// DEPRECATED: Use sf::render::INVALID_DESCRIPTOR_INDEX
-constexpr u32 INVALID_INDEX_U32 = sf::render::INVALID_DESCRIPTOR_INDEX;
+    // DEPRECATED: Use sf::render::INVALID_DESCRIPTOR_INDEX
+    constexpr u32 INVALID_INDEX_U32 = sf::render::INVALID_DESCRIPTOR_INDEX;
 
-// DEPRECATED: Use sf::string_utils::to_wstring()
-inline std::wstring AnsiToWString(const std::string& str) {
-    return sf::string_utils::to_wstring(str);
-}
+    // DEPRECATED: Use sf::string_utils::to_wstring()
+    inline std::wstring AnsiToWString(const std::string& str) { return sf::string_utils::to_wstring(str); }
 
-// DEPRECATED: Use sf::string_utils::to_string()
-inline std::string WStringToANSI(const std::wstring_view wstr) {
-    return sf::string_utils::to_string(wstr);
-}
+    // DEPRECATED: Use sf::string_utils::to_string()
+    inline std::string WStringToANSI(const std::wstring_view wstr) { return sf::string_utils::to_string(wstr); }
 
 } // namespace sf::d3d

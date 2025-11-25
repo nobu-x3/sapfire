@@ -6,35 +6,33 @@
 #include "memory/memory.h"
 
 namespace sf {
+    ECManager::ECManager() :
+        m_ComponentRegistry(stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic)),
+        m_EntityRegistry(stl::make_unique<EntityRegistry>(mem::MemTag::Logic)) {}
 
-	ECManager::ECManager() :
-		m_ComponentRegistry(stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic)),
-		m_EntityRegistry(stl::make_unique<EntityRegistry>(mem::MemTag::Logic)) {}
+    void ECManager::reset() {
+        m_ComponentRegistry = stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic);
+        m_EntityRegistry = stl::make_unique<EntityRegistry>(mem::MemTag::Logic);
+    }
+    Entity ECManager::create_entity(UUID uuid) {
+        auto entity = m_EntityRegistry->create_entity(uuid);
+        m_ComponentRegistry->add_engine_component<components::NameComponent>(entity, {});
+        m_ComponentRegistry->add_engine_component<components::Transform>(entity, {});
+        return entity;
+    }
 
-	void ECManager::reset() {
-		m_ComponentRegistry = stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic);
-		m_EntityRegistry = stl::make_unique<EntityRegistry>(mem::MemTag::Logic);
-	}
-
-	Entity ECManager::create_entity(UUID uuid) {
-		auto entity = m_EntityRegistry->create_entity(uuid);
-		m_ComponentRegistry->add_engine_component<components::NameComponent>(entity, {});
-		m_ComponentRegistry->add_engine_component<components::Transform>(entity, {});
-		return entity;
-	}
-
-	void ECManager::destroy_entity(Entity entity) {
-		m_EntityRegistry->destroy_entity(entity);
-		auto indices = m_EntityRegistry->entities();
-		for (auto& index : indices) {
-			if (!index.has_value())
-				continue;
-			auto entity_to_change = index->value;
-			auto& transform = m_ComponentRegistry->get_engine_component<components::Transform>(entity_to_change);
-			if (transform.parent() == entity_to_change.id().index) {
-				destroy_entity(entity_to_change);
-			}
-		}
-		m_ComponentRegistry->entity_destroyed(entity);
-	}
+    void ECManager::destroy_entity(Entity entity) {
+        m_EntityRegistry->destroy_entity(entity);
+        auto indices = m_EntityRegistry->entities();
+        for (auto& index : indices) {
+            if (!index.has_value())
+                continue;
+            auto entity_to_change = index->value;
+            auto& transform = m_ComponentRegistry->get_engine_component<components::Transform>(entity_to_change);
+            if (transform.parent() == entity_to_change.id().index) {
+                destroy_entity(entity_to_change);
+            }
+        }
+        m_ComponentRegistry->entity_destroyed(entity);
+    }
 } // namespace sf

@@ -1,6 +1,5 @@
 #pragma once
 
-
 #pragma warning(push, 0)
 #include <spdlog/fmt/ostr.h>
 #include <spdlog/spdlog.h>
@@ -9,21 +8,21 @@
 #include "core/core.h"
 
 namespace spdlog {
-	class logger;
+    class logger;
 }
 
 namespace sf {
-	class SFAPI Log {
-	public:
-		static void Init();
+    class SFAPI Log {
+    public:
+        static void Init();
 
-		static stl::shared_ptr<spdlog::logger>& get_core_logger();
-		static stl::shared_ptr<spdlog::logger>& get_client_logger();
+        static stl::shared_ptr<spdlog::logger>& get_core_logger();
+        static stl::shared_ptr<spdlog::logger>& get_client_logger();
 
-	private:
-		static stl::shared_ptr<spdlog::logger> s_CoreLogger;
-		static stl::shared_ptr<spdlog::logger> s_ClientLogger;
-	};
+    private:
+        static stl::shared_ptr<spdlog::logger> s_CoreLogger;
+        static stl::shared_ptr<spdlog::logger> s_ClientLogger;
+    };
 } // namespace sf
 
 // Core log macros

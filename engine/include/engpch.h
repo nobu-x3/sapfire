@@ -25,9 +25,9 @@
 #include <utility>
 #include <vector>
 
+#include "core/core.h"
 #include "core/file_system.h"
 #include "core/logger.h"
 #include "core/platform.h"
 #include "core/uuid.h"
 #include "tools/profiling.h"
-#include "core/core.h"
