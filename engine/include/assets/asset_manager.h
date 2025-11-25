@@ -28,7 +28,7 @@ namespace sf::assets {
         AssetManager& operator=(const AssetManager&) = delete;
         AssetManager& operator=(AssetManager&&) = delete;
         bool is_texture_loaded_for_runtime(UUID uuid);
-        void import_texture(const stl::string& path);
+        stl::result<> import_texture(const stl::string& path);
         inline void move_texture(const stl::string& old_path, const stl::string& new_path) {
             m_TextureRegistry.move_texture(m_Device, old_path, new_path);
         }
@@ -104,7 +104,7 @@ namespace sf::assets {
 
     private:
         void load_all_runtime_textures();
-        void load_runtime_texture(const stl::string& path);
+        stl::result<> load_runtime_texture(const stl::string& path);
 
     private:
         MeshRegistry m_MeshRegistry;

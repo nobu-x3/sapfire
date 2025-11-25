@@ -12,7 +12,8 @@ SandboxGameContext::SandboxGameContext(const sf::GameContextCreationDesc& desc) 
 }
 
 void SandboxGameContext::load_contents() {
-	m_PipelineState = m_GraphicsDevice->create_graphics_pipeline({
+    // TODO: refactor this to return stl::result
+    auto pipeline_result = m_GraphicsDevice->create_graphics_pipeline({
 		.shader_module =
 			{
 				.vertex_shader_path = L"bindless.hlsl",
@@ -22,19 +23,34 @@ void SandboxGameContext::load_contents() {
 			},
 		.name = L"Bindless Pipeline",
 	});
-	m_MainPassCB = m_GraphicsDevice->create_buffer(sf::render::BufferCreationDesc{
+    if(!pipeline_result) {
+        CLIENT_CRITICAL("Failed to create bindless pipeline.");
+        return;
+    }
+	m_PipelineState = std::move(*pipeline_result);
+    auto cbv_result = m_GraphicsDevice->create_buffer(sf::render::BufferCreationDesc{
 		.usage = sf::render::BufferUsage::Constant,
 		.size_in_bytes = sizeof(PassConstants),
 		.name = L"Main Pass Constant Buffer",
 	});
+    if(!cbv_result) {
+        CLIENT_CRITICAL("Failed to create main pass constant buffer.");
+        return;
+    }
+	m_MainPassCB = std::move(*cbv_result);
 	// textures:
-	m_DepthTexture = m_GraphicsDevice->create_texture({
+    auto depth_result = m_GraphicsDevice->create_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
 		.name = L"Depth Texture",
 	});
+    if(!depth_result) {
+        CLIENT_CRITICAL("Failed to create depth texture.");
+        return;
+    }
+	m_DepthTexture = std::move(*depth_result);
 	assets::SceneWriter writer{&m_ECManager, m_AssetManager.get()};
 	writer.deserealize("test_scene.scene", [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
 		create_render_component(entity, resource_paths);
@@ -171,11 +187,17 @@ void SandboxGameContext::render() {
 void SandboxGameContext::resize_depth_texture() {
 	m_MainCamera = {CAMERA_FOV, static_cast<f32>(m_ClientExtent->width) / m_ClientExtent->height, 0.1f, 1000.f};
 	// Release old texture by reassigning
-	m_DepthTexture = m_GraphicsDevice->create_texture({
+    // TODO: make this return stl::result
+    auto depth_result = m_GraphicsDevice->create_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
 		.name = L"Depth Texture",
 	});
+    if(!depth_result) {
+        CLIENT_CRITICAL("Failed to create depth texture while resizing.");
+        return;
+    }
+	m_DepthTexture = std::move(*depth_result);
 }

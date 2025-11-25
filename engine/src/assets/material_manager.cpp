@@ -32,36 +32,30 @@ namespace sf::assets {
         file.close();
     }
 
-    void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path))
-            return;
+            return stl::success;
         std::ifstream file{path.c_str()};
         if (!file.is_open()) {
-            CORE_ERROR("Material at path {} could not be open.", path);
-            return;
+            return stl::make_error("Material at path {} could not be open.", path.data());
         }
         nlohmann::json j;
         file >> j;
         file.close();
         if (!j.contains("UUID")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain UUID.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain UUID.", path.data());
         }
         if (!j.contains("name")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain name.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain name.", path.data());
         }
         if (!j.contains("diffuse_albedo")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain diffuse albedo.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain diffuse albedo.", path.data());
         }
         if (!j.contains("fresnel_r0")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain fresnel r0.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain fresnel r0.", path.data());
         }
         if (!j.contains("roughness")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain roughness.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain roughness.", path.data());
         }
         const UUID uuid = UUID{j["UUID"]};
         stl::string name_str = j["name"];
@@ -69,46 +63,46 @@ namespace sf::assets {
         material.roughness = j["roughness"];
         material.diffuse_albedo =
             sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
-        material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-        material.material_buffer = device->create_buffer({
+        auto result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = sf::string_utils::to_wstring(material.name),
         });
+        if (!result) {
+            return stl::make_error("Failed to create buffer for material at path {}: {}", path.data(), result.error().data());
+        }
+        material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
+        material.material_buffer = std::move(*result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
             .uuid = uuid,
             .material = material,
         };
         m_UUIDToPathMap[uuid] = path;
+        return stl::success;
     }
 
-    void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid) {
         if (m_PathToMaterialAssetMap.contains(path))
-            return;
+            return stl::success;
         std::ifstream file{path.c_str()};
         if (!file.is_open()) {
-            CORE_ERROR("Material at path {} could not be open.", path);
-            return;
+            return stl::make_error("Material at path {} could not be open.", path.data());
         }
         nlohmann::json j;
         file >> j;
         file.close();
         if (!j.contains("name")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain name.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain name.", path.data());
         }
         if (!j.contains("diffuse_albedo")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain diffuse albedo.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain diffuse albedo.", path.data());
         }
         if (!j.contains("fresnel_r0")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain fresnel r0.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain fresnel r0.", path.data());
         }
         if (!j.contains("roughness")) {
-            CORE_CRITICAL("Broken material at path {}. Does not contain roughness.", path);
-            return;
+            return stl::make_error("Broken material at path {}. Does not contain roughness.", path.data());
         }
         stl::string name_str = j["name"];
         sf::render::Material material{.name = fs::file_name(name_str)};
@@ -116,46 +110,61 @@ namespace sf::assets {
         material.diffuse_albedo =
             sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
         material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-        material.material_buffer = device->create_buffer({
+        auto buffer_result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = sf::string_utils::to_wstring(material.name),
         });
+        if (!buffer_result) {
+            return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
+                                   buffer_result.error().data());
+        }
+        material.material_buffer = std::move(*buffer_result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
             .uuid = uuid,
             .material = material,
         };
         m_UUIDToPathMap[uuid] = path;
+        return stl::success;
     }
 
-    void MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path)) {
-            CORE_ERROR("Material with path {} already exists.", path);
-            return;
+            return stl::success;
         }
-        asset.material.name = fs::file_name(path);
-        asset.material.material_buffer = device->create_buffer({
+        auto buffer_result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = sf::string_utils::to_wstring(asset.material.name),
         });
+        if (!buffer_result) {
+            return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
+                                   buffer_result.error().data());
+        }
+        asset.material.name = fs::file_name(path);
+        asset.material.material_buffer = std::move(*buffer_result);
         asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
         const UUID uuid{asset.uuid};
         m_PathToMaterialAssetMap[path] = std::move(asset);
         m_UUIDToPathMap[uuid] = path;
+        return stl::success;
     }
 
-    void MaterialRegistry::move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path) {}
+    stl::result<> MaterialRegistry::move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path,
+                                                  const stl::string& new_path) {
+        assert("Not implemented yet");
+        return stl::success;
+    }
 
-    void MaterialRegistry::release_material(const stl::string& path) {
+    stl::result<> MaterialRegistry::release_material(const stl::string& path) {
         if (!m_PathToMaterialAssetMap.contains(path)) {
-            CORE_ERROR("Material at path {} does not exist.", path);
-            return;
+            return stl::make_error("Material at path {} does not exist.", path.data());
         }
         auto uuid = m_PathToMaterialAssetMap[path].uuid;
         m_PathToMaterialAssetMap.erase(path);
         m_UUIDToPathMap.erase(uuid);
+        return stl::success;
     }
 
     void MaterialRegistry::serialize() {
@@ -236,6 +245,7 @@ namespace sf::assets {
             import_material(device, relative_path);
         }
     }
+
     stl::string MaterialRegistry::to_string() {
         nlohmann::json j;
         for (auto&& [path, asset] : m_PathToMaterialAssetMap) {
@@ -255,11 +265,13 @@ namespace sf::assets {
         }
         return stl::string(mem::MemTag::Strings, j.dump());
     }
+
     MaterialAsset* MaterialRegistry::get(const stl::string& path) const {
         if (!m_PathToMaterialAssetMap.contains(path))
             return MaterialRegistry::default_material();
         return const_cast<MaterialAsset*>(&m_PathToMaterialAssetMap.at(path));
     }
+
     MaterialAsset* MaterialRegistry::get(UUID uuid) const {
         if (!m_UUIDToPathMap.contains(uuid)) {
             return MaterialRegistry::default_material();
@@ -267,11 +279,13 @@ namespace sf::assets {
         auto& path = m_UUIDToPathMap.at(uuid);
         return get(path);
     }
+
     stl::string MaterialRegistry::get_path(UUID uuid) const {
         if (!m_UUIDToPathMap.contains(uuid))
             return "";
         return m_UUIDToPathMap.at(uuid);
     }
+
     MaterialAsset* MaterialRegistry::default_material(sf::render::IGraphicsDevice* device) {
         const static std::wstring name = sf::string_utils::to_wstring(DEFAULT_MATERIAL_NAME);
         static sf::render::MaterialConstants default_material_constants{
@@ -279,11 +293,15 @@ namespace sf::assets {
             .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
             .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
         };
-        static sf::render::Buffer buffer = device->create_buffer({
+        static auto buffer_result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = name,
         });
+        if (!buffer_result) {
+            CORE_CRITICAL("Failed to load default material buffer.");
+            return nullptr;
+        }
         static MaterialAsset default_mat{
             .uuid = DEFAULT_MATERIAL_UUID,
             .material{
@@ -291,11 +309,11 @@ namespace sf::assets {
                 .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
                 .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
                 .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
-                .material_buffer = buffer,
-                .material_cb_index = static_cast<i32>(buffer.cbv_index),
+                .material_buffer = *buffer_result,
+                .material_cb_index = static_cast<i32>(buffer_result->cbv_index),
             },
         };
-        buffer.update(&default_material_constants, sizeof(sf::render::MaterialConstants));
+        buffer_result->update(&default_material_constants, sizeof(sf::render::MaterialConstants));
         return &default_mat;
     }
 } // namespace sf::assets

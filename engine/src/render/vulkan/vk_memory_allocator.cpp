@@ -3,6 +3,7 @@
 #include "render/vulkan/vk_memory_allocator.h"
 #include "core/logger.h"
 #include "render/vulkan/vk_type_conversions.h"
+#include "render/vulkan/vk_compat.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -23,7 +24,7 @@ namespace sf::render::vk {
         }
     }
 
-    void VkMemoryAllocator::allocate_buffer(Buffer& buffer, const BufferCreationDesc& desc) {
+    stl::result<Buffer> VkMemoryAllocator::allocate_buffer(const BufferCreationDesc& desc) {
         VkBufferCreateInfo buffer_info{};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = desc.size_in_bytes;
@@ -32,15 +33,21 @@ namespace sf::render::vk {
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+        Buffer buffer{};
         VkBuffer vk_buffer;
         VmaAllocation allocation;
-        vmaCreateBuffer(m_Allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr);
+        VK_RETURN_ON_ERROR_T(Buffer, vmaCreateBuffer(m_Allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr),
+                             "Failed to allocate buffer");
+
         buffer.resource = reinterpret_cast<void*>(vk_buffer);
         buffer.allocation = allocation;
         buffer.size_in_bytes = desc.size_in_bytes;
+
+        return buffer;
     }
 
-    void VkMemoryAllocator::allocate_texture(Texture& texture, const TextureCreationDesc& desc) {
+    stl::result<Texture> VkMemoryAllocator::allocate_texture(const TextureCreationDesc& desc) {
         VkImageCreateInfo image_info{};
         image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -58,15 +65,21 @@ namespace sf::render::vk {
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+
+        Texture texture{};
         VkImage vk_image;
         VmaAllocation allocation;
-        vmaCreateImage(m_Allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr);
+        VK_RETURN_ON_ERROR_T(Texture, vmaCreateImage(m_Allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr),
+                             "Failed to allocate texture");
+
         texture.resource = reinterpret_cast<void*>(vk_image);
         texture.allocation = allocation;
         texture.width = desc.width;
         texture.height = desc.height;
         texture.depth_or_array_size = desc.depth_or_array_size;
         texture.format = desc.format;
+
+        return texture;
     }
 
     void VkMemoryAllocator::free_buffer(Buffer& buffer) {

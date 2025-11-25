@@ -38,24 +38,24 @@ namespace sf::render {
         // Resource Creation
 
         // Buffer creation
-        virtual Buffer create_buffer(const BufferCreationDesc& desc) = 0;
+        virtual stl::result<Buffer> create_buffer(const BufferCreationDesc& desc) = 0;
 
         template <typename T>
-        Buffer create_buffer(const BufferCreationDesc& desc, stl::span<T> data) {
+        stl::result<Buffer> create_buffer(const BufferCreationDesc& desc, stl::span<T> data) {
             BufferCreationDesc buffer_desc = desc;
             buffer_desc.size_in_bytes = data.size_bytes();
             return create_buffer_with_data(buffer_desc, data.data(), data.size_bytes());
         }
 
-        virtual Buffer create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) = 0;
+        virtual stl::result<Buffer> create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) = 0;
 
         // Texture creation
-        virtual Texture create_texture(const TextureCreationDesc& desc) = 0;
-        virtual Texture create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) = 0;
+        virtual stl::result<Texture> create_texture(const TextureCreationDesc& desc) = 0;
+        virtual stl::result<Texture> create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) = 0;
 
         // Pipeline state creation
-        virtual IPipelineState* create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) = 0;
-        virtual IPipelineState* create_compute_pipeline(const ComputePipelineStateDesc& desc) = 0;
+        virtual stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) = 0;
+        virtual stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) = 0;
 
         // Context Access (Command Lists)
 

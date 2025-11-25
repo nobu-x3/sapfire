@@ -3,6 +3,7 @@
 #include "engpch.h"
 #include "render/vulkan/vk_shader_compiler.h"
 #include "render/vulkan/vk_type_conversions.h"
+#include "render/vulkan/vk_compat.h"
 
 namespace sf::render::vk {
     VkPipelineState::~VkPipelineState() {
@@ -11,7 +12,7 @@ namespace sf::render::vk {
         }
     }
 
-    void VkPipelineState::create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout,
+    stl::result<> VkPipelineState::create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout,
                                           VkRenderPass render_pass) {
         m_Device = device;
         m_IsCompute = false;
@@ -21,10 +22,9 @@ namespace sf::render::vk {
         Shader fragment_shader =
             compile(device, ShaderType::Fragment, desc.shader_module.pixel_shader_path, desc.shader_module.pixel_entry_point);
         if (vertex_shader.module == VK_NULL_HANDLE || fragment_shader.module == VK_NULL_HANDLE) {
-            CORE_ERROR("Failed to load shaders for graphics pipeline");
             destroy_shader_module(device, vertex_shader);
             destroy_shader_module(device, fragment_shader);
-            return;
+            return stl::make_error<>("Failed to load shaders for graphics pipeline");
         }
         // Shader stages
         VkPipelineShaderStageCreateInfo vertex_stage{};
@@ -124,25 +124,25 @@ namespace sf::render::vk {
         pipeline_info.layout = layout;
         pipeline_info.renderPass = render_pass;
         pipeline_info.subpass = 0;
-        VkResult result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline);
-        if (result != VK_SUCCESS) {
-            CORE_ERROR("Failed to create graphics pipeline. Error code: {}", static_cast<int>(result));
-        } else {
-            CORE_INFO("Created graphics pipeline");
-        }
+        VK_RETURN_ON_ERROR(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline),
+                           "Failed to create graphics pipeline");
+
+        CORE_INFO("Created graphics pipeline");
+
         // Clean up shader modules
         destroy_shader_module(device, vertex_shader);
         destroy_shader_module(device, fragment_shader);
+
+        return stl::result_success();
     }
 
-    void VkPipelineState::create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout) {
+    stl::result<> VkPipelineState::create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout) {
         m_Device = device;
         m_IsCompute = true;
         // Load and compile compute shader
         Shader compute_shader = compile(device, ShaderType::Compute, desc.shader_path, desc.entry_point);
         if (compute_shader.module == VK_NULL_HANDLE) {
-            CORE_ERROR("Failed to load compute shader");
-            return;
+            return stl::make_error<>("Failed to load compute shader");
         }
         // Shader stage
         VkPipelineShaderStageCreateInfo shader_stage{};
@@ -155,13 +155,14 @@ namespace sf::render::vk {
         pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         pipeline_info.stage = shader_stage;
         pipeline_info.layout = layout;
-        VkResult result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline);
-        if (result != VK_SUCCESS) {
-            CORE_ERROR("Failed to create compute pipeline. Error code: {}", static_cast<int>(result));
-        } else {
-            CORE_INFO("Created compute pipeline");
-        }
+        VK_RETURN_ON_ERROR(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline),
+                           "Failed to create compute pipeline");
+
+        CORE_INFO("Created compute pipeline");
+
         // Clean up shader module
         destroy_shader_module(device, compute_shader);
+
+        return stl::result_success();
     }
 } // namespace sf::render::vk

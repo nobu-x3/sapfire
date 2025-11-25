@@ -25,14 +25,26 @@ namespace sf::assets {
         file.close();
     }
 
-    void TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path) {
+    stl::result<> TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path) {
         auto uuid = UUID{};
         i32 width{};
         i32 height{};
         void* data = tools::texture_loader::load(fs::full_path(path).c_str(), width, height, 4);
         auto name = sf::string_utils::to_wstring(path);
         if (m_PathToTextureAssetMap.contains(path))
-            return;
+            return stl::success;
+        auto result = device->create_texture_with_data(
+            sf::render::TextureCreationDesc{
+                .usage = sf::render::TextureUsage::ShaderResource,
+                .width = static_cast<u32>(width),
+                .height = static_cast<u32>(height),
+                .name = name,
+                .path = sf::string_utils::to_wstring(fs::full_path(path)),
+            },
+            data, width * height * 4);
+        if (!result) {
+            return stl::make_error("Failed to create texture with data: ", result.error().data());
+        }
         m_PathToTextureAssetMap[path] = TextureAsset{
             .uuid = uuid,
             .description =
@@ -43,37 +55,36 @@ namespace sf::assets {
                     .name = name,
                     .path = sf::string_utils::to_wstring(path),
                 },
-            .data = device->create_texture_with_data(
-                sf::render::TextureCreationDesc{
-                    .usage = sf::render::TextureUsage::ShaderResource,
-                    .width = static_cast<u32>(width),
-                    .height = static_cast<u32>(height),
-                    .name = name,
-                    .path = sf::string_utils::to_wstring(fs::full_path(path)),
-                },
-                data, width * height * 4),
+            .data = std::move(*result),
         };
         m_UUIDToPathMap[uuid] = path;
+        return stl::success;
     }
 
-    void TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path,
-                                         const sf::render::TextureCreationDesc& desc, UUID uuid) {
+    stl::result<> TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path,
+                                                  const sf::render::TextureCreationDesc& desc, UUID uuid) {
         auto name = sf::string_utils::to_wstring(path);
         if (m_PathToTextureAssetMap.contains(path))
-            return;
+            return stl::success;
+        auto result = device->create_texture(sf::render::TextureCreationDesc{
+            .usage = sf::render::TextureUsage::ShaderResource,
+            .name = name,
+            .path = sf::string_utils::to_wstring(fs::full_path(path)),
+        });
+        if (!result) {
+            return stl::make_error("Failed to import texture at path {}: {}", path.data(), result.error().data());
+        }
         m_PathToTextureAssetMap[path] = TextureAsset{
             .uuid = uuid,
             .description = desc,
-            .data = device->create_texture(sf::render::TextureCreationDesc{
-                .usage = sf::render::TextureUsage::ShaderResource,
-                .name = name,
-                .path = sf::string_utils::to_wstring(fs::full_path(path)),
-            }),
+            .data = std::move(*result),
         };
         m_UUIDToPathMap[uuid] = path;
+        return stl::success;
     }
 
-    void TextureRegistry::move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path) {
+    stl::result<> TextureRegistry::move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path,
+                                                const stl::string& new_path) {
         if (!m_PathToTextureAssetMap.contains(old_path)) {
             CORE_WARN("Texture at path {} does not exist, adding new.", old_path);
             auto uuid = UUID{};
@@ -81,6 +92,18 @@ namespace sf::assets {
             i32 height{};
             void* data = tools::texture_loader::load(new_path.c_str(), width, height, 4);
             auto name = sf::string_utils::to_wstring(new_path);
+            auto result = device->create_texture_with_data(
+                sf::render::TextureCreationDesc{
+                    .usage = sf::render::TextureUsage::ShaderResource,
+                    .width = static_cast<u32>(width),
+                    .height = static_cast<u32>(height),
+                    .name = name,
+                    .path = sf::string_utils::to_wstring(new_path),
+                },
+                data, width * height * 4);
+            if (!result) {
+                return stl::make_error("Failed to move texture from {} to {}: {}", old_path.data(), new_path.data(), result.error().data());
+            }
             m_PathToTextureAssetMap[new_path] = TextureAsset{
                 .uuid = uuid,
                 .description =
@@ -91,33 +114,26 @@ namespace sf::assets {
                         .name = name,
                         .path = sf::string_utils::to_wstring(new_path),
                     },
-                .data = device->create_texture_with_data(
-                    sf::render::TextureCreationDesc{
-                        .usage = sf::render::TextureUsage::ShaderResource,
-                        .width = static_cast<u32>(width),
-                        .height = static_cast<u32>(height),
-                        .name = name,
-                        .path = sf::string_utils::to_wstring(new_path),
-                    },
-                    data, width * height * 4),
+                .data = std::move(*result),
             };
             m_UUIDToPathMap[uuid] = new_path;
-            return;
+            return stl::success;
         }
         auto mesh_data = m_PathToTextureAssetMap[old_path];
         m_PathToTextureAssetMap.erase(old_path);
         m_PathToTextureAssetMap[new_path] = mesh_data;
         m_UUIDToPathMap[mesh_data.uuid] = new_path;
+        return stl::success;
     }
 
-    void TextureRegistry::release_texture(const stl::string& path) {
+    stl::result<> TextureRegistry::release_texture(const stl::string& path) {
         if (!m_PathToTextureAssetMap.contains(path)) {
-            CORE_ERROR("Texture at path {} does not exist", path);
-            return;
+            return stl::make_error("Texture at path {} does not exist", path.data());
         }
         auto uuid = m_PathToTextureAssetMap[path].uuid;
         m_PathToTextureAssetMap.erase(path);
         m_UUIDToPathMap.erase(uuid);
+        return stl::success;
     }
 
     void TextureRegistry::serialize() {
@@ -286,13 +302,19 @@ namespace sf::assets {
         }
         return data;
     }
+
     TextureAsset* TextureRegistry::default_texture(sf::render::IGraphicsDevice* device) {
         const static UUID default_texture_uuid = UUID{5596545107579832553};
         static auto data = default_texture_data();
+        auto result = device->create_texture_with_data(DEFAULT_TEXTURE_CREATION_INFO, data, BYTE_COUNT);
+        if (!result) {
+            CORE_CRITICAL("Failed to create default texture.");
+            return nullptr;
+        }
         static TextureAsset asset = {
             .uuid = default_texture_uuid,
             .description = DEFAULT_TEXTURE_CREATION_INFO,
-            .data = device->create_texture_with_data(DEFAULT_TEXTURE_CREATION_INFO, data, BYTE_COUNT),
+            .data = std::move(*result),
         };
         return &asset;
     }

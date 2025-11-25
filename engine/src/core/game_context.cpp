@@ -33,7 +33,7 @@ namespace sf {
 
     void GameContext::init() { load_contents(); }
 
-    void GameContext::create_render_component(Entity entity, const RenderComponentResourcePaths& resource_paths) {
+    stl::result<> GameContext::create_render_component(Entity entity, const RenderComponentResourcePaths& resource_paths) {
         const bool already_has_component = m_ECManager.has_engine_component<components::RenderComponent>(entity);
         auto* mesh_asset =
             resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh() : m_AssetManager->get_mesh(resource_paths.mesh_path);
@@ -59,11 +59,15 @@ namespace sf {
             assert(mesh_asset->data->normals.size() > 0);
             assert(mesh_asset->data->texcs.size() > 0);
             if (!already_has_component) {
-                m_TransformBuffers.emplace_back(m_GraphicsDevice->create_buffer({
+                auto transform_result = m_GraphicsDevice->create_buffer({
                     .usage = sf::render::BufferUsage::Constant,
                     .size_in_bytes = sizeof(ObjectConstants),
                     .name = L"Transform buffer " + std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
-                }));
+                });
+                if (!transform_result) {
+                    return stl::make_error("Failed to create transform buffer: {}", transform_result.error().data());
+                }
+                m_TransformBuffers.emplace_back(std::move(*transform_result));
             }
             bool should_add_tangent = false;
             const bool should_allocate_mesh = !m_AssetManager->mesh_resource_exists(resource_paths.mesh_path);
@@ -71,39 +75,59 @@ namespace sf {
                 const std::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
                     ? L"Default Mesh"
                     : std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
-                m_RTIndexBuffers.push_back(m_GraphicsDevice->create_buffer<u16>(
+                auto index_buffer_result = m_GraphicsDevice->create_buffer<u16>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Index,
                         .name = L"Index buffer " + name,
                     },
-                    mesh_asset->data->indices16()));
-                m_VertexPosBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+                    mesh_asset->data->indices16());
+                if (!index_buffer_result) {
+                    return stl::make_error("Failed to create index buffer: {}", index_buffer_result.error().data());
+                }
+                m_RTIndexBuffers.push_back(std::move(*index_buffer_result));
+                auto vertex_pos_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
                         .name = L"Vertex Pos buffer " + name,
                     },
-                    mesh_asset->data->positions));
-                m_VertexNormalBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+                    mesh_asset->data->positions);
+                if (!vertex_pos_buffer_result) {
+                    return stl::make_error("Failed to create vertex position buffer: {}", vertex_pos_buffer_result.error().data());
+                }
+                m_VertexPosBuffers.push_back(std::move(*vertex_pos_buffer_result));
+                auto vertex_normal_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
                         .name = L"Vertex Norm buffer " + name,
                     },
-                    mesh_asset->data->normals));
+                    mesh_asset->data->normals);
+                if (!vertex_normal_buffer_result) {
+                    return stl::make_error("Failed to create vertex normal buffer: {}", vertex_normal_buffer_result.error().data());
+                }
+                m_VertexNormalBuffers.push_back(std::move(*vertex_normal_buffer_result));
                 if (mesh_asset->data->tangentus.size() > 0) {
-                    m_VertexTangentBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec3>(
+                    auto tangentus_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                         sf::render::BufferCreationDesc{
                             .usage = sf::render::BufferUsage::Structured,
                             .name = L"Vertex Tang buffer " + name,
                         },
-                        mesh_asset->data->tangentus));
+                        mesh_asset->data->tangentus);
+                    if (!tangentus_buffer_result) {
+                        return stl::make_error("Failed to create vertex tangent buffer: {}", tangentus_buffer_result.error().data());
+                    }
+                    m_VertexTangentBuffers.push_back(std::move(*tangentus_buffer_result));
                     should_add_tangent = true;
                 }
-                m_VertexUVBuffers.push_back(m_GraphicsDevice->create_buffer<sf::math::vec2>(
+                auto uv_result = m_GraphicsDevice->create_buffer<sf::math::vec2>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
                         .name = L"Vertex UV buffer " + name,
                     },
-                    mesh_asset->data->texcs));
+                    mesh_asset->data->texcs);
+                if (!uv_result) {
+                    return stl::make_error("Failed to create vertex UV buffer: {}", uv_result.error().data());
+                }
+                m_VertexUVBuffers.push_back(std::move(*uv_result));
             }
             auto cpu_data = components::CPUData{
                 .indices_size = static_cast<u32>(mesh_asset->data->indices32.size()),
@@ -189,6 +213,7 @@ namespace sf {
                 }};
             m_ECManager.add_engine_component<components::RenderComponent>(entity, render_component);
         }
+        return stl::success;
     }
 
     void GameContext::on_window_resize() {
