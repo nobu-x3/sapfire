@@ -12,10 +12,10 @@ namespace sf::render {
         virtual ~IMemoryAllocator() = default;
 
         // Buffer allocation
-        virtual void allocate_buffer(Buffer& buffer, const BufferCreationDesc& desc) = 0;
+        virtual stl::result<Buffer> allocate_buffer(const BufferCreationDesc& desc) = 0;
 
         // Texture allocation
-        virtual void allocate_texture(Texture& texture, const TextureCreationDesc& desc) = 0;
+        virtual stl::result<Texture> allocate_texture(const TextureCreationDesc& desc) = 0;
 
         // Free resources
         virtual void free_buffer(Buffer& buffer) = 0;

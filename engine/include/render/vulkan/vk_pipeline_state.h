@@ -10,8 +10,8 @@ namespace sf::render::vk {
         VkPipelineState() = default;
         ~VkPipelineState() override;
 
-        void create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout, VkRenderPass render_pass);
-        void create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout);
+        stl::result<> create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout, VkRenderPass render_pass);
+        stl::result<> create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout);
 
         bool is_compute() const override { return m_IsCompute; }
         bool is_graphics() const override { return !m_IsCompute; }

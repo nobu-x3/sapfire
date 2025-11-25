@@ -47,7 +47,7 @@ namespace sf {
         GameContext(const GameContextCreationDesc& desc);
         virtual ~GameContext() {}
         void init();
-        void create_render_component(Entity entity, const RenderComponentResourcePaths& resource_paths);
+        sf::stl::result<> create_render_component(Entity entity, const RenderComponentResourcePaths& resource_paths);
         virtual void on_window_resize();
         virtual void load_contents() = 0;
         virtual void update(f32 delta_time);

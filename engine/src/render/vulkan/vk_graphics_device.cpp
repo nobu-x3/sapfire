@@ -3,6 +3,7 @@
 #include "core/logger.h"
 #include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_type_conversions.h"
+#include "render/vulkan/vk_compat.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -49,18 +50,80 @@ namespace sf::render::vk {
         m_WindowWidth = desc.width;
         m_WindowHeight = desc.height;
         m_BackBufferFormat = desc.format;
-        init_instance();
-        init_surface(desc);
-        init_physical_device();
-        init_logical_device();
-        init_swapchain(desc);
-        init_command_queues();
-        init_descriptor_heaps();
-        init_memory_allocator();
-        init_render_pass();
-        init_bindless_pipeline_layout();
-        create_swapchain_framebuffers();
-        init_contexts();
+
+        // Initialize all components and log errors if any fail
+        auto instance_result = init_instance();
+        if (!instance_result) {
+            CORE_CRITICAL(instance_result.error().c_str());
+            return;
+        }
+
+        auto surface_result = init_surface(desc);
+        if (!surface_result) {
+            CORE_CRITICAL(surface_result.error().c_str());
+            return;
+        }
+
+        auto physical_device_result = init_physical_device();
+        if (!physical_device_result) {
+            CORE_CRITICAL(physical_device_result.error().c_str());
+            return;
+        }
+
+        auto logical_device_result = init_logical_device();
+        if (!logical_device_result) {
+            CORE_CRITICAL(logical_device_result.error().c_str());
+            return;
+        }
+
+        auto swapchain_result = init_swapchain(desc);
+        if (!swapchain_result) {
+            CORE_CRITICAL(swapchain_result.error().c_str());
+            return;
+        }
+
+        auto queues_result = init_command_queues();
+        if (!queues_result) {
+            CORE_CRITICAL(queues_result.error().c_str());
+            return;
+        }
+
+        auto heaps_result = init_descriptor_heaps();
+        if (!heaps_result) {
+            CORE_CRITICAL(heaps_result.error().c_str());
+            return;
+        }
+
+        auto allocator_result = init_memory_allocator();
+        if (!allocator_result) {
+            CORE_CRITICAL(allocator_result.error().c_str());
+            return;
+        }
+
+        auto render_pass_result = init_render_pass();
+        if (!render_pass_result) {
+            CORE_CRITICAL(render_pass_result.error().c_str());
+            return;
+        }
+
+        auto pipeline_layout_result = init_bindless_pipeline_layout();
+        if (!pipeline_layout_result) {
+            CORE_CRITICAL(pipeline_layout_result.error().c_str());
+            return;
+        }
+
+        auto framebuffers_result = create_swapchain_framebuffers();
+        if (!framebuffers_result) {
+            CORE_CRITICAL(framebuffers_result.error().c_str());
+            return;
+        }
+
+        auto contexts_result = init_contexts();
+        if (!contexts_result) {
+            CORE_CRITICAL(contexts_result.error().c_str());
+            return;
+        }
+
         CORE_INFO("Vulkan graphics device initialized successfully");
     }
 
@@ -114,7 +177,7 @@ namespace sf::render::vk {
         CORE_INFO("Vulkan graphics device destroyed");
     }
 
-    void VkGraphicsDevice::init_instance() {
+    stl::result<> VkGraphicsDevice::init_instance() {
         VkApplicationInfo app_info{};
         app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         app_info.pApplicationName = "Sapfire Application";
@@ -163,11 +226,9 @@ namespace sf::render::vk {
         create_info.ppEnabledExtensionNames = extensions.data();
         create_info.enabledLayerCount = static_cast<u32>(validation_layers.size());
         create_info.ppEnabledLayerNames = validation_layers.data();
-        VkResult result = vkCreateInstance(&create_info, nullptr, &m_Instance);
-        if (result != VK_SUCCESS) {
-            CORE_CRITICAL("Failed to create Vulkan instance. Error code: {}", static_cast<int>(result));
-            return;
-        }
+
+        VK_RETURN_ON_ERROR(vkCreateInstance(&create_info, nullptr, &m_Instance), "Failed to create Vulkan instance");
+
         CORE_INFO("Vulkan instance created");
 #if defined(DEBUG) || defined(_DEBUG)
         VkDebugUtilsMessengerCreateInfoEXT debug_create_info{};
@@ -181,37 +242,36 @@ namespace sf::render::vk {
             func(m_Instance, &debug_create_info, nullptr, &m_DebugMessenger);
         }
 #endif
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_surface(const SwapchainCreationDesc& desc) {
+    stl::result<> VkGraphicsDevice::init_surface(const SwapchainCreationDesc& desc) {
         SDL_Window* sdl_window = static_cast<SDL_Window*>(desc.window_handle);
         if (!SDL_Vulkan_CreateSurface(sdl_window, m_Instance, nullptr, &m_Surface)) {
-            CORE_CRITICAL("Failed to create Vulkan surface: {}", SDL_GetError());
-            return;
+            return stl::make_error<>("Failed to create Vulkan surface: {}", SDL_GetError());
         }
         CORE_INFO("Vulkan surface created");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_physical_device() {
+    stl::result<> VkGraphicsDevice::init_physical_device() {
         u32 device_count = 0;
-        VkResult result = vkEnumeratePhysicalDevices(m_Instance, &device_count, nullptr);
-        if (result != VK_SUCCESS) {
-            CORE_CRITICAL("Failed to enumerate physical devices. Error code: {}", static_cast<int>(result));
-            return;
-        }
+        VK_RETURN_ON_ERROR(vkEnumeratePhysicalDevices(m_Instance, &device_count, nullptr), "Failed to enumerate physical devices");
+
         if (device_count == 0) {
-            CORE_CRITICAL("Failed to find GPUs with Vulkan support");
-            return;
+            return stl::make_error<>("Failed to find GPUs with Vulkan support");
         }
+
         stl::vector<VkPhysicalDevice> devices{mem::MemTag::Temp, device_count};
         vkEnumeratePhysicalDevices(m_Instance, &device_count, devices.data());
         m_PhysicalDevice = devices[0];
         VkPhysicalDeviceProperties properties;
         vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
         CORE_INFO("Selected GPU: {}", properties.deviceName);
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_logical_device() {
+    stl::result<> VkGraphicsDevice::init_logical_device() {
         m_GraphicsQueueFamily = find_queue_family(VK_QUEUE_GRAPHICS_BIT);
         m_ComputeQueueFamily = find_queue_family(VK_QUEUE_COMPUTE_BIT);
         m_TransferQueueFamily = find_queue_family(VK_QUEUE_TRANSFER_BIT);
@@ -248,8 +308,7 @@ namespace sf::render::vk {
         stl::vector<const char*> device_extensions{mem::MemTag::Temp};
         for (const auto* ext : required_extensions) {
             if (!check_extension_supported(available_extensions, ext)) {
-                CORE_CRITICAL("Required device extension not available: {}", ext);
-                return;
+                return stl::make_error<>("Required device extension not available: {}", ext);
             }
             device_extensions.push_back(ext);
         }
@@ -270,15 +329,14 @@ namespace sf::render::vk {
         create_info.pEnabledFeatures = &device_features;
         create_info.enabledExtensionCount = static_cast<u32>(device_extensions.size());
         create_info.ppEnabledExtensionNames = device_extensions.data();
-        VkResult result = vkCreateDevice(m_PhysicalDevice, &create_info, nullptr, &m_Device);
-        if (result != VK_SUCCESS) {
-            CORE_CRITICAL("Failed to create Vulkan logical device. Error code: {}", static_cast<int>(result));
-            return;
-        }
+
+        VK_RETURN_ON_ERROR(vkCreateDevice(m_PhysicalDevice, &create_info, nullptr, &m_Device), "Failed to create Vulkan logical device");
+
         CORE_INFO("Vulkan logical device created");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_swapchain(const SwapchainCreationDesc& desc) {
+    stl::result<> VkGraphicsDevice::init_swapchain(const SwapchainCreationDesc& desc) {
         VkSurfaceCapabilitiesKHR capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
         u32 format_count;
@@ -328,11 +386,9 @@ namespace sf::render::vk {
         create_info.compositeAlpha = composite_alpha;
         create_info.presentMode = VK_PRESENT_MODE_FIFO_KHR;
         create_info.clipped = VK_TRUE;
-        VkResult result = vkCreateSwapchainKHR(m_Device, &create_info, nullptr, &m_Swapchain);
-        if (result != VK_SUCCESS) {
-            CORE_CRITICAL("Failed to create Vulkan swapchain. Error code: {}", static_cast<int>(result));
-            return;
-        }
+
+        VK_RETURN_ON_ERROR(vkCreateSwapchainKHR(m_Device, &create_info, nullptr, &m_Swapchain), "Failed to create Vulkan swapchain");
+
         u32 swapchain_image_count;
         vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &swapchain_image_count, nullptr);
         stl::vector<VkImage> swapchain_images{mem::MemTag::Temp, swapchain_image_count};
@@ -357,32 +413,33 @@ namespace sf::render::vk {
             view_info.subresourceRange.levelCount = 1;
             view_info.subresourceRange.baseArrayLayer = 0;
             view_info.subresourceRange.layerCount = 1;
-            VkResult view_result = vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]);
-            if (view_result != VK_SUCCESS) {
-                CORE_CRITICAL("Failed to create swapchain image view {}. Error code: {}", i, static_cast<int>(view_result));
-                return;
-            }
+
+            VK_RETURN_ON_ERROR(vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]),
+                               "Failed to create swapchain image view {}", i);
         }
         for (auto& fence : m_InFlightFences) {
             VkFenceCreateInfo fence_info{};
             fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
             fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            vkCreateFence(m_Device, &fence_info, nullptr, &fence);
+            VK_RETURN_ON_ERROR(vkCreateFence(m_Device, &fence_info, nullptr, &fence), "Failed to create fence");
         }
         for (auto& semaphore : m_ImageAvailableSemaphores) {
             VkSemaphoreCreateInfo semaphore_info{};
             semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore);
+            VK_RETURN_ON_ERROR(vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore),
+                               "Failed to create image available semaphore");
         }
         for (auto& semaphore : m_RenderFinishedSemaphores) {
             VkSemaphoreCreateInfo semaphore_info{};
             semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore);
+            VK_RETURN_ON_ERROR(vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore),
+                               "Failed to create render finished semaphore");
         }
         CORE_INFO("Vulkan swapchain created");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_command_queues() {
+    stl::result<> VkGraphicsDevice::init_command_queues() {
         VkQueue graphics_queue, compute_queue, transfer_queue;
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
         vkGetDeviceQueue(m_Device, m_ComputeQueueFamily, 0, &compute_queue);
@@ -390,24 +447,30 @@ namespace sf::render::vk {
         new (&m_GraphicsQueue) VkCommandQueue(m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
         new (&m_ComputeQueue) VkCommandQueue(m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
         new (&m_TransferQueue) VkCommandQueue(m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_descriptor_heaps() {
+    stl::result<> VkGraphicsDevice::init_descriptor_heaps() {
         new (&m_DescriptorHeap) VkDescriptorHeap(m_Device, 10000, "Main Descriptor Heap");
         new (&m_SamplerHeap) VkDescriptorHeap(m_Device, 256, "Sampler Heap");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_memory_allocator() { new (&m_MemoryAllocator) VkMemoryAllocator(m_Instance, m_PhysicalDevice, m_Device); }
+    stl::result<> VkGraphicsDevice::init_memory_allocator() {
+        new (&m_MemoryAllocator) VkMemoryAllocator(m_Instance, m_PhysicalDevice, m_Device);
+        return stl::result_success();
+    }
 
-    void VkGraphicsDevice::init_contexts() {
+    stl::result<> VkGraphicsDevice::init_contexts() {
         for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
             new (&m_GraphicsContexts[i]) VkGraphicsContext(this);
         }
         new (&m_ComputeContext) VkComputeContext(this);
         new (&m_CopyContext) VkCopyContext(this);
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_bindless_pipeline_layout() {
+    stl::result<> VkGraphicsDevice::init_bindless_pipeline_layout() {
         VkPushConstantRange push_constant_range{};
         push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
         push_constant_range.offset = 0;
@@ -416,10 +479,12 @@ namespace sf::render::vk {
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.pushConstantRangeCount = 1;
         layout_info.pPushConstantRanges = &push_constant_range;
-        vkCreatePipelineLayout(m_Device, &layout_info, nullptr, &m_BindlessPipelineLayout);
+        VK_RETURN_ON_ERROR(vkCreatePipelineLayout(m_Device, &layout_info, nullptr, &m_BindlessPipelineLayout),
+                           "Failed to create bindless pipeline layout");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::init_render_pass() {
+    stl::result<> VkGraphicsDevice::init_render_pass() {
         VkAttachmentDescription color_attachment{};
         color_attachment.format = to_vk_format(m_BackBufferFormat);
         color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -442,10 +507,11 @@ namespace sf::render::vk {
         render_pass_info.pAttachments = &color_attachment;
         render_pass_info.subpassCount = 1;
         render_pass_info.pSubpasses = &subpass;
-        vkCreateRenderPass(m_Device, &render_pass_info, nullptr, &m_MainRenderPass);
+        VK_RETURN_ON_ERROR(vkCreateRenderPass(m_Device, &render_pass_info, nullptr, &m_MainRenderPass), "Failed to create render pass");
+        return stl::result_success();
     }
 
-    void VkGraphicsDevice::create_swapchain_framebuffers() {
+    stl::result<> VkGraphicsDevice::create_swapchain_framebuffers() {
         for (u32 i = 0; i < m_BackBufferCount && i < MAX_FRAMES_IN_FLIGHT; ++i) {
             VkImageView attachments[] = {m_SwapchainImageViews[i]};
             VkFramebufferCreateInfo framebuffer_info{};
@@ -456,12 +522,11 @@ namespace sf::render::vk {
             framebuffer_info.width = m_WindowWidth;
             framebuffer_info.height = m_WindowHeight;
             framebuffer_info.layers = 1;
-            VkResult result = vkCreateFramebuffer(m_Device, &framebuffer_info, nullptr, &m_SwapchainFramebuffers[i]);
-            if (result != VK_SUCCESS) {
-                CORE_CRITICAL("Failed to create framebuffer {}. Error code: {}", i, static_cast<int>(result));
-                return;
-            }
+
+            VK_RETURN_ON_ERROR(vkCreateFramebuffer(m_Device, &framebuffer_info, nullptr, &m_SwapchainFramebuffers[i]),
+                               "Failed to create framebuffer {}", i);
         }
+        return stl::result_success();
     }
 
     void VkGraphicsDevice::cleanup_swapchain() {
@@ -548,8 +613,19 @@ namespace sf::render::vk {
         swapchain_desc.height = height;
         swapchain_desc.format = m_BackBufferFormat;
         swapchain_desc.buffer_count = m_BackBufferCount;
-        init_swapchain(swapchain_desc);
-        create_swapchain_framebuffers();
+
+        auto swapchain_result = init_swapchain(swapchain_desc);
+        if (!swapchain_result) {
+            CORE_CRITICAL(swapchain_result.error().c_str());
+            return;
+        }
+
+        auto framebuffers_result = create_swapchain_framebuffers();
+        if (!framebuffers_result) {
+            CORE_CRITICAL(framebuffers_result.error().c_str());
+            return;
+        }
+
         CORE_INFO("Window resized to {}x{}", width, height);
     }
 
@@ -557,26 +633,35 @@ namespace sf::render::vk {
 
     Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
 
-    Buffer VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
-        Buffer buffer{};
-        m_MemoryAllocator.allocate_buffer(buffer, desc);
-        return buffer;
+    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
+        return m_MemoryAllocator.allocate_buffer(desc);
     }
 
-    Buffer VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
-        Buffer buffer = create_buffer(desc);
+    stl::result<Buffer> VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
+        auto buffer_result = create_buffer(desc);
+        if (!buffer_result) {
+            return buffer_result;
+        }
+        Buffer buffer = std::move(buffer_result.value());
+
         BufferCreationDesc staging_desc{};
         staging_desc.usage = BufferUsage::Upload;
         staging_desc.size_in_bytes = data_size;
         staging_desc.name = L"Staging Buffer";
-        Buffer staging_buffer = create_buffer(staging_desc);
-        if (staging_buffer.mapped_data) {
-            memcpy(staging_buffer.mapped_data, data, data_size);
-        } else {
-            CORE_ERROR("Failed to map staging buffer for data upload");
-            m_MemoryAllocator.free_buffer(staging_buffer);
-            return buffer;
+
+        auto staging_result = create_buffer(staging_desc);
+        if (!staging_result) {
+            return staging_result;
         }
+        Buffer staging_buffer = std::move(staging_result.value());
+
+        if (!staging_buffer.mapped_data) {
+            m_MemoryAllocator.free_buffer(staging_buffer);
+            return stl::make_error<Buffer>("Failed to map staging buffer for data upload");
+        }
+
+        memcpy(staging_buffer.mapped_data, data, data_size);
+
         m_CopyContext.reset();
         m_CopyContext.transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
         m_CopyContext.execute_resource_barriers();
@@ -584,38 +669,51 @@ namespace sf::render::vk {
         m_CopyContext.transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
         m_CopyContext.execute_resource_barriers();
         m_CopyContext.close();
+
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
         VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
-        vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+        VK_RETURN_ON_ERROR_T(Buffer, vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE), "Failed to submit buffer upload");
+
         wait_for_idle();
         m_MemoryAllocator.free_buffer(staging_buffer);
+
         return buffer;
     }
 
-    Texture VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
-        Texture texture{};
-        m_MemoryAllocator.allocate_texture(texture, desc);
-        return texture;
+    stl::result<Texture> VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
+        return m_MemoryAllocator.allocate_texture(desc);
     }
 
-    Texture VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
-        Texture texture = create_texture(desc);
+    stl::result<Texture> VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
+        auto texture_result = create_texture(desc);
+        if (!texture_result) {
+            return texture_result;
+        }
+        Texture texture = std::move(texture_result.value());
+
         BufferCreationDesc staging_desc{};
         staging_desc.usage = BufferUsage::Upload;
         staging_desc.size_in_bytes = data_size;
         staging_desc.name = L"Texture Staging Buffer";
-        Buffer staging_buffer = create_buffer(staging_desc);
-        if (staging_buffer.mapped_data) {
-            memcpy(staging_buffer.mapped_data, data, data_size);
-        } else {
-            CORE_ERROR("Failed to map staging buffer for texture upload");
-            m_MemoryAllocator.free_buffer(staging_buffer);
-            return texture;
+
+        auto staging_result = create_buffer(staging_desc);
+        if (!staging_result) {
+            return stl::make_error<Texture>(staging_result.error().c_str());
         }
+        Buffer staging_buffer = std::move(staging_result.value());
+
+        if (!staging_buffer.mapped_data) {
+            m_MemoryAllocator.free_buffer(staging_buffer);
+            return stl::make_error<Texture>("Failed to map staging buffer for texture upload");
+        }
+
+        memcpy(staging_buffer.mapped_data, data, data_size);
+
         m_CopyContext.reset();
         m_CopyContext.transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
         m_CopyContext.execute_resource_barriers();
@@ -623,29 +721,43 @@ namespace sf::render::vk {
         m_CopyContext.transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
         m_CopyContext.execute_resource_barriers();
         m_CopyContext.close();
+
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
         VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
         VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
-        vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
+
+        VK_RETURN_ON_ERROR_T(Texture, vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE), "Failed to submit texture upload");
+
         wait_for_idle();
         m_MemoryAllocator.free_buffer(staging_buffer);
+
         return texture;
     }
 
-    IPipelineState* VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
+    stl::result<IPipelineState*> VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
         auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
-        pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
+
+        auto create_result = pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
+        if (!create_result) {
+            return stl::make_error<IPipelineState*>(create_result.error().c_str());
+        }
+
         auto* ptr = pipeline.get();
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;
     }
 
-    IPipelineState* VkGraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
+    stl::result<IPipelineState*> VkGraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
         auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
-        pipeline->create_compute(m_Device, desc, m_BindlessPipelineLayout);
+
+        auto create_result = pipeline->create_compute(m_Device, desc, m_BindlessPipelineLayout);
+        if (!create_result) {
+            return stl::make_error<IPipelineState*>(create_result.error().c_str());
+        }
+
         auto* ptr = pipeline.get();
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;

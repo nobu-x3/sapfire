@@ -38,11 +38,11 @@ namespace sf::assets {
         TextureRegistry(TextureRegistry&&) = delete;
         TextureRegistry& operator=(const TextureRegistry&) = delete;
         TextureRegistry& operator=(TextureRegistry&&) = delete;
-        void import_texture(sf::render::IGraphicsDevice* device, const stl::string& path);
-        void import_texture(sf::render::IGraphicsDevice* device, const stl::string& path, const sf::render::TextureCreationDesc& desc,
+        stl::result<> import_texture(sf::render::IGraphicsDevice* device, const stl::string& path);
+        stl::result<> import_texture(sf::render::IGraphicsDevice* device, const stl::string& path, const sf::render::TextureCreationDesc& desc,
                             UUID uuid = {});
-        void move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
-        void release_texture(const stl::string& path);
+        stl::result<> move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
+        stl::result<> release_texture(const stl::string& path);
         void serialize();
         void deserialize(sf::render::IGraphicsDevice* device, const stl::string& data);
         TextureAsset* get(const stl::string& path) const;

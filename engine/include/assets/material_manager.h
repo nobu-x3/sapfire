@@ -36,11 +36,11 @@ namespace sf::assets {
         MaterialRegistry(MaterialRegistry&&) = delete;
         MaterialRegistry& operator=(const MaterialRegistry&) = delete;
         MaterialRegistry& operator=(MaterialRegistry&&) = delete;
-        void import_material(sf::render::IGraphicsDevice* device, const stl::string& path);
-        void import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path);
-        void import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid);
-        void move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
-        void release_material(const stl::string& path);
+        stl::result<> import_material(sf::render::IGraphicsDevice* device, const stl::string& path);
+        stl::result<> import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path);
+        stl::result<> import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid);
+        stl::result<> move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
+        stl::result<> release_material(const stl::string& path);
         void serialize();
         void serialize(const MaterialAsset& asset) const;
         void deserialize(sf::render::IGraphicsDevice* device, const stl::string& data);

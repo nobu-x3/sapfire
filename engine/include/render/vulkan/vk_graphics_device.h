@@ -34,14 +34,14 @@ namespace sf::render::vk {
 
         // Resource Creation
 
-        Buffer create_buffer(const BufferCreationDesc& desc) override;
-        Buffer create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
+        stl::result<Buffer> create_buffer(const BufferCreationDesc& desc) override;
+        stl::result<Buffer> create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
 
-        Texture create_texture(const TextureCreationDesc& desc) override;
-        Texture create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) override;
+        stl::result<Texture> create_texture(const TextureCreationDesc& desc) override;
+        stl::result<Texture> create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) override;
 
-        IPipelineState* create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
-        IPipelineState* create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
+        stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
+        stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
 
         // Context Access
 
@@ -93,18 +93,18 @@ namespace sf::render::vk {
         VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
     private:
-        void init_instance();
-        void init_surface(const SwapchainCreationDesc& desc);
-        void init_physical_device();
-        void init_logical_device();
-        void init_swapchain(const SwapchainCreationDesc& desc);
-        void init_command_queues();
-        void init_descriptor_heaps();
-        void init_memory_allocator();
-        void init_contexts();
-        void init_bindless_pipeline_layout();
-        void init_render_pass();
-        void create_swapchain_framebuffers();
+        stl::result<> init_instance();
+        stl::result<> init_surface(const SwapchainCreationDesc& desc);
+        stl::result<> init_physical_device();
+        stl::result<> init_logical_device();
+        stl::result<> init_swapchain(const SwapchainCreationDesc& desc);
+        stl::result<> init_command_queues();
+        stl::result<> init_descriptor_heaps();
+        stl::result<> init_memory_allocator();
+        stl::result<> init_contexts();
+        stl::result<> init_bindless_pipeline_layout();
+        stl::result<> init_render_pass();
+        stl::result<> create_swapchain_framebuffers();
         void cleanup_swapchain();
 
         u32 find_queue_family(VkQueueFlags flags);
