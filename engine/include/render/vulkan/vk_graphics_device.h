@@ -52,20 +52,20 @@ namespace sf::render::vk {
 
         // Command Queue Access
 
-        ICommandQueue* get_direct_queue() override { return m_GraphicsQueue.get(); }
-        ICommandQueue* get_compute_queue() override { return m_ComputeQueue.get(); }
-        ICommandQueue* get_copy_queue() override { return m_TransferQueue.get(); }
+        ICommandQueue* get_direct_queue() override { return &m_GraphicsQueue; }
+        ICommandQueue* get_compute_queue() override { return &m_ComputeQueue; }
+        ICommandQueue* get_copy_queue() override { return &m_TransferQueue; }
 
         // Descriptor Heap Access
 
-        IDescriptorHeap* get_cbv_srv_uav_heap() override { return m_DescriptorHeap.get(); }
-        IDescriptorHeap* get_rtv_heap() override { return m_DescriptorHeap.get(); }
-        IDescriptorHeap* get_dsv_heap() override { return m_DescriptorHeap.get(); }
-        IDescriptorHeap* get_sampler_heap() override { return m_SamplerHeap.get(); }
+        IDescriptorHeap* get_cbv_srv_uav_heap() override { return &m_DescriptorHeap; }
+        IDescriptorHeap* get_rtv_heap() override { return &m_DescriptorHeap; }
+        IDescriptorHeap* get_dsv_heap() override { return &m_DescriptorHeap; }
+        IDescriptorHeap* get_sampler_heap() override { return &m_SamplerHeap; }
 
         // Memory Allocator Access
 
-        IMemoryAllocator* get_memory_allocator() override { return m_MemoryAllocator.get(); }
+        IMemoryAllocator* get_memory_allocator() override { return &m_MemoryAllocator; }
 
         // Frame Timing
 
@@ -88,8 +88,8 @@ namespace sf::render::vk {
         VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
         VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
 
-        VkDescriptorHeap* get_vk_descriptor_heap() const { return m_DescriptorHeap.get(); }
-        VkDescriptorHeap* get_vk_sampler_heap() const { return m_SamplerHeap.get(); }
+        const VkDescriptorHeap* get_vk_descriptor_heap() const { return &m_DescriptorHeap; }
+        const VkDescriptorHeap* get_vk_sampler_heap() const { return &m_SamplerHeap; }
         VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
     private:
@@ -124,18 +124,18 @@ namespace sf::render::vk {
         VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 #endif
 
-        stl::unique_ptr<VkCommandQueue> m_GraphicsQueue;
-        stl::unique_ptr<VkCommandQueue> m_ComputeQueue;
-        stl::unique_ptr<VkCommandQueue> m_TransferQueue;
+        VkCommandQueue m_GraphicsQueue;
+        VkCommandQueue m_ComputeQueue;
+        VkCommandQueue m_TransferQueue;
 
-        stl::array<stl::unique_ptr<VkGraphicsContext>, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
-        stl::unique_ptr<VkComputeContext> m_ComputeContext;
-        stl::unique_ptr<VkCopyContext> m_CopyContext;
+        stl::array<VkGraphicsContext, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
+        VkComputeContext m_ComputeContext;
+        VkCopyContext m_CopyContext;
 
-        stl::unique_ptr<VkDescriptorHeap> m_DescriptorHeap;
-        stl::unique_ptr<VkDescriptorHeap> m_SamplerHeap;
+        VkDescriptorHeap m_DescriptorHeap;
+        VkDescriptorHeap m_SamplerHeap;
 
-        stl::unique_ptr<VkMemoryAllocator> m_MemoryAllocator;
+        VkMemoryAllocator m_MemoryAllocator;
 
         stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates{mem::MemTag::Render};
 

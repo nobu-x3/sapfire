@@ -32,6 +32,7 @@ namespace sf::render::vk {
             return false;
         }
     } // namespace
+
 #if defined(DEBUG) || defined(_DEBUG)
     static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
                                                          VkDebugUtilsMessageTypeFlagsEXT type,
@@ -42,6 +43,7 @@ namespace sf::render::vk {
         return VK_FALSE;
     }
 #endif
+
     VkGraphicsDevice::VkGraphicsDevice(const SwapchainCreationDesc& desc) {
         m_WindowHandle = desc.window_handle;
         m_WindowWidth = desc.width;
@@ -61,18 +63,13 @@ namespace sf::render::vk {
         init_contexts();
         CORE_INFO("Vulkan graphics device initialized successfully");
     }
+
     VkGraphicsDevice::~VkGraphicsDevice() {
         wait_for_idle();
         cleanup_swapchain();
         m_GraphicsContexts = {};
         m_ComputeContext.reset();
         m_CopyContext.reset();
-        m_DescriptorHeap.reset();
-        m_SamplerHeap.reset();
-        m_MemoryAllocator.reset();
-        m_GraphicsQueue.reset();
-        m_ComputeQueue.reset();
-        m_TransferQueue.reset();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
         }
@@ -286,9 +283,16 @@ namespace sf::render::vk {
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
         u32 format_count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &format_count, nullptr);
-        stl::vector<VkSurfaceFormatKHR> formats{mem::MemTag::Temp, format_count};
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &format_count, formats.data());
-        VkSurfaceFormatKHR surface_format = formats[0];
+        stl::vector<VkSurfaceFormatKHR> surface_formats{mem::MemTag::Temp, format_count};
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_PhysicalDevice, m_Surface, &format_count, surface_formats.data());
+        // Arbitrarily first
+        VkSurfaceFormatKHR surface_format = surface_formats[0];
+        if (surface_format.format != to_vk_format(desc.format)) {
+            // TODO: write a function that properly formats these enums to string
+            CORE_WARN("Given format {} has not been choses due to device capabilities. Using {} format.", static_cast<u32>(desc.format),
+                      static_cast<u32>(surface_format.format));
+            m_BackBufferFormat = from_vk_format(surface_format.format);
+        }
         u32 image_count = desc.buffer_count;
         if (image_count < capabilities.minImageCount) {
             image_count = capabilities.minImageCount;
@@ -333,7 +337,7 @@ namespace sf::render::vk {
         vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &swapchain_image_count, nullptr);
         stl::vector<VkImage> swapchain_images{mem::MemTag::Temp, swapchain_image_count};
         vkGetSwapchainImagesKHR(m_Device, m_Swapchain, &swapchain_image_count, swapchain_images.data());
-        m_BackBufferCount = static_cast<u32>(swapchain_images.size());
+        m_BackBufferCount = static_cast<u32>(swapchain_image_count);
         for (u32 i = 0; i < m_BackBufferCount && i < MAX_FRAMES_IN_FLIGHT; ++i) {
             m_BackBuffers[i].resource = reinterpret_cast<void*>(swapchain_images[i]);
             m_BackBuffers[i].format = from_vk_format(surface_format.format);
@@ -383,29 +387,24 @@ namespace sf::render::vk {
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
         vkGetDeviceQueue(m_Device, m_ComputeQueueFamily, 0, &compute_queue);
         vkGetDeviceQueue(m_Device, m_TransferQueueFamily, 0, &transfer_queue);
-        m_GraphicsQueue =
-            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
-        m_ComputeQueue =
-            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
-        m_TransferQueue =
-            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
+        new (&m_GraphicsQueue) VkCommandQueue(m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
+        new (&m_ComputeQueue) VkCommandQueue(m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
+        new (&m_TransferQueue) VkCommandQueue(m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
     }
 
     void VkGraphicsDevice::init_descriptor_heaps() {
-        m_DescriptorHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 10000, "Main Descriptor Heap");
-        m_SamplerHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 256, "Sampler Heap");
+        new (&m_DescriptorHeap) VkDescriptorHeap(m_Device, 10000, "Main Descriptor Heap");
+        new (&m_SamplerHeap) VkDescriptorHeap(m_Device, 256, "Sampler Heap");
     }
 
-    void VkGraphicsDevice::init_memory_allocator() {
-        m_MemoryAllocator = stl::make_unique<VkMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
-    }
+    void VkGraphicsDevice::init_memory_allocator() { new (&m_MemoryAllocator) VkMemoryAllocator(m_Instance, m_PhysicalDevice, m_Device); }
 
     void VkGraphicsDevice::init_contexts() {
         for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            m_GraphicsContexts[i] = stl::make_unique<VkGraphicsContext>(mem::MemTag::Render, this);
+            new (&m_GraphicsContexts[i]) VkGraphicsContext(this);
         }
-        m_ComputeContext = stl::make_unique<VkComputeContext>(mem::MemTag::Render, this);
-        m_CopyContext = stl::make_unique<VkCopyContext>(mem::MemTag::Render, this);
+        new (&m_ComputeContext) VkComputeContext(this);
+        new (&m_CopyContext) VkCopyContext(this);
     }
 
     void VkGraphicsDevice::init_bindless_pipeline_layout() {
@@ -553,13 +552,17 @@ namespace sf::render::vk {
         create_swapchain_framebuffers();
         CORE_INFO("Window resized to {}x{}", width, height);
     }
+
     Texture& VkGraphicsDevice::get_current_back_buffer() { return m_BackBuffers[m_CurrentBackBufferIndex]; }
+
     Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
+
     Buffer VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
         Buffer buffer{};
-        m_MemoryAllocator->allocate_buffer(buffer, desc);
+        m_MemoryAllocator.allocate_buffer(buffer, desc);
         return buffer;
     }
+
     Buffer VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
         Buffer buffer = create_buffer(desc);
         BufferCreationDesc staging_desc{};
@@ -571,32 +574,34 @@ namespace sf::render::vk {
             memcpy(staging_buffer.mapped_data, data, data_size);
         } else {
             CORE_ERROR("Failed to map staging buffer for data upload");
-            m_MemoryAllocator->free_buffer(staging_buffer);
+            m_MemoryAllocator.free_buffer(staging_buffer);
             return buffer;
         }
-        m_CopyContext->reset();
-        m_CopyContext->transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
-        m_CopyContext->execute_resource_barriers();
-        m_CopyContext->copy_buffer(buffer, staging_buffer, data_size);
-        m_CopyContext->transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
-        m_CopyContext->execute_resource_barriers();
-        m_CopyContext->close();
+        m_CopyContext.reset();
+        m_CopyContext.transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
+        m_CopyContext.execute_resource_barriers();
+        m_CopyContext.copy_buffer(buffer, staging_buffer, data_size);
+        m_CopyContext.transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
+        m_CopyContext.execute_resource_barriers();
+        m_CopyContext.close();
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
+        VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
-        VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
+        VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
         vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
         wait_for_idle();
-        m_MemoryAllocator->free_buffer(staging_buffer);
+        m_MemoryAllocator.free_buffer(staging_buffer);
         return buffer;
     }
+
     Texture VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
         Texture texture{};
-        m_MemoryAllocator->allocate_texture(texture, desc);
+        m_MemoryAllocator.allocate_texture(texture, desc);
         return texture;
     }
+
     Texture VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
         Texture texture = create_texture(desc);
         BufferCreationDesc staging_desc{};
@@ -608,27 +613,28 @@ namespace sf::render::vk {
             memcpy(staging_buffer.mapped_data, data, data_size);
         } else {
             CORE_ERROR("Failed to map staging buffer for texture upload");
-            m_MemoryAllocator->free_buffer(staging_buffer);
+            m_MemoryAllocator.free_buffer(staging_buffer);
             return texture;
         }
-        m_CopyContext->reset();
-        m_CopyContext->transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
-        m_CopyContext->execute_resource_barriers();
-        m_CopyContext->copy_buffer_to_texture(texture, staging_buffer, 0);
-        m_CopyContext->transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
-        m_CopyContext->execute_resource_barriers();
-        m_CopyContext->close();
+        m_CopyContext.reset();
+        m_CopyContext.transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
+        m_CopyContext.execute_resource_barriers();
+        m_CopyContext.copy_buffer_to_texture(texture, staging_buffer, 0);
+        m_CopyContext.transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
+        m_CopyContext.execute_resource_barriers();
+        m_CopyContext.close();
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
+        VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
-        VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
+        VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
         vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE);
         wait_for_idle();
-        m_MemoryAllocator->free_buffer(staging_buffer);
+        m_MemoryAllocator.free_buffer(staging_buffer);
         return texture;
     }
+
     IPipelineState* VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
         auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
         pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
@@ -636,6 +642,7 @@ namespace sf::render::vk {
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;
     }
+
     IPipelineState* VkGraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
         auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
         pipeline->create_compute(m_Device, desc, m_BindlessPipelineLayout);
@@ -643,8 +650,12 @@ namespace sf::render::vk {
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;
     }
-    IGraphicsContext& VkGraphicsDevice::get_current_graphics_context() { return *m_GraphicsContexts[m_CurrentFrameIndex]; }
-    IGraphicsContext& VkGraphicsDevice::get_graphics_context(u32 frame_index) { return *m_GraphicsContexts[frame_index]; }
-    IComputeContext& VkGraphicsDevice::get_compute_context() { return *m_ComputeContext; }
-    ICopyContext& VkGraphicsDevice::get_copy_context() { return *m_CopyContext; }
+
+    IGraphicsContext& VkGraphicsDevice::get_current_graphics_context() { return m_GraphicsContexts[m_CurrentFrameIndex]; }
+
+    IGraphicsContext& VkGraphicsDevice::get_graphics_context(u32 frame_index) { return m_GraphicsContexts[frame_index]; }
+
+    IComputeContext& VkGraphicsDevice::get_compute_context() { return m_ComputeContext; }
+
+    ICopyContext& VkGraphicsDevice::get_copy_context() { return m_CopyContext; }
 } // namespace sf::render::vk

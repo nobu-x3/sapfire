@@ -8,6 +8,7 @@ namespace sf::render::vk {
     class VkMemoryAllocator : public IMemoryAllocator {
     public:
         explicit VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
+        VkMemoryAllocator() = default;
         ~VkMemoryAllocator() override;
 
         void allocate_buffer(Buffer& buffer, const BufferCreationDesc& desc) override;
@@ -22,8 +23,8 @@ namespace sf::render::vk {
         VmaAllocator get_vma_allocator() const { return m_Allocator; }
 
     private:
-        VkDevice m_Device;
-        VmaAllocator m_Allocator;
+        VkDevice m_Device {VK_NULL_HANDLE};
+        VmaAllocator m_Allocator {VK_NULL_HANDLE};
     };
 
 } // namespace sf::render::vk

@@ -8,8 +8,6 @@ namespace sf::render::vk {
 
     constexpr u32 NUMBER_32_BIT_CONSTANTS = 64;
 
-    // Base Vulkan Context
-
     class VkContext : public IContext {
     public:
         VkContext() = default;
@@ -36,11 +34,10 @@ namespace sf::render::vk {
         stl::vector<VkBufferMemoryBarrier> m_BufferBarriers;
     };
 
-    // Vulkan Graphics Context
-
     class VkGraphicsContext : public VkContext, public IGraphicsContext {
     public:
         explicit VkGraphicsContext(VkGraphicsDevice* device);
+        VkGraphicsContext() = default;
         ~VkGraphicsContext() override = default;
 
         void reset() override;
@@ -83,16 +80,15 @@ namespace sf::render::vk {
                                     u32 start_instance = 0) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr;
+        VkGraphicsDevice* m_DevicePtr{nullptr};
         VkRenderPass m_CurrentRenderPass = VK_NULL_HANDLE;
         VkFramebuffer m_CurrentFramebuffer = VK_NULL_HANDLE;
     };
 
-    // Vulkan Compute Context
-
     class VkComputeContext : public VkContext, public IComputeContext {
     public:
         explicit VkComputeContext(VkGraphicsDevice* device);
+        VkComputeContext() = default;
         ~VkComputeContext() override = default;
 
         void reset() override;
@@ -118,7 +114,7 @@ namespace sf::render::vk {
         void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr;
+        VkGraphicsDevice* m_DevicePtr{nullptr};
     };
 
     // Vulkan Copy Context
@@ -126,6 +122,7 @@ namespace sf::render::vk {
     class VkCopyContext : public VkContext, public ICopyContext {
     public:
         explicit VkCopyContext(VkGraphicsDevice* device);
+        VkCopyContext() = default;
         ~VkCopyContext() override = default;
 
         void reset() override;
@@ -147,7 +144,7 @@ namespace sf::render::vk {
         void copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource = 0) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr;
+        VkGraphicsDevice* m_DevicePtr{nullptr};
     };
 
 } // namespace sf::render::vk

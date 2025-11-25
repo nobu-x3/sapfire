@@ -1,6 +1,7 @@
+#include "engpch.h"
+
 #include "render/vulkan/vk_memory_allocator.h"
 #include "core/logger.h"
-#include "engpch.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 #define VMA_IMPLEMENTATION
@@ -17,7 +18,7 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan memory allocator (VMA)");
     }
     VkMemoryAllocator::~VkMemoryAllocator() {
-        if (m_Allocator) {
+        if (m_Allocator != VK_NULL_HANDLE) {
             vmaDestroyAllocator(m_Allocator);
         }
     }

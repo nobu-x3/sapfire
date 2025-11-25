@@ -6,13 +6,14 @@
 namespace sf::render::vk {
     VkDescriptorHeap::VkDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name) :
         m_Device(device), m_DescriptorCount(descriptor_count) {
-        stl::vector<VkDescriptorPoolSize> pool_sizes{mem::MemTag::Temp, 6};
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_SAMPLER, descriptor_count});
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptor_count});
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptor_count});
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptor_count});
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_count});
-        pool_sizes.push_back({VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptor_count});
+        stl::array<VkDescriptorPoolSize, 6> pool_sizes{{
+            {VK_DESCRIPTOR_TYPE_SAMPLER, descriptor_count},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, descriptor_count},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, descriptor_count},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, descriptor_count},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, descriptor_count},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, descriptor_count},
+        }};
         VkDescriptorPoolCreateInfo pool_info{};
         pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         pool_info.poolSizeCount = static_cast<u32>(pool_sizes.size());
@@ -22,6 +23,7 @@ namespace sf::render::vk {
         vkCreateDescriptorPool(m_Device, &pool_info, nullptr, &m_DescriptorPool);
         CORE_INFO("Created Vulkan descriptor heap: {}", name);
     }
+
     VkDescriptorHeap::~VkDescriptorHeap() {
         if (m_DescriptorSet != VK_NULL_HANDLE && m_DescriptorPool != VK_NULL_HANDLE) {
             vkFreeDescriptorSets(m_Device, m_DescriptorPool, 1, &m_DescriptorSet);
@@ -33,6 +35,7 @@ namespace sf::render::vk {
             vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
         }
     }
+
     u32 VkDescriptorHeap::allocate_srv(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         // For bindless rendering, this would write a descriptor to the descriptor set at the allocated index
@@ -55,6 +58,7 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_srv(Buffer) - descriptor set layout not fully configured");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_srv(Texture& texture, const ShaderResourceViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         // For bindless rendering, this would write a sampled image descriptor
@@ -73,6 +77,7 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_srv(Texture) - descriptor set layout not fully configured");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_uav(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         VkDescriptorBufferInfo buffer_info{};
@@ -90,6 +95,7 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_uav(Buffer) - descriptor set layout not fully configured");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_uav(Texture& texture, const UnorderedAccessViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         VkDescriptorImageInfo image_info{};
@@ -107,6 +113,7 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_uav(Texture) - descriptor set layout not fully configured");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_cbv(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         VkDescriptorBufferInfo buffer_info{};
@@ -124,6 +131,7 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_cbv(Buffer) - descriptor set layout not fully configured");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_cbv(const ConstantBufferViewDesc& desc) {
         u32 index = m_CurrentIndex++;
         // This version uses a descriptor with explicit buffer location
@@ -131,16 +139,19 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_cbv(Desc) - requires buffer handle, use allocate_cbv(Buffer&) instead");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_rtv(Texture& texture, const RenderTargetViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         CORE_WARN("VkDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_dsv(Texture& texture, const DepthStencilViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         CORE_WARN("VkDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors");
         return index;
     }
+
     u32 VkDescriptorHeap::allocate_sampler(const SamplerDesc& desc) {
         u32 index = m_CurrentIndex++;
         // Create a Vulkan sampler from the descriptor
@@ -165,15 +176,18 @@ namespace sf::render::vk {
         CORE_WARN("VkDescriptorHeap::allocate_sampler - sampler creation not fully implemented");
         return index;
     }
+
     void* VkDescriptorHeap::get_cpu_handle(u32 index) {
         // In Vulkan, there's no concept of CPU/GPU descriptor handles like in D3D12
         // Descriptors are accessed through descriptor sets
         // For compatibility, return the descriptor set (index is implicit in the binding)
         return reinterpret_cast<void*>(m_DescriptorSet);
     }
+
     void* VkDescriptorHeap::get_gpu_handle(u32 index) {
         // In Vulkan, GPU access to descriptors is through descriptor sets bound to the pipeline
         // The index would be used as the array element when accessing the descriptor in shaders
         return reinterpret_cast<void*>(m_DescriptorSet);
     }
+
 } // namespace sf::render::vk

@@ -1,5 +1,6 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 #include "render/i_command_queue.h"
 
 namespace sf::render::vk {
@@ -7,6 +8,7 @@ namespace sf::render::vk {
     class VkCommandQueue : public ICommandQueue {
     public:
         explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
+        VkCommandQueue() = default;
         ~VkCommandQueue() override = default;
 
         void execute_command_lists(IContext** contexts, u32 count) override;
@@ -25,9 +27,9 @@ namespace sf::render::vk {
         bool is_fence_complete(u64 fence_value) const;
 
     private:
-        VkDevice m_Device;
-        VkQueue m_Queue;
-        VkFence m_Fence;
+        VkDevice m_Device{VK_NULL_HANDLE};
+        VkQueue m_Queue{VK_NULL_HANDLE};
+        VkFence m_Fence{VK_NULL_HANDLE};
         u64 m_FenceValue = 0;
         CommandQueueType m_Type;
     };

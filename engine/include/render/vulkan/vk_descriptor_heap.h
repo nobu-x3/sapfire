@@ -7,6 +7,7 @@ namespace sf::render::vk {
     class VkDescriptorHeap : public IDescriptorHeap {
     public:
         explicit VkDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name);
+        VkDescriptorHeap() = default;
         ~VkDescriptorHeap() override;
 
         u32 allocate_srv(Buffer& buffer) override;
@@ -34,12 +35,12 @@ namespace sf::render::vk {
         VkDescriptorSet get_vk_set() const { return m_DescriptorSet; }
 
     private:
-        VkDevice m_Device;
-        VkDescriptorPool m_DescriptorPool;
-        VkDescriptorSet m_DescriptorSet;
-        VkDescriptorSetLayout m_DescriptorSetLayout;
-        u32 m_DescriptorCount;
-        u32 m_CurrentIndex = 0;
+        VkDevice m_Device{VK_NULL_HANDLE};
+        VkDescriptorPool m_DescriptorPool{VK_NULL_HANDLE};
+        VkDescriptorSet m_DescriptorSet{VK_NULL_HANDLE};
+        VkDescriptorSetLayout m_DescriptorSetLayout{VK_NULL_HANDLE};
+        u32 m_DescriptorCount{0};
+        u32 m_CurrentIndex{0};
     };
 
 } // namespace sf::render::vk
