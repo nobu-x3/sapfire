@@ -88,10 +88,8 @@ void SceneViewWidget::render() {
     }
     auto& back_buffer = device->get_current_back_buffer();
     auto& ctx = device->get_current_graphics_context();
-    ctx.transition_barrier(back_buffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
-    sf::f32 clear_color[4] = {0.1f, 0.1f, 0.1f, 1.0f};
-    ctx.clear_render_target_view(back_buffer, std::span<sf::f32, 4>(clear_color, 4));
-    ctx.transition_barrier(back_buffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
+    ctx.set_render_target(back_buffer);
+    // TODO: render commands go here
     device->end_frame();
     device->present();
 }
