@@ -1,7 +1,7 @@
 #include <QApplication>
+#include <SDL3/SDL.h>
 #include <core/logger.h>
 #include <memory/memory.h>
-#include <SDL3/SDL.h>
 #include <render/render_backend.h>
 #include "main_window.h"
 
@@ -13,7 +13,6 @@ namespace sf {
         components::ComponentRegistry::s_CustomComponentLists{};
     components::ComponentType components::ComponentRegistry::s_NextComponentTypeNumber = 0;
 } // namespace sf
-
 
 int main(int argc, char** argv) {
     sf::Log::Init();
@@ -30,9 +29,12 @@ int main(int argc, char** argv) {
 #else
     sf::render::RenderBackend::initialize(sf::render::RenderAPI::Vulkan);
 #endif
-    SaplingMainWindow main_window;
-    main_window.show();
-    int result = app.exec();
+    int result = 0;
+    {
+        SaplingMainWindow main_window;
+        main_window.show();
+        result = app.exec();
+    }
     sf::render::RenderBackend::shutdown();
     SDL_Quit();
     return result;
