@@ -29,7 +29,7 @@ add_subdirectory(engine/vendor/SDL3)
 include(engine_translation_units.cmake)
 
 add_subdirectory(engine)
-# add_subdirectory(sapling)  # Disabled - being refactored
+add_subdirectory(sapling)
 if(BUILD_TESTS)
 add_subdirectory(tests)
 endif()

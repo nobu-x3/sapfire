@@ -4,7 +4,6 @@
 #include <string>
 #include <string_view>
 #include "memory/memory.h"
-#include "core/core.h"
 
 namespace sf::stl {
 

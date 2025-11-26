@@ -3,7 +3,7 @@
 #include "core/core.h"
 
 namespace sf::rtti {
-    enum class rtti_type { U8, U16, U32, U64, S8, S16, S32, S64, F32, F64, STRING, BOOL, VEC3, REFERENCE };
+    enum class rtti_type { U8, U16, U32, U64, I8, I16, I32, I64, F32, F64, STRING, BOOL, VEC3, REFERENCE };
 
     enum class rtti_reference_type {
         None,

@@ -35,28 +35,28 @@ namespace sf::rtti {
                 *ptr = *data;
                 break;
             }
-        case rtti_type::S8:
+        case rtti_type::I8:
             {
                 auto* ptr = static_cast<u8*>(obj->head) + field->offset;
                 auto* data = static_cast<i8*>(value);
                 *ptr = *data;
                 break;
             }
-        case rtti_type::S16:
+        case rtti_type::I16:
             {
                 auto* ptr = static_cast<u8*>(obj->head) + field->offset;
                 auto* data = static_cast<i16*>(value);
                 *ptr = *data;
                 break;
             }
-        case rtti_type::S32:
+        case rtti_type::I32:
             {
                 auto* ptr = static_cast<u8*>(obj->head) + field->offset;
                 auto* data = static_cast<i32*>(value);
                 *ptr = *data;
                 break;
             }
-        case rtti_type::S64:
+        case rtti_type::I64:
             {
                 auto* ptr = static_cast<u8*>(obj->head) + field->offset;
                 auto* data = static_cast<i64*>(value);

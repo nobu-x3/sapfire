@@ -1,0 +1,37 @@
+#pragma once
+
+#include <render/i_graphics_device.h>
+#include <assets/asset_manager.h>
+#include <components/ec_manager.h>
+
+// Singleton that manages shared editor state and engine systems
+class EditorContext {
+public:
+    static EditorContext& instance() {
+        static EditorContext s_Instance;
+        return s_Instance;
+    }
+
+    void initialize(void* native_window_handle, sf::u32 width, sf::u32 height);
+
+    void shutdown();
+
+    sf::render::IGraphicsDevice* graphics_device() { return m_GraphicsDevice; }
+    sf::assets::AssetManager* asset_manager() { return m_AssetManager.get(); }
+    sf::ECManager* ec_manager() { return m_ECManager.get(); }
+
+    bool is_initialized() const { return m_Initialized; }
+
+private:
+    EditorContext() = default;
+    ~EditorContext() { shutdown(); }
+
+    EditorContext(const EditorContext&) = delete;
+    EditorContext& operator=(const EditorContext&) = delete;
+
+private:
+    sf::render::IGraphicsDevice* m_GraphicsDevice{nullptr};
+    sf::stl::unique_ptr<sf::assets::AssetManager> m_AssetManager;
+    sf::stl::unique_ptr<sf::ECManager> m_ECManager;
+    bool m_Initialized{false};
+};
