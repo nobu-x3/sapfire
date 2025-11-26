@@ -16,8 +16,8 @@ namespace sf::render {
         virtual ~IContext() = default;
 
         // Command list lifecycle
-        virtual void reset() = 0;
-        virtual void close() = 0;
+        virtual stl::result<> reset() = 0;
+        virtual stl::result<> close() = 0;
 
         // Resource barriers
         virtual void add_resource_barrier(const ResourceBarrier& barrier) = 0;

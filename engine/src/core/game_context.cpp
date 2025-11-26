@@ -1,3 +1,4 @@
+#include "core/logger.h"
 #include "engpch.h"
 
 #include "components/render_component.h"
@@ -217,8 +218,12 @@ namespace sf {
     }
 
     void GameContext::on_window_resize() {
-        if (m_GraphicsDevice)
-            m_GraphicsDevice->resize_window(static_cast<u32>(m_ClientExtent->width), static_cast<u32>(m_ClientExtent->height));
+        if (m_GraphicsDevice) {
+            auto resize_result = m_GraphicsDevice->resize_window(static_cast<u32>(m_ClientExtent->width), static_cast<u32>(m_ClientExtent->height));
+            if(!resize_result) {
+                CORE_ERROR("Failed to resize window: {}", resize_result.error().c_str());
+            }
+        }
     }
 
     void GameContext::update(f32 delta_time) {

@@ -17,20 +17,20 @@ namespace sf::render::vk {
 
         // Frame Management
 
-        void begin_frame() override;
-        void end_frame() override;
-        void present() override;
-        void wait_for_idle() override;
+        stl::result<> begin_frame() override;
+        stl::result<> end_frame() override;
+        stl::result<> present() override;
+        stl::result<> wait_for_idle() override;
 
         // Window / Swapchain Management
 
-        void resize_window(u32 width, u32 height) override;
-        u32 get_window_width() const override { return m_WindowWidth; }
-        u32 get_window_height() const override { return m_WindowHeight; }
+        stl::result<> resize_window(u32 width, u32 height) override;
+        inline u32 get_window_width() const override { return m_WindowWidth; }
+        inline u32 get_window_height() const override { return m_WindowHeight; }
         Texture& get_current_back_buffer() override;
         Texture& get_back_buffer(u32 index) override;
-        u32 get_current_back_buffer_index() const override { return m_CurrentBackBufferIndex; }
-        u32 get_back_buffer_count() const override { return m_BackBufferCount; }
+        inline u32 get_current_back_buffer_index() const override { return m_CurrentBackBufferIndex; }
+        inline u32 get_back_buffer_count() const override { return m_BackBufferCount; }
 
         // Resource Creation
 
@@ -52,45 +52,49 @@ namespace sf::render::vk {
 
         // Command Queue Access
 
-        ICommandQueue* get_direct_queue() override { return &m_GraphicsQueue; }
-        ICommandQueue* get_compute_queue() override { return &m_ComputeQueue; }
-        ICommandQueue* get_copy_queue() override { return &m_TransferQueue; }
+        inline ICommandQueue* get_direct_queue() override { return &m_GraphicsQueue; }
+        inline ICommandQueue* get_compute_queue() override { return &m_ComputeQueue; }
+        inline ICommandQueue* get_copy_queue() override { return &m_TransferQueue; }
+
+        inline u32 get_graphics_queue_family_index() const { return m_GraphicsQueueFamily; }
+        inline u32 get_compute_queue_family_index() const { return m_ComputeQueueFamily; }
+        inline u32 get_transfer_queue_family_index() const { return m_TransferQueueFamily; }
 
         // Descriptor Heap Access
 
-        IDescriptorHeap* get_cbv_srv_uav_heap() override { return &m_DescriptorHeap; }
-        IDescriptorHeap* get_rtv_heap() override { return &m_DescriptorHeap; }
-        IDescriptorHeap* get_dsv_heap() override { return &m_DescriptorHeap; }
-        IDescriptorHeap* get_sampler_heap() override { return &m_SamplerHeap; }
+        inline IDescriptorHeap* get_cbv_srv_uav_heap() override { return &m_DescriptorHeap; }
+        inline IDescriptorHeap* get_rtv_heap() override { return &m_DescriptorHeap; }
+        inline IDescriptorHeap* get_dsv_heap() override { return &m_DescriptorHeap; }
+        inline IDescriptorHeap* get_sampler_heap() override { return &m_SamplerHeap; }
 
         // Memory Allocator Access
 
-        IMemoryAllocator* get_memory_allocator() override { return &m_MemoryAllocator; }
+        inline IMemoryAllocator* get_memory_allocator() override { return &m_MemoryAllocator; }
 
         // Frame Timing
 
-        u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
-        u32 get_frames_in_flight() const override { return m_FramesInFlight; }
+        inline u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
+        inline u32 get_frames_in_flight() const override { return m_FramesInFlight; }
 
         // Backend Information
 
-        RenderAPI get_api() const override { return RenderAPI::Vulkan; }
-        const char* get_api_name() const override { return "Vulkan"; }
-        void* get_native_device() override { return reinterpret_cast<void*>(m_Device); }
+        inline RenderAPI get_api() const override { return RenderAPI::Vulkan; }
+        inline const char* get_api_name() const override { return "Vulkan"; }
+        inline void* get_native_device() override { return reinterpret_cast<void*>(m_Device); }
 
         // Vulkan-specific accessors
 
-        VkInstance get_vk_instance() const { return m_Instance; }
-        VkPhysicalDevice get_vk_physical_device() const { return m_PhysicalDevice; }
-        VkDevice get_vk_device() const { return m_Device; }
-        VkSwapchainKHR get_vk_swapchain() const { return m_Swapchain; }
-        VkSurfaceKHR get_vk_surface() const { return m_Surface; }
-        VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
-        VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
+        inline VkInstance get_vk_instance() const { return m_Instance; }
+        inline VkPhysicalDevice get_vk_physical_device() const { return m_PhysicalDevice; }
+        inline VkDevice get_vk_device() const { return m_Device; }
+        inline VkSwapchainKHR get_vk_swapchain() const { return m_Swapchain; }
+        inline VkSurfaceKHR get_vk_surface() const { return m_Surface; }
+        inline VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
+        inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
 
-        const VkDescriptorHeap* get_vk_descriptor_heap() const { return &m_DescriptorHeap; }
-        const VkDescriptorHeap* get_vk_sampler_heap() const { return &m_SamplerHeap; }
-        VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
+        inline const VkDescriptorHeap* get_vk_descriptor_heap() const { return &m_DescriptorHeap; }
+        inline const VkDescriptorHeap* get_vk_sampler_heap() const { return &m_SamplerHeap; }
+        inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
     private:
         stl::result<> init_instance();

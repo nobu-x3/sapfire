@@ -10,11 +10,13 @@ namespace sf::render::vk {
 
     class VkContext : public IContext {
     public:
+        VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
         VkContext() = default;
         virtual ~VkContext() override = default;
 
-        void reset() override;
-        void close() override;
+        stl::result<> init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
+        stl::result<> reset() override;
+        stl::result<> close() override;
 
         void add_resource_barrier(const ResourceBarrier& barrier) override;
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override;
@@ -30,8 +32,8 @@ namespace sf::render::vk {
         VkDevice m_Device = VK_NULL_HANDLE;
         VkCommandBuffer m_CommandBuffer = VK_NULL_HANDLE;
         VkCommandPool m_CommandPool = VK_NULL_HANDLE;
-        stl::vector<VkImageMemoryBarrier> m_ImageBarriers;
-        stl::vector<VkBufferMemoryBarrier> m_BufferBarriers;
+        stl::vector<VkImageMemoryBarrier> m_ImageBarriers{mem::MemTag::Render};
+        stl::vector<VkBufferMemoryBarrier> m_BufferBarriers{mem::MemTag::Render};
     };
 
     class VkGraphicsContext : public VkContext, public IGraphicsContext {
@@ -40,8 +42,8 @@ namespace sf::render::vk {
         VkGraphicsContext() = default;
         ~VkGraphicsContext() override = default;
 
-        void reset() override;
-        void close() override;
+        stl::result<> reset() override;
+        stl::result<> close() override;
 
         void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
@@ -91,8 +93,8 @@ namespace sf::render::vk {
         VkComputeContext() = default;
         ~VkComputeContext() override = default;
 
-        void reset() override;
-        void close() override { VkContext::close(); }
+        stl::result<> reset() override;
+        stl::result<> close() override { return VkContext::close(); }
 
         void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
@@ -125,8 +127,8 @@ namespace sf::render::vk {
         VkCopyContext() = default;
         ~VkCopyContext() override = default;
 
-        void reset() override;
-        void close() override { VkContext::close(); }
+        stl::result<> reset() override;
+        stl::result<> close() override { return VkContext::close(); }
 
         void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {

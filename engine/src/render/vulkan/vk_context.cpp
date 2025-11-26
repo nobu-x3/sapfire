@@ -1,24 +1,50 @@
-#include "render/vulkan/vk_context.h"
-#include "core/logger.h"
 #include "engpch.h"
+
+#include <vulkan/vulkan_core.h>
+#include "core/logger.h"
+#include "render/vulkan/vk_compat.h"
+#include "render/vulkan/vk_context.h"
 #include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 namespace sf::render::vk {
     // Base VkContext
 
-    void VkContext::reset() {
+    VkContext::VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) : m_Device(nullptr) { init(device, family_index, pool_ci_flags); }
+
+    stl::result<> VkContext::init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) {
+        m_Device = device->get_vk_device();
+        VkCommandPoolCreateInfo command_pool_ci{};
+        command_pool_ci.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        command_pool_ci.pNext = nullptr;
+        command_pool_ci.flags = pool_ci_flags;
+        command_pool_ci.queueFamilyIndex = family_index;
+        VK_RETURN_ON_ERROR(vkCreateCommandPool(m_Device, &command_pool_ci, nullptr, &m_CommandPool), "Failed to create command pool.");
+        ;
+        VkCommandBufferAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        alloc_info.pNext = nullptr;
+        alloc_info.commandBufferCount = 1;
+        alloc_info.commandPool = m_CommandPool;
+        alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        VK_RETURN_ON_ERROR(vkAllocateCommandBuffers(m_Device, &alloc_info, &m_CommandBuffer), "Failed to allocate command buffer.");
+        return stl::success;
+    }
+
+    stl::result<> VkContext::reset() {
         m_ImageBarriers.clear();
         m_BufferBarriers.clear();
         if (m_CommandBuffer != VK_NULL_HANDLE) {
-            vkResetCommandBuffer(m_CommandBuffer, 0);
+            VK_RETURN_ON_ERROR(vkResetCommandBuffer(m_CommandBuffer, 0), "Failed to reset command buffer in VkContext.");
         }
+        return stl::success;
     }
 
-    void VkContext::close() {
+    stl::result<> VkContext::close() {
         if (m_CommandBuffer != VK_NULL_HANDLE) {
-            vkEndCommandBuffer(m_CommandBuffer);
+            VK_RETURN_ON_ERROR(vkEndCommandBuffer(m_CommandBuffer), "Failed to end command buffer in VkContext.");
         }
+        return stl::success;
     }
 
     void VkContext::add_resource_barrier(const ResourceBarrier& barrier) {
@@ -85,10 +111,12 @@ namespace sf::render::vk {
             m_ImageBarriers.clear();
         }
     }
-    // VkGraphicsContext
-    VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device) : m_DevicePtr(device) { m_Device = device->get_vk_device(); }
 
-    void VkGraphicsContext::reset() {
+    // VkGraphicsContext
+    VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device) :
+        VkContext(device, device->get_graphics_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {}
+
+    stl::result<> VkGraphicsContext::reset() {
         if (m_CurrentRenderPass != VK_NULL_HANDLE) {
             vkCmdEndRenderPass(m_CommandBuffer);
             m_CurrentRenderPass = VK_NULL_HANDLE;
@@ -98,17 +126,18 @@ namespace sf::render::vk {
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(m_CommandBuffer, &begin_info);
+        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkGraphicsContext.");
+        return stl::success;
     }
 
-    void VkGraphicsContext::close() {
+    stl::result<> VkGraphicsContext::close() {
         // End any active render pass before closing command buffer
         if (m_CurrentRenderPass != VK_NULL_HANDLE) {
             vkCmdEndRenderPass(m_CommandBuffer);
             m_CurrentRenderPass = VK_NULL_HANDLE;
             m_CurrentFramebuffer = VK_NULL_HANDLE;
         }
-        VkContext::close();
+        return VkContext::close();
     }
 
     void VkGraphicsContext::clear_render_target_view(Texture& texture, stl::span<f32, 4> clear_color) {
@@ -261,15 +290,18 @@ namespace sf::render::vk {
                                                    u32 start_instance) {
         draw_indexed(index_count_per_instance, instance_count, start_index, base_vertex, start_instance);
     }
-    // VkComputeContext
-    VkComputeContext::VkComputeContext(VkGraphicsDevice* device) : m_DevicePtr(device) { m_Device = device->get_vk_device(); }
 
-    void VkComputeContext::reset() {
+    // VkComputeContext
+    VkComputeContext::VkComputeContext(VkGraphicsDevice* device) :
+        VkContext(device, device->get_compute_queue_family_index()), m_DevicePtr(device) {}
+
+    stl::result<> VkComputeContext::reset() {
         VkContext::reset();
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(m_CommandBuffer, &begin_info);
+        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkComputeContext.");
+        return stl::success;
     }
 
     void VkComputeContext::set_pipeline_state(IPipelineState* pipeline) {
@@ -308,15 +340,18 @@ namespace sf::render::vk {
     void VkComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) {
         vkCmdDispatch(m_CommandBuffer, thread_group_count_x, thread_group_count_y, thread_group_count_z);
     }
-    // VkCopyContext
-    VkCopyContext::VkCopyContext(VkGraphicsDevice* device) : m_DevicePtr(device) { m_Device = device->get_vk_device(); }
 
-    void VkCopyContext::reset() {
+    // VkCopyContext
+    VkCopyContext::VkCopyContext(VkGraphicsDevice* device) :
+        VkContext(device, device->get_transfer_queue_family_index()), m_DevicePtr(device) {}
+
+    stl::result<> VkCopyContext::reset() {
         VkContext::reset();
         VkCommandBufferBeginInfo begin_info{};
         begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vkBeginCommandBuffer(m_CommandBuffer, &begin_info);
+        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkCopyContext.");
+        return stl::success;
     }
 
     void VkCopyContext::copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset, u64 src_offset) {

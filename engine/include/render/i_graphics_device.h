@@ -20,14 +20,14 @@ namespace sf::render {
 
         // Frame Management
 
-        virtual void begin_frame() = 0;
-        virtual void end_frame() = 0;
-        virtual void present() = 0;
-        virtual void wait_for_idle() = 0;
+        virtual stl::result<> begin_frame() = 0;
+        virtual stl::result<> end_frame() = 0;
+        virtual stl::result<> present() = 0;
+        virtual stl::result<> wait_for_idle() = 0;
 
         // Window / Swapchain Management
 
-        virtual void resize_window(u32 width, u32 height) = 0;
+        virtual stl::result<> resize_window(u32 width, u32 height) = 0;
         virtual u32 get_window_width() const = 0;
         virtual u32 get_window_height() const = 0;
         virtual Texture& get_current_back_buffer() = 0;

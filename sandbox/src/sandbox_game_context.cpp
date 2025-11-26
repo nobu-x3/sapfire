@@ -1,4 +1,5 @@
 #include "sandbox_game_context.h"
+#include "core/logger.h"
 #include "math/math.h"
 #include "components/movement_component.h"
 #include "components/render_component.h"
@@ -127,7 +128,11 @@ void SandboxGameContext::udpate_transform_buffer(f32 delta_time) {
 
 void SandboxGameContext::render() {
 	PROFILE_FUNCTION();
-	m_GraphicsDevice->begin_frame();
+	auto begin_frame_res = m_GraphicsDevice->begin_frame();
+    if(!begin_frame_res) {
+        CORE_CRITICAL("Failed to begin frame: {}", begin_frame_res.error().c_str());
+        return;
+    }
 	auto& gfx_ctx = m_GraphicsDevice->get_current_graphics_context();
 	auto& current_backbuffer = m_GraphicsDevice->get_current_back_buffer();
 	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
@@ -178,10 +183,20 @@ void SandboxGameContext::render() {
 	}
 	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
 	gfx_ctx.execute_resource_barriers();
-	gfx_ctx.close();
+	auto close_res = gfx_ctx.close();
+    if(!close_res) {
+        CORE_CRITICAL(close_res.error());
+        return;
+    }
 	m_GraphicsDevice->get_direct_queue()->execute_command_list(&gfx_ctx);
-	m_GraphicsDevice->present();
-	m_GraphicsDevice->end_frame();
+	auto present_result = m_GraphicsDevice->present();
+    if(!present_result) {
+        CORE_CRITICAL("Failed to present: {}", present_result.error().c_str());
+    }
+	auto end_frame_res = m_GraphicsDevice->end_frame();
+    if(!end_frame_res) {
+        CORE_CRITICAL("Failed to end frame: {}", end_frame_res.error().c_str());
+    }
 }
 
 void SandboxGameContext::resize_depth_texture() {
