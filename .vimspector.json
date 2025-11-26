@@ -1,11 +1,30 @@
 {
   "configurations": {
-    "Launch": {
+    "Sanbox": {
       "adapter": "vscode-cpptools",
-      "filetypes": [ "cpp", "c", "objc", "rust" ], // optional
+      "filetypes": [ "cpp", "c", "objc", "rust" ],
       "configuration": {
         "request": "launch",
         "program": "${workspaceFolder}/build/Sandbox",
+        "cwd": "${workspaceFolder}/build",
+        "environment": [],
+        "externalConsole": true,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ]
+      }
+    },
+    "Editor": {
+      "adapter": "vscode-cpptools",
+      "filetypes": [ "cpp", "c", "objc", "rust" ],
+      "configuration": {
+        "request": "launch",
+        "program": "${workspaceFolder}/build/sapling/Sapling",
         "cwd": "${workspaceFolder}/build",
         "environment": [],
         "externalConsole": true,

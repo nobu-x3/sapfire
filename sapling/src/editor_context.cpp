@@ -2,14 +2,15 @@
 #include <core/logger.h>
 #include <render/render_backend.h>
 
-void EditorContext::initialize(void* native_window_handle, sf::u32 width, sf::u32 height) {
+void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 height) {
     if (m_Initialized) {
         CORE_WARN("EditorContext already initialized!");
         return;
     }
     CORE_INFO("Initializing EditorContext...");
+    CORE_INFO("Initializing EditorContext...");
     m_GraphicsDevice = sf::render::RenderBackend::create_device({
-        .window_handle = native_window_handle,
+        .window_handle = sdl_window,
         .width = width,
         .height = height,
         .buffer_count = sf::render::MAX_FRAMES_IN_FLIGHT,

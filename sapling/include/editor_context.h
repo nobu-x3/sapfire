@@ -4,6 +4,8 @@
 #include <assets/asset_manager.h>
 #include <components/ec_manager.h>
 
+struct SDL_Window;
+
 // Singleton that manages shared editor state and engine systems
 class EditorContext {
 public:
@@ -12,7 +14,7 @@ public:
         return s_Instance;
     }
 
-    void initialize(void* native_window_handle, sf::u32 width, sf::u32 height);
+    void initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 height);
 
     void shutdown();
 

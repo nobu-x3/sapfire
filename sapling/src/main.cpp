@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <core/logger.h>
 #include <memory/memory.h>
+#include <SDL3/SDL.h>
 #include <render/render_backend.h>
 #include "main_window.h"
 
@@ -13,8 +14,12 @@ namespace sf {
     components::ComponentType components::ComponentRegistry::s_NextComponentTypeNumber = 0;
 } // namespace sf
 
+
 int main(int argc, char** argv) {
     sf::Log::Init();
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        return -1;
+    }
     sf::mem::Budgets budgets{};
     sf::mem::MemoryManager memory_manager(budgets);
     QApplication app(argc, argv);
@@ -29,5 +34,6 @@ int main(int argc, char** argv) {
     main_window.show();
     int result = app.exec();
     sf::render::RenderBackend::shutdown();
+    SDL_Quit();
     return result;
 }
