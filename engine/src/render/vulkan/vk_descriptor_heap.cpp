@@ -25,6 +25,8 @@ namespace sf::render::vk {
     }
 
     VkDescriptorHeap::~VkDescriptorHeap() {
+        if(!m_Device)
+            return;
         if (m_DescriptorSet != VK_NULL_HANDLE && m_DescriptorPool != VK_NULL_HANDLE) {
             vkFreeDescriptorSets(m_Device, m_DescriptorPool, 1, &m_DescriptorSet);
         }
@@ -34,6 +36,7 @@ namespace sf::render::vk {
         if (m_DescriptorPool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
         }
+        m_Device = nullptr;
     }
 
     u32 VkDescriptorHeap::allocate_srv(Buffer& buffer) {

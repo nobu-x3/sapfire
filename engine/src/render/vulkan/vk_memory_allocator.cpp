@@ -18,10 +18,14 @@ namespace sf::render::vk {
         vmaCreateAllocator(&allocator_info, &m_Allocator);
         CORE_INFO("Created Vulkan memory allocator (VMA)");
     }
+
     VkMemoryAllocator::~VkMemoryAllocator() {
+        if(!m_Device)
+            return;
         if (m_Allocator != VK_NULL_HANDLE) {
             vmaDestroyAllocator(m_Allocator);
         }
+        m_Device = nullptr;
     }
 
     stl::result<Buffer> VkMemoryAllocator::allocate_buffer(const BufferCreationDesc& desc) {
@@ -33,17 +37,14 @@ namespace sf::render::vk {
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-
         Buffer buffer{};
         VkBuffer vk_buffer;
         VmaAllocation allocation;
         VK_RETURN_ON_ERROR_T(Buffer, vmaCreateBuffer(m_Allocator, &buffer_info, &alloc_info, &vk_buffer, &allocation, nullptr),
                              "Failed to allocate buffer");
-
         buffer.resource = reinterpret_cast<void*>(vk_buffer);
         buffer.allocation = allocation;
         buffer.size_in_bytes = desc.size_in_bytes;
-
         return buffer;
     }
 
@@ -65,20 +66,17 @@ namespace sf::render::vk {
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
-
         Texture texture{};
         VkImage vk_image;
         VmaAllocation allocation;
         VK_RETURN_ON_ERROR_T(Texture, vmaCreateImage(m_Allocator, &image_info, &alloc_info, &vk_image, &allocation, nullptr),
                              "Failed to allocate texture");
-
         texture.resource = reinterpret_cast<void*>(vk_image);
         texture.allocation = allocation;
         texture.width = desc.width;
         texture.height = desc.height;
         texture.depth_or_array_size = desc.depth_or_array_size;
         texture.format = desc.format;
-
         return texture;
     }
 

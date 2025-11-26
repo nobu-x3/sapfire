@@ -15,7 +15,10 @@ namespace sf::render::vk {
     }
 
     VkContext::~VkContext() {
+        if (!m_Device)
+            return;
         vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+        m_Device = nullptr;
     }
 
     stl::result<> VkContext::init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) {
