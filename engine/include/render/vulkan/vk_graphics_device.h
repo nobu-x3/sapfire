@@ -102,6 +102,7 @@ namespace sf::render::vk {
         stl::result<> init_physical_device();
         stl::result<> init_logical_device();
         stl::result<> init_swapchain(const SwapchainCreationDesc& desc);
+        stl::result<> init_sync_objects();
         stl::result<> init_command_queues();
         stl::result<> init_descriptor_heaps();
         stl::result<> init_memory_allocator();

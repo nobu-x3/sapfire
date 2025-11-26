@@ -10,7 +10,13 @@
 namespace sf::render::vk {
     // Base VkContext
 
-    VkContext::VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) : m_Device(nullptr) { init(device, family_index, pool_ci_flags); }
+    VkContext::VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) : m_Device(nullptr) {
+        init(device, family_index, pool_ci_flags);
+    }
+
+    VkContext::~VkContext() {
+        vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+    }
 
     stl::result<> VkContext::init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) {
         m_Device = device->get_vk_device();
@@ -114,7 +120,8 @@ namespace sf::render::vk {
 
     // VkGraphicsContext
     VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device) :
-        VkContext(device, device->get_graphics_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {}
+        VkContext(device, device->get_graphics_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {
+    }
 
     stl::result<> VkGraphicsContext::reset() {
         if (m_CurrentRenderPass != VK_NULL_HANDLE) {
@@ -247,7 +254,7 @@ namespace sf::render::vk {
         begin_info.renderArea.offset = {0, 0};
         begin_info.renderArea.extent = {render_target.width, render_target.height};
         VkClearValue clear_value{};
-        clear_value.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        clear_value.color = {{0.1f, 0.1f, 0.1f, 1.0f}};
         begin_info.clearValueCount = 1;
         begin_info.pClearValues = &clear_value;
         vkCmdBeginRenderPass(m_CommandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -293,7 +300,7 @@ namespace sf::render::vk {
 
     // VkComputeContext
     VkComputeContext::VkComputeContext(VkGraphicsDevice* device) :
-        VkContext(device, device->get_compute_queue_family_index()), m_DevicePtr(device) {}
+        VkContext(device, device->get_compute_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {}
 
     stl::result<> VkComputeContext::reset() {
         VkContext::reset();
@@ -343,7 +350,8 @@ namespace sf::render::vk {
 
     // VkCopyContext
     VkCopyContext::VkCopyContext(VkGraphicsDevice* device) :
-        VkContext(device, device->get_transfer_queue_family_index()), m_DevicePtr(device) {}
+        VkContext(device, device->get_transfer_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {
+    }
 
     stl::result<> VkCopyContext::reset() {
         VkContext::reset();

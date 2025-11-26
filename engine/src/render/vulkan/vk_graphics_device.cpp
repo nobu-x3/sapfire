@@ -1,9 +1,10 @@
 #include "engpch.h"
 
 #include "core/logger.h"
-#include "render/vulkan/vk_graphics_device.h"
-#include "render/vulkan/vk_type_conversions.h"
 #include "render/vulkan/vk_compat.h"
+#include "render/vulkan/vk_graphics_device.h"
+#include "render/vulkan/vk_context.h"
+#include "render/vulkan/vk_type_conversions.h"
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -76,6 +77,11 @@ namespace sf::render::vk {
             CORE_CRITICAL(swapchain_result.error().c_str());
             return;
         }
+        auto sync_objs_result = init_sync_objects();
+        if (!sync_objs_result) {
+            CORE_CRITICAL(sync_objs_result.error().c_str());
+            return;
+        }
         auto queues_result = init_command_queues();
         if (!queues_result) {
             CORE_CRITICAL(queues_result.error().c_str());
@@ -117,9 +123,19 @@ namespace sf::render::vk {
     VkGraphicsDevice::~VkGraphicsDevice() {
         wait_for_idle();
         cleanup_swapchain();
-        m_GraphicsContexts = {};
+        // Clean up contexts (must be before destroying command pools)
+        for(auto& ctx : m_GraphicsContexts) {
+            ctx.reset();
+        }
+        std::destroy(m_GraphicsContexts.begin(), m_GraphicsContexts.end());
         m_ComputeContext.reset();
+        m_ComputeContext.~VkComputeContext();
         m_CopyContext.reset();
+        m_CopyContext.~VkCopyContext();
+        m_PipelineStates.clear();
+        m_DescriptorHeap.~VkDescriptorHeap();
+        m_SamplerHeap.~VkDescriptorHeap();
+        m_MemoryAllocator.~VkMemoryAllocator();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
         }
@@ -144,6 +160,7 @@ namespace sf::render::vk {
                 vkDestroySemaphore(m_Device, semaphore, nullptr);
             }
         }
+        // Destroy device (must be AFTER all child objects are destroyed)
         if (m_Device != VK_NULL_HANDLE) {
             vkDestroyDevice(m_Device, nullptr);
         }
@@ -395,10 +412,15 @@ namespace sf::render::vk {
             VK_RETURN_ON_ERROR(vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]),
                                "Failed to create swapchain image view {}", i);
         }
+        CORE_INFO("Vulkan swapchain created");
+        return stl::result_success();
+    }
+
+    stl::result<> VkGraphicsDevice::init_sync_objects() {
         for (auto& fence : m_InFlightFences) {
             VkFenceCreateInfo fence_info{};
             fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled so first frame doesn't wait
             VK_RETURN_ON_ERROR(vkCreateFence(m_Device, &fence_info, nullptr, &fence), "Failed to create fence");
         }
         for (auto& semaphore : m_ImageAvailableSemaphores) {
@@ -413,8 +435,8 @@ namespace sf::render::vk {
             VK_RETURN_ON_ERROR(vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore),
                                "Failed to create render finished semaphore");
         }
-        CORE_INFO("Vulkan swapchain created");
-        return stl::result_success();
+        CORE_INFO("Vulkan synchronization objects created");
+        return stl::success;
     }
 
     stl::result<> VkGraphicsDevice::init_command_queues() {
@@ -507,6 +529,7 @@ namespace sf::render::vk {
     }
 
     void VkGraphicsDevice::cleanup_swapchain() {
+        wait_for_idle();
         for (auto& framebuffer : m_SwapchainFramebuffers) {
             if (framebuffer != VK_NULL_HANDLE) {
                 vkDestroyFramebuffer(m_Device, framebuffer, nullptr);
@@ -550,14 +573,40 @@ namespace sf::render::vk {
     }
 
     stl::result<> VkGraphicsDevice::begin_frame() {
-        VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex], VK_TRUE, UINT64_MAX), "Failed to wait for fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex]), "Failed to reset fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex], VK_NULL_HANDLE,
-                              &m_CurrentBackBufferIndex), "Failed to acquire next swapchain image when beginning frame");
+        VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex], VK_TRUE, UINT64_MAX),
+                           "Failed to wait for fences when beginning frame.");
+        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex]),
+                           "Failed to reset fences when beginning frame.");
+        VK_RETURN_ON_ERROR(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex],
+                                                 VK_NULL_HANDLE, &m_CurrentBackBufferIndex),
+                           "Failed to acquire next swapchain image when beginning frame");
         return get_current_graphics_context().reset();
     }
 
-    stl::result<> VkGraphicsDevice::end_frame() { return get_current_graphics_context().close(); }
+    stl::result<> VkGraphicsDevice::end_frame() {
+        auto close_result = get_current_graphics_context().close();
+        if (!close_result) {
+            return close_result;
+        }
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphores[m_CurrentFrameIndex]};
+        VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+        submit_info.waitSemaphoreCount = 1;
+        submit_info.pWaitSemaphores = wait_semaphores;
+        submit_info.pWaitDstStageMask = wait_stages;
+        VkCommandBuffer cmd_buffer = reinterpret_cast<VkCommandBuffer>(get_current_graphics_context().get_native_command_list());
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmd_buffer;
+        VkSemaphore signal_semaphores[] = {m_RenderFinishedSemaphores[m_CurrentFrameIndex]};
+        submit_info.signalSemaphoreCount = 1;
+        submit_info.pSignalSemaphores = signal_semaphores;
+        VkQueue graphics_queue;
+        vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
+        VK_RETURN_ON_ERROR(vkQueueSubmit(graphics_queue, 1, &submit_info, m_InFlightFences[m_CurrentFrameIndex]),
+                           "Failed to submit command buffer in end_frame");
+        return stl::success;
+    }
 
     stl::result<> VkGraphicsDevice::present() {
         VkPresentInfoKHR present_info{};
@@ -576,7 +625,8 @@ namespace sf::render::vk {
 
     stl::result<> VkGraphicsDevice::wait_for_idle() {
         if (m_Device != VK_NULL_HANDLE) {
-            VK_RETURN_ON_ERROR(vkDeviceWaitIdle(m_Device), "Failed to wait for device idle.");;
+            VK_RETURN_ON_ERROR(vkDeviceWaitIdle(m_Device), "Failed to wait for device idle.");
+            ;
         }
         return stl::success;
     }
@@ -588,7 +638,7 @@ namespace sf::render::vk {
         m_WindowWidth = width;
         m_WindowHeight = height;
         auto wait_result = wait_for_idle();
-        if(!wait_result) {
+        if (!wait_result) {
             return wait_result;
         }
         cleanup_swapchain();
@@ -615,9 +665,7 @@ namespace sf::render::vk {
 
     Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
 
-    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
-        return m_MemoryAllocator.allocate_buffer(desc);
-    }
+    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) { return m_MemoryAllocator.allocate_buffer(desc); }
 
     stl::result<Buffer> VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
         auto buffer_result = create_buffer(desc);
