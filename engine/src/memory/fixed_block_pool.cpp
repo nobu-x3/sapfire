@@ -11,6 +11,7 @@ namespace sf::mem {
         assert(arena_ != nullptr);
         assert(per_chunk_ > 0);
     }
+
     void* FixedBlockPool::allocate() {
         if (!free_) {
             add_chunk();

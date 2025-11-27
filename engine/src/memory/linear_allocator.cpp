@@ -13,6 +13,7 @@ namespace sf::mem {
         used_peak_ = 0;
         alloc_calls_ = 0;
     }
+
     void* LinearArena::allocate(size_t bytes, size_t align) {
         if (bytes == 0)
             return nullptr;

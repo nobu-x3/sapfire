@@ -8,7 +8,6 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         return;
     }
     CORE_INFO("Initializing EditorContext...");
-    CORE_INFO("Initializing EditorContext...");
     m_GraphicsDevice = sf::render::RenderBackend::create_device({
         .window_handle = sdl_window,
         .width = width,
