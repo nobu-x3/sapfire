@@ -13,6 +13,7 @@ namespace sf::render::vk {
         VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
         VkContext() = default;
         virtual ~VkContext() override;
+        void destroy_resources();
 
         stl::result<> init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
         stl::result<> reset() override;

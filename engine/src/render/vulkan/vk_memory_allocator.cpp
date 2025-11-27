@@ -1,9 +1,10 @@
 #include "engpch.h"
 
-#include "render/vulkan/vk_memory_allocator.h"
+#include <vulkan/vulkan_core.h>
 #include "core/logger.h"
-#include "render/vulkan/vk_type_conversions.h"
 #include "render/vulkan/vk_compat.h"
+#include "render/vulkan/vk_memory_allocator.h"
+#include "render/vulkan/vk_type_conversions.h"
 
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -20,12 +21,17 @@ namespace sf::render::vk {
     }
 
     VkMemoryAllocator::~VkMemoryAllocator() {
-        if(!m_Device)
+        if (m_Device == VK_NULL_HANDLE)
             return;
+        destroy_resources();
+    }
+
+    void VkMemoryAllocator::destroy_resources() {
         if (m_Allocator != VK_NULL_HANDLE) {
             vmaDestroyAllocator(m_Allocator);
+            m_Allocator = VK_NULL_HANDLE;
         }
-        m_Device = nullptr;
+        m_Device = VK_NULL_HANDLE;
     }
 
     stl::result<Buffer> VkMemoryAllocator::allocate_buffer(const BufferCreationDesc& desc) {

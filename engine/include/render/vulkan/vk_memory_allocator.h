@@ -11,6 +11,8 @@ namespace sf::render::vk {
         VkMemoryAllocator() = default;
         ~VkMemoryAllocator() override;
 
+        void destroy_resources();
+
         stl::result<Buffer> allocate_buffer(const BufferCreationDesc& desc) override;
         stl::result<Texture> allocate_texture(const TextureCreationDesc& desc) override;
 

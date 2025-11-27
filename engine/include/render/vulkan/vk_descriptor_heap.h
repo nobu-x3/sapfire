@@ -10,6 +10,8 @@ namespace sf::render::vk {
         VkDescriptorHeap() = default;
         ~VkDescriptorHeap() override;
 
+        void destroy_resources();
+
         u32 allocate_srv(Buffer& buffer) override;
         u32 allocate_srv(Texture& texture, const ShaderResourceViewDesc* desc = nullptr) override;
 

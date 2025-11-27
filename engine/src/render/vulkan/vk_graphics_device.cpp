@@ -9,6 +9,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <set>
+#include <vulkan/vulkan_core.h>
 
 namespace sf::render::vk {
     // Extension validation helpers (following vk-bootstrap pattern)
@@ -124,45 +125,48 @@ namespace sf::render::vk {
         wait_for_idle();
         cleanup_swapchain();
         // Clean up contexts (must be before destroying command pools)
-        // for(auto& ctx : m_GraphicsContexts) {
-        //     ctx.reset();
-        // }
-        std::destroy(m_GraphicsContexts.begin(), m_GraphicsContexts.end());
-        // m_ComputeContext.reset();
-        m_ComputeContext.~VkComputeContext();
-        // m_CopyContext.reset();
-        m_CopyContext.~VkCopyContext();
-        m_PipelineStates.clear();
-        m_DescriptorHeap.~VkDescriptorHeap();
-        m_SamplerHeap.~VkDescriptorHeap();
-        m_MemoryAllocator.~VkMemoryAllocator();
+        for(auto& ctx : m_GraphicsContexts) {
+            ctx.destroy_resources();
+        }
+        m_ComputeContext.destroy_resources();
+        m_CopyContext.destroy_resources();
+        m_DescriptorHeap.destroy_resources();
+        m_SamplerHeap.destroy_resources();
+        m_MemoryAllocator.destroy_resources();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
+            m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
         }
         if (m_BindlessPipelineLayout != VK_NULL_HANDLE) {
             vkDestroyPipelineLayout(m_Device, m_BindlessPipelineLayout, nullptr);
+            m_BindlessPipelineLayout = VK_NULL_HANDLE;
         }
         if (m_MainRenderPass != VK_NULL_HANDLE) {
             vkDestroyRenderPass(m_Device, m_MainRenderPass, nullptr);
+            m_MainRenderPass = VK_NULL_HANDLE;
         }
         for (auto& fence : m_InFlightFences) {
             if (fence != VK_NULL_HANDLE) {
                 vkDestroyFence(m_Device, fence, nullptr);
+                fence = VK_NULL_HANDLE;
             }
         }
         for (auto& semaphore : m_ImageAvailableSemaphores) {
             if (semaphore != VK_NULL_HANDLE) {
                 vkDestroySemaphore(m_Device, semaphore, nullptr);
+                semaphore = VK_NULL_HANDLE;
             }
         }
         for (auto& semaphore : m_RenderFinishedSemaphores) {
             if (semaphore != VK_NULL_HANDLE) {
                 vkDestroySemaphore(m_Device, semaphore, nullptr);
+                semaphore = VK_NULL_HANDLE;
             }
         }
         // Destroy device (must be AFTER all child objects are destroyed)
         if (m_Device != VK_NULL_HANDLE) {
             vkDestroyDevice(m_Device, nullptr);
+            m_Device = VK_NULL_HANDLE;
         }
 #if defined(DEBUG) || defined(_DEBUG)
         if (m_DebugMessenger != VK_NULL_HANDLE) {
@@ -174,9 +178,11 @@ namespace sf::render::vk {
 #endif
         if (m_Surface != VK_NULL_HANDLE) {
             vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
+            m_Surface = VK_NULL_HANDLE;
         }
         if (m_Instance != VK_NULL_HANDLE) {
             vkDestroyInstance(m_Instance, nullptr);
+            m_Instance = VK_NULL_HANDLE;
         }
         CORE_INFO("Vulkan graphics device destroyed");
     }

@@ -1,6 +1,8 @@
-#include "render/vulkan/vk_descriptor_heap.h"
-#include "core/logger.h"
 #include "engpch.h"
+
+#include <vulkan/vulkan_core.h>
+#include "core/logger.h"
+#include "render/vulkan/vk_descriptor_heap.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 namespace sf::render::vk {
@@ -25,18 +27,25 @@ namespace sf::render::vk {
     }
 
     VkDescriptorHeap::~VkDescriptorHeap() {
-        if(!m_Device)
+        if (m_Device == VK_NULL_HANDLE)
             return;
+        destroy_resources();
+    }
+
+    void VkDescriptorHeap::destroy_resources() {
         if (m_DescriptorSet != VK_NULL_HANDLE && m_DescriptorPool != VK_NULL_HANDLE) {
             vkFreeDescriptorSets(m_Device, m_DescriptorPool, 1, &m_DescriptorSet);
+            m_DescriptorSet = VK_NULL_HANDLE;
         }
         if (m_DescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_DescriptorSetLayout, nullptr);
+            m_DescriptorSetLayout = VK_NULL_HANDLE;
         }
         if (m_DescriptorPool != VK_NULL_HANDLE) {
             vkDestroyDescriptorPool(m_Device, m_DescriptorPool, nullptr);
+            m_DescriptorPool = VK_NULL_HANDLE;
         }
-        m_Device = nullptr;
+        m_Device = VK_NULL_HANDLE;
     }
 
     u32 VkDescriptorHeap::allocate_srv(Buffer& buffer) {

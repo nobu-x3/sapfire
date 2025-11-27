@@ -15,10 +15,21 @@ namespace sf::render::vk {
     }
 
     VkContext::~VkContext() {
-        if (!m_Device)
+        if (m_Device == VK_NULL_HANDLE)
             return;
-        vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
-        m_Device = nullptr;
+        destroy_resources();
+    }
+
+    void VkContext::destroy_resources() {
+        if (m_Device != VK_NULL_HANDLE && m_CommandBuffer != VK_NULL_HANDLE) {
+            vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &m_CommandBuffer);
+            m_CommandBuffer = VK_NULL_HANDLE;
+        }
+        if (m_Device != VK_NULL_HANDLE && m_CommandPool != VK_NULL_HANDLE) {
+            vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+            m_CommandPool = VK_NULL_HANDLE;
+        }
+        m_Device = VK_NULL_HANDLE;
     }
 
     stl::result<> VkContext::init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags) {
