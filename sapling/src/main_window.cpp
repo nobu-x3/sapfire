@@ -1,5 +1,6 @@
 #include "main_window.h"
 #include "editor_context.h"
+#include "memory/memory.h"
 #include "widgets/asset_browser_widget.h"
 #include "widgets/entity_inspector_widget.h"
 #include "widgets/scene_hierarchy_widget.h"
@@ -92,6 +93,7 @@ void SaplingMainWindow::on_update_timer() {
     if (m_SceneView) {
         m_SceneView->update_frame(delta_time);
     }
+    sf::mem::MemoryManager::get()->reset(sf::mem::MemTag::Temp);
 }
 
 void SaplingMainWindow::on_new_scene() {
