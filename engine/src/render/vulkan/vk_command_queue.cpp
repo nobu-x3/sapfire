@@ -1,4 +1,5 @@
 #include "render/vulkan/vk_command_queue.h"
+#include <vulkan/vulkan_core.h>
 #include "core/logger.h"
 #include "engpch.h"
 #include "render/vulkan/vk_context.h"
@@ -11,6 +12,16 @@ namespace sf::render::vk {
         fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
         vkCreateFence(m_Device, &fence_info, nullptr, &m_Fence);
         CORE_INFO("Created Vulkan command queue: {}", name);
+    }
+
+    VkCommandQueue::~VkCommandQueue() { destroy_resources(); }
+
+    void VkCommandQueue::destroy_resources() {
+        if (m_Device != VK_NULL_HANDLE && m_Fence != VK_NULL_HANDLE) {
+            vkDestroyFence(m_Device, m_Fence, nullptr);
+            m_Fence = VK_NULL_HANDLE;
+        }
+        m_Device = VK_NULL_HANDLE;
     }
 
     void VkCommandQueue::execute_command_lists(IContext** contexts, u32 count) {

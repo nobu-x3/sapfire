@@ -21,8 +21,6 @@ namespace sf::render::vk {
     }
 
     VkMemoryAllocator::~VkMemoryAllocator() {
-        if (m_Device == VK_NULL_HANDLE)
-            return;
         destroy_resources();
     }
 

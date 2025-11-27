@@ -9,7 +9,9 @@ namespace sf::render::vk {
     public:
         explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
         VkCommandQueue() = default;
-        ~VkCommandQueue() override = default;
+        ~VkCommandQueue() override;
+
+        void destroy_resources();
 
         void execute_command_lists(IContext** contexts, u32 count) override;
         void execute_command_list(IContext* context) override;

@@ -27,8 +27,6 @@ namespace sf::render::vk {
     }
 
     VkDescriptorHeap::~VkDescriptorHeap() {
-        if (m_Device == VK_NULL_HANDLE)
-            return;
         destroy_resources();
     }
 

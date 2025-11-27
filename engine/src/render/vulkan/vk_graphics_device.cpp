@@ -124,6 +124,7 @@ namespace sf::render::vk {
     VkGraphicsDevice::~VkGraphicsDevice() {
         wait_for_idle();
         cleanup_swapchain();
+        m_PipelineStates.clear();
         // Clean up contexts (must be before destroying command pools)
         for(auto& ctx : m_GraphicsContexts) {
             ctx.destroy_resources();
@@ -133,6 +134,9 @@ namespace sf::render::vk {
         m_DescriptorHeap.destroy_resources();
         m_SamplerHeap.destroy_resources();
         m_MemoryAllocator.destroy_resources();
+        m_GraphicsQueue.destroy_resources();
+        m_ComputeQueue.destroy_resources();
+        m_TransferQueue.destroy_resources();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
             m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;

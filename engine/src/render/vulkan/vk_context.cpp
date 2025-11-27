@@ -15,8 +15,6 @@ namespace sf::render::vk {
     }
 
     VkContext::~VkContext() {
-        if (m_Device == VK_NULL_HANDLE)
-            return;
         destroy_resources();
     }
 
