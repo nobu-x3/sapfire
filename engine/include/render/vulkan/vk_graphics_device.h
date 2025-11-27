@@ -10,7 +10,7 @@
 
 namespace sf::render::vk {
 
-    class VkGraphicsDevice final: public IGraphicsDevice {
+    class VkGraphicsDevice final : public IGraphicsDevice {
     public:
         explicit VkGraphicsDevice(const SwapchainCreationDesc& desc);
         ~VkGraphicsDevice() override;
@@ -52,9 +52,9 @@ namespace sf::render::vk {
 
         // Command Queue Access
 
-        inline ICommandQueue* get_direct_queue() override { return &m_GraphicsQueue; }
-        inline ICommandQueue* get_compute_queue() override { return &m_ComputeQueue; }
-        inline ICommandQueue* get_copy_queue() override { return &m_TransferQueue; }
+        inline ICommandQueue* get_direct_queue() override { return m_GraphicsQueue.get(); }
+        inline ICommandQueue* get_compute_queue() override { return m_ComputeQueue.get(); }
+        inline ICommandQueue* get_copy_queue() override { return m_TransferQueue.get(); }
 
         inline u32 get_graphics_queue_family_index() const { return m_GraphicsQueueFamily; }
         inline u32 get_compute_queue_family_index() const { return m_ComputeQueueFamily; }
@@ -62,14 +62,14 @@ namespace sf::render::vk {
 
         // Descriptor Heap Access
 
-        inline IDescriptorHeap* get_cbv_srv_uav_heap() override { return &m_DescriptorHeap; }
-        inline IDescriptorHeap* get_rtv_heap() override { return &m_DescriptorHeap; }
-        inline IDescriptorHeap* get_dsv_heap() override { return &m_DescriptorHeap; }
-        inline IDescriptorHeap* get_sampler_heap() override { return &m_SamplerHeap; }
+        inline IDescriptorHeap* get_cbv_srv_uav_heap() override { return m_DescriptorHeap.get(); }
+        inline IDescriptorHeap* get_rtv_heap() override { return m_DescriptorHeap.get(); }
+        inline IDescriptorHeap* get_dsv_heap() override { return m_DescriptorHeap.get(); }
+        inline IDescriptorHeap* get_sampler_heap() override { return m_SamplerHeap.get(); }
 
         // Memory Allocator Access
 
-        inline IMemoryAllocator* get_memory_allocator() override { return &m_MemoryAllocator; }
+        inline IMemoryAllocator* get_memory_allocator() override { return m_MemoryAllocator.get(); }
 
         // Frame Timing
 
@@ -92,8 +92,8 @@ namespace sf::render::vk {
         inline VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
         inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
 
-        inline const VkDescriptorHeap* get_vk_descriptor_heap() const { return &m_DescriptorHeap; }
-        inline const VkDescriptorHeap* get_vk_sampler_heap() const { return &m_SamplerHeap; }
+        inline const VkDescriptorHeap* get_vk_descriptor_heap() const { return m_DescriptorHeap.get(); }
+        inline const VkDescriptorHeap* get_vk_sampler_heap() const { return m_SamplerHeap.get(); }
         inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
     private:
@@ -116,54 +116,62 @@ namespace sf::render::vk {
         u32 find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties);
 
     private:
-        VkInstance m_Instance = VK_NULL_HANDLE;
-        VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+        // Hot data - accessed every frame (grouped for cache locality)
         VkDevice m_Device = VK_NULL_HANDLE;
-        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+        u32 m_CurrentFrameIndex = 0;
+        u32 m_CurrentBackBufferIndex = 0;
+        u32 m_FramesInFlight = MAX_FRAMES_IN_FLIGHT;
+        u32 m_BackBufferCount = MAX_FRAMES_IN_FLIGHT;
+
+        // Frequently accessed objects (now heap-allocated to avoid placement new)
+        stl::unique_ptr<VkCommandQueue> m_GraphicsQueue;
+        stl::unique_ptr<VkCommandQueue> m_ComputeQueue;
+        stl::unique_ptr<VkCommandQueue> m_TransferQueue;
+        stl::array<stl::unique_ptr<VkGraphicsContext>, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
+        stl::unique_ptr<VkComputeContext> m_ComputeContext;
+        stl::unique_ptr<VkCopyContext> m_CopyContext;
+        stl::unique_ptr<VkDescriptorHeap> m_DescriptorHeap;
+        stl::unique_ptr<VkDescriptorHeap> m_SamplerHeap;
+        stl::unique_ptr<VkMemoryAllocator> m_MemoryAllocator;
+
+        // Frame sync objects
+        stl::array<VkFence, MAX_FRAMES_IN_FLIGHT> m_InFlightFences;
+        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
+        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_RenderFinishedSemaphores;
+
+        // Back buffers
+        stl::array<Texture, MAX_FRAMES_IN_FLIGHT> m_BackBuffers;
+        stl::array<VkImageView, MAX_FRAMES_IN_FLIGHT> m_SwapchainImageViews = {VK_NULL_HANDLE};
+        stl::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> m_SwapchainFramebuffers = {VK_NULL_HANDLE};
+        Format m_BackBufferFormat;
+
+        // Swapchain and rendering
         VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
+        VkRenderPass m_MainRenderPass = VK_NULL_HANDLE;
         VkPipelineLayout m_BindlessPipelineLayout = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-        VkRenderPass m_MainRenderPass = VK_NULL_HANDLE;
+
+        // Init-only data (cold)
+        VkInstance m_Instance = VK_NULL_HANDLE;
+        VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+        VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
 
 #ifdef _DEBUG
         VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;
 #endif
 
-        VkCommandQueue m_GraphicsQueue;
-        VkCommandQueue m_ComputeQueue;
-        VkCommandQueue m_TransferQueue;
-
-        stl::array<VkGraphicsContext, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
-        VkComputeContext m_ComputeContext;
-        VkCopyContext m_CopyContext;
-
-        VkDescriptorHeap m_DescriptorHeap;
-        VkDescriptorHeap m_SamplerHeap;
-
-        VkMemoryAllocator m_MemoryAllocator;
-
-        stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates{mem::MemTag::Render};
-
-        stl::array<Texture, MAX_FRAMES_IN_FLIGHT> m_BackBuffers;
-        stl::array<VkImageView, MAX_FRAMES_IN_FLIGHT> m_SwapchainImageViews = {VK_NULL_HANDLE};
-        stl::array<VkFramebuffer, MAX_FRAMES_IN_FLIGHT> m_SwapchainFramebuffers = {VK_NULL_HANDLE};
-        u32 m_BackBufferCount = MAX_FRAMES_IN_FLIGHT;
-        u32 m_CurrentBackBufferIndex = 0;
-        Format m_BackBufferFormat;
-
+        // Window state
         void* m_WindowHandle = nullptr;
         u32 m_WindowWidth = 0;
         u32 m_WindowHeight = 0;
 
-        u32 m_CurrentFrameIndex = 0;
-        u32 m_FramesInFlight = MAX_FRAMES_IN_FLIGHT;
-        stl::array<VkFence, MAX_FRAMES_IN_FLIGHT> m_InFlightFences;
-        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
-        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_RenderFinishedSemaphores;
-
+        // Queue families
         u32 m_GraphicsQueueFamily = UINT32_MAX;
         u32 m_ComputeQueueFamily = UINT32_MAX;
         u32 m_TransferQueueFamily = UINT32_MAX;
+
+        // Dynamic collections
+        stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates{mem::MemTag::Render};
 
         mutable stl::recursive_mutex m_ResourceMutex;
     };

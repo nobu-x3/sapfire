@@ -20,10 +20,6 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan memory allocator (VMA)");
     }
 
-    VkMemoryAllocator::~VkMemoryAllocator() {
-        destroy_resources();
-    }
-
     void VkMemoryAllocator::destroy_resources() {
         if(m_Device == VK_NULL_HANDLE)
             return;

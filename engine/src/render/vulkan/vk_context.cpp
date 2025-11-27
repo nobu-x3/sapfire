@@ -14,10 +14,6 @@ namespace sf::render::vk {
         init(device, family_index, pool_ci_flags);
     }
 
-    VkContext::~VkContext() {
-        destroy_resources();
-    }
-
     void VkContext::destroy_resources() {
         if(m_Device == VK_NULL_HANDLE)
             return;

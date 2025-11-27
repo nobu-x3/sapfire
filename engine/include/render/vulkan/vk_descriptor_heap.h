@@ -7,8 +7,6 @@ namespace sf::render::vk {
     class VkDescriptorHeap final: public IDescriptorHeap {
     public:
         explicit VkDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name);
-        VkDescriptorHeap() = default;
-        ~VkDescriptorHeap() override;
 
         void destroy_resources();
 

@@ -2,8 +2,10 @@
 
 #include "core/logger.h"
 #include "render/vulkan/vk_compat.h"
-#include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_context.h"
+#include "render/vulkan/vk_descriptor_heap.h"
+#include "render/vulkan/vk_graphics_device.h"
+#include "render/vulkan/vk_memory_allocator.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 #include <SDL3/SDL.h>
@@ -126,17 +128,26 @@ namespace sf::render::vk {
         cleanup_swapchain();
         m_PipelineStates.clear();
         // Clean up contexts (must be before destroying command pools)
-        for(auto& ctx : m_GraphicsContexts) {
-            ctx.destroy_resources();
+        for (auto& ctx : m_GraphicsContexts) {
+            if (ctx)
+                ctx->destroy_resources();
         }
-        m_ComputeContext.destroy_resources();
-        m_CopyContext.destroy_resources();
-        m_DescriptorHeap.destroy_resources();
-        m_SamplerHeap.destroy_resources();
-        m_MemoryAllocator.destroy_resources();
-        m_GraphicsQueue.destroy_resources();
-        m_ComputeQueue.destroy_resources();
-        m_TransferQueue.destroy_resources();
+        if (m_ComputeContext)
+            m_ComputeContext->destroy_resources();
+        if (m_CopyContext)
+            m_CopyContext->destroy_resources();
+        if (m_DescriptorHeap)
+            m_DescriptorHeap->destroy_resources();
+        if (m_SamplerHeap)
+            m_SamplerHeap->destroy_resources();
+        if (m_MemoryAllocator)
+            m_MemoryAllocator->destroy_resources();
+        if (m_GraphicsQueue)
+            m_GraphicsQueue->destroy_resources();
+        if (m_ComputeQueue)
+            m_ComputeQueue->destroy_resources();
+        if (m_TransferQueue)
+            m_TransferQueue->destroy_resources();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
             m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
@@ -454,29 +465,32 @@ namespace sf::render::vk {
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
         vkGetDeviceQueue(m_Device, m_ComputeQueueFamily, 0, &compute_queue);
         vkGetDeviceQueue(m_Device, m_TransferQueueFamily, 0, &transfer_queue);
-        new (&m_GraphicsQueue) VkCommandQueue(m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
-        new (&m_ComputeQueue) VkCommandQueue(m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
-        new (&m_TransferQueue) VkCommandQueue(m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
+        m_GraphicsQueue =
+            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, graphics_queue, CommandQueueType::Direct, "Graphics Queue");
+        m_ComputeQueue =
+            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, compute_queue, CommandQueueType::Compute, "Compute Queue");
+        m_TransferQueue =
+            stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, transfer_queue, CommandQueueType::Copy, "Transfer Queue");
         return stl::success;
     }
 
     stl::result<> VkGraphicsDevice::init_descriptor_heaps() {
-        new (&m_DescriptorHeap) VkDescriptorHeap(m_Device, 10000, "Main Descriptor Heap");
-        new (&m_SamplerHeap) VkDescriptorHeap(m_Device, 256, "Sampler Heap");
+        m_DescriptorHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 10000, "Main Descriptor Heap");
+        m_SamplerHeap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, 256, "Sampler Heap");
         return stl::success;
     }
 
     stl::result<> VkGraphicsDevice::init_memory_allocator() {
-        new (&m_MemoryAllocator) VkMemoryAllocator(m_Instance, m_PhysicalDevice, m_Device);
+        m_MemoryAllocator = stl::make_unique<VkMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
         return stl::success;
     }
 
     stl::result<> VkGraphicsDevice::init_contexts() {
         for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
-            new (&m_GraphicsContexts[i]) VkGraphicsContext(this);
+            m_GraphicsContexts[i] = stl::make_unique<VkGraphicsContext>(mem::MemTag::Render, this);
         }
-        new (&m_ComputeContext) VkComputeContext(this);
-        new (&m_CopyContext) VkCopyContext(this);
+        m_ComputeContext = stl::make_unique<VkComputeContext>(mem::MemTag::Render, this);
+        m_CopyContext = stl::make_unique<VkCopyContext>(mem::MemTag::Render, this);
         return stl::success;
     }
 
@@ -673,7 +687,7 @@ namespace sf::render::vk {
 
     Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
 
-    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) { return m_MemoryAllocator.allocate_buffer(desc); }
+    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) { return m_MemoryAllocator->allocate_buffer(desc); }
 
     stl::result<Buffer> VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
         auto buffer_result = create_buffer(desc);
@@ -691,31 +705,31 @@ namespace sf::render::vk {
         }
         Buffer staging_buffer = std::move(staging_result.value());
         if (!staging_buffer.mapped_data) {
-            m_MemoryAllocator.free_buffer(staging_buffer);
+            m_MemoryAllocator->free_buffer(staging_buffer);
             return stl::make_error<Buffer>("Failed to map staging buffer for data upload");
         }
         memcpy(staging_buffer.mapped_data, data, data_size);
-        m_CopyContext.reset();
-        m_CopyContext.transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
-        m_CopyContext.execute_resource_barriers();
-        m_CopyContext.copy_buffer(buffer, staging_buffer, data_size);
-        m_CopyContext.transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
-        m_CopyContext.execute_resource_barriers();
-        m_CopyContext.close();
+        m_CopyContext->reset();
+        m_CopyContext->transition_barrier(buffer, ResourceState::Common, ResourceState::CopyDest);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->copy_buffer(buffer, staging_buffer, data_size);
+        m_CopyContext->transition_barrier(buffer, ResourceState::CopyDest, ResourceState::Common);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->close();
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
+        VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
-        VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
+        VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
         VK_RETURN_ON_ERROR_T(Buffer, vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE), "Failed to submit buffer upload");
         wait_for_idle();
-        m_MemoryAllocator.free_buffer(staging_buffer);
+        m_MemoryAllocator->free_buffer(staging_buffer);
         return buffer;
     }
 
     stl::result<Texture> VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
-        return m_MemoryAllocator.allocate_texture(desc);
+        return m_MemoryAllocator->allocate_texture(desc);
     }
 
     stl::result<Texture> VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
@@ -734,26 +748,26 @@ namespace sf::render::vk {
         }
         Buffer staging_buffer = std::move(staging_result.value());
         if (!staging_buffer.mapped_data) {
-            m_MemoryAllocator.free_buffer(staging_buffer);
+            m_MemoryAllocator->free_buffer(staging_buffer);
             return stl::make_error<Texture>("Failed to map staging buffer for texture upload");
         }
         memcpy(staging_buffer.mapped_data, data, data_size);
-        m_CopyContext.reset();
-        m_CopyContext.transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
-        m_CopyContext.execute_resource_barriers();
-        m_CopyContext.copy_buffer_to_texture(texture, staging_buffer, 0);
-        m_CopyContext.transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
-        m_CopyContext.execute_resource_barriers();
-        m_CopyContext.close();
+        m_CopyContext->reset();
+        m_CopyContext->transition_barrier(texture, ResourceState::Common, ResourceState::CopyDest);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->copy_buffer_to_texture(texture, staging_buffer, 0);
+        m_CopyContext->transition_barrier(texture, ResourceState::CopyDest, ResourceState::Common);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->close();
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         submit_info.commandBufferCount = 1;
-        VkCommandBuffer cmd_buffer = m_CopyContext.get_vk_command_buffer();
+        VkCommandBuffer cmd_buffer = m_CopyContext->get_vk_command_buffer();
         submit_info.pCommandBuffers = &cmd_buffer;
-        VkQueue transfer_queue = m_TransferQueue.get_vk_queue();
+        VkQueue transfer_queue = m_TransferQueue->get_vk_queue();
         VK_RETURN_ON_ERROR_T(Texture, vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE), "Failed to submit texture upload");
         wait_for_idle();
-        m_MemoryAllocator.free_buffer(staging_buffer);
+        m_MemoryAllocator->free_buffer(staging_buffer);
         return texture;
     }
 
@@ -779,11 +793,11 @@ namespace sf::render::vk {
         return ptr;
     }
 
-    IGraphicsContext& VkGraphicsDevice::get_current_graphics_context() { return m_GraphicsContexts[m_CurrentFrameIndex]; }
+    IGraphicsContext& VkGraphicsDevice::get_current_graphics_context() { return *m_GraphicsContexts[m_CurrentFrameIndex]; }
 
-    IGraphicsContext& VkGraphicsDevice::get_graphics_context(u32 frame_index) { return m_GraphicsContexts[frame_index]; }
+    IGraphicsContext& VkGraphicsDevice::get_graphics_context(u32 frame_index) { return *m_GraphicsContexts[frame_index]; }
 
-    IComputeContext& VkGraphicsDevice::get_compute_context() { return m_ComputeContext; }
+    IComputeContext& VkGraphicsDevice::get_compute_context() { return *m_ComputeContext; }
 
-    ICopyContext& VkGraphicsDevice::get_copy_context() { return m_CopyContext; }
+    ICopyContext& VkGraphicsDevice::get_copy_context() { return *m_CopyContext; }
 } // namespace sf::render::vk

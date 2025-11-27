@@ -14,8 +14,6 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan command queue: {}", name);
     }
 
-    VkCommandQueue::~VkCommandQueue() { destroy_resources(); }
-
     void VkCommandQueue::destroy_resources() {
         if (m_Device != VK_NULL_HANDLE && m_Fence != VK_NULL_HANDLE) {
             vkDestroyFence(m_Device, m_Fence, nullptr);

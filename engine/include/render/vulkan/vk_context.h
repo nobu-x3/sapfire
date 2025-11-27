@@ -11,8 +11,7 @@ namespace sf::render::vk {
     class VkContext : public IContext {
     public:
         VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
-        VkContext() = default;
-        virtual ~VkContext() override;
+
         void destroy_resources();
 
         stl::result<> init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
@@ -40,7 +39,6 @@ namespace sf::render::vk {
     class VkGraphicsContext final: public VkContext, public IGraphicsContext {
     public:
         explicit VkGraphicsContext(VkGraphicsDevice* device);
-        VkGraphicsContext() = default;
 
         stl::result<> reset() override;
         stl::result<> close() override;
@@ -90,7 +88,6 @@ namespace sf::render::vk {
     class VkComputeContext final: public VkContext, public IComputeContext {
     public:
         explicit VkComputeContext(VkGraphicsDevice* device);
-        VkComputeContext() = default;
 
         stl::result<> reset() override;
         stl::result<> close() override { return VkContext::close(); }
@@ -123,7 +120,6 @@ namespace sf::render::vk {
     class VkCopyContext final: public VkContext, public ICopyContext {
     public:
         explicit VkCopyContext(VkGraphicsDevice* device);
-        VkCopyContext() = default;
 
         stl::result<> reset() override;
         stl::result<> close() override { return VkContext::close(); }

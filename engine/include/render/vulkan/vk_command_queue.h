@@ -8,8 +8,6 @@ namespace sf::render::vk {
     class VkCommandQueue final: public ICommandQueue {
     public:
         explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
-        VkCommandQueue() = default;
-        ~VkCommandQueue() override;
 
         void destroy_resources();
 

@@ -26,10 +26,6 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan descriptor heap: {}", name);
     }
 
-    VkDescriptorHeap::~VkDescriptorHeap() {
-        destroy_resources();
-    }
-
     void VkDescriptorHeap::destroy_resources() {
         if(m_Device == VK_NULL_HANDLE)
             return;

@@ -8,8 +8,6 @@ namespace sf::render::vk {
     class VkMemoryAllocator final: public IMemoryAllocator {
     public:
         explicit VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
-        VkMemoryAllocator() = default;
-        ~VkMemoryAllocator() override;
 
         void destroy_resources();
 
