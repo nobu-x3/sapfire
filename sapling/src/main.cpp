@@ -36,7 +36,6 @@ int main(int argc, char** argv) {
         result = app.exec();
     }
     sf::render::RenderBackend::shutdown();
-    memory_manager.reset_all();
     SDL_Quit();
     return result;
 }

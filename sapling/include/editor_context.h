@@ -18,7 +18,7 @@ public:
 
     void shutdown();
 
-    sf::render::IGraphicsDevice* graphics_device() { return m_GraphicsDevice; }
+    sf::render::IGraphicsDevice* graphics_device() { return m_GraphicsDevice.get(); }
     sf::assets::AssetManager* asset_manager() { return m_AssetManager.get(); }
     sf::ECManager* ec_manager() { return m_ECManager.get(); }
 
@@ -32,7 +32,7 @@ private:
     EditorContext& operator=(const EditorContext&) = delete;
 
 private:
-    sf::render::IGraphicsDevice* m_GraphicsDevice{nullptr};
+    sf::stl::unique_ptr<sf::render::IGraphicsDevice> m_GraphicsDevice;
     sf::stl::unique_ptr<sf::assets::AssetManager> m_AssetManager;
     sf::stl::unique_ptr<sf::ECManager> m_ECManager;
     bool m_Initialized{false};

@@ -55,7 +55,7 @@ namespace sf {
 
     protected:
         ClientExtent* m_ClientExtent;
-        sf::render::IGraphicsDevice* m_GraphicsDevice = nullptr;
+        stl::unique_ptr<sf::render::IGraphicsDevice> m_GraphicsDevice;
         stl::unique_ptr<physics::PhysicsEngine> m_PhysicsEngine;
         sf::stl::vector<sf::render::Buffer> m_RTIndexBuffers{};
         sf::stl::vector<sf::render::Buffer> m_VertexPosBuffers{};

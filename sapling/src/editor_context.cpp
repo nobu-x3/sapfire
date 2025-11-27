@@ -23,7 +23,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
     m_AssetManager = sf::stl::make_unique<sf::assets::AssetManager>(
         sf::mem::MemTag::Application,
         sf::assets::AssetManagerCreationDesc{
-            .device = m_GraphicsDevice,
+            .device = m_GraphicsDevice.get(),
             .mesh_registry_path = sf::stl::string(sf::mem::MemTag::Mesh, "mesh_registry.db"),
             .texture_registry_path = sf::stl::string(sf::mem::MemTag::Texture, "texture_registry.db"),
         });
@@ -37,12 +37,9 @@ void EditorContext::shutdown() {
         return;
     }
     CORE_INFO("Shutting down EditorContext...");
+    m_GraphicsDevice.reset();
     m_ECManager.reset();
     m_AssetManager.reset();
-    if (m_GraphicsDevice) {
-        delete m_GraphicsDevice;
-        m_GraphicsDevice = nullptr;
-    }
     m_Initialized = false;
     CORE_INFO("EditorContext shutdown complete.");
 }

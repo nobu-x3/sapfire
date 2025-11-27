@@ -92,8 +92,8 @@ namespace sf {
             static MemoryManager* get() noexcept { return g_instance; }
 
         private:
-            std::vector<uint8_t> m_Backing;
             LinearArena m_Arenas[static_cast<int32_t>(MemTag::Count)];
+            std::vector<uint8_t> m_Backing;
             inline static MemoryManager* g_instance = nullptr;
         };
 
@@ -173,6 +173,9 @@ namespace sf::stl {
     public:
         explicit TaggedDeleter(mem::MemTag tag = mem::MemTag::Logic) : m_Tag(tag) {}
 
+        template<typename U>
+        TaggedDeleter(const TaggedDeleter<U>& other) noexcept : m_Tag(other.m_Tag) {}
+
         void operator()(T* ptr) const {
             if (ptr) {
                 ptr->~T(); // Call destructor
@@ -180,7 +183,6 @@ namespace sf::stl {
             }
         }
 
-    private:
         mem::MemTag m_Tag;
     };
 

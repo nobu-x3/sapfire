@@ -20,7 +20,7 @@ namespace sf::render {
         static bool is_initialized();
 
         // Create graphics device
-        static IGraphicsDevice* create_device(const SwapchainCreationDesc& desc);
+        static stl::unique_ptr<IGraphicsDevice> create_device(const SwapchainCreationDesc& desc);
 
         // Shutdown backend
         static void shutdown();

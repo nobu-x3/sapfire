@@ -30,7 +30,8 @@ namespace sf::render {
     RenderAPI RenderBackend::get_api() { return s_CurrentAPI; }
 
     bool RenderBackend::is_initialized() { return s_Initialized; }
-    IGraphicsDevice* RenderBackend::create_device(const SwapchainCreationDesc& desc) {
+
+    stl::unique_ptr<IGraphicsDevice> RenderBackend::create_device(const SwapchainCreationDesc& desc) {
         if (!s_Initialized) {
             CORE_ERROR("RenderBackend not initialized! Call RenderBackend::initialize() first.");
             return nullptr;
@@ -38,13 +39,14 @@ namespace sf::render {
         switch (s_CurrentAPI) {
         case RenderAPI::DX12:
 #ifdef SF_PLATFORM_WINDOWS
-            return mem_new(mem::MemTag::Render) dx12::DX12GraphicsDevice(desc);
+            return stl::make_unique<dx12::DX12GraphicsDevice>(mem::MemTag::Render, desc);
 #else
             CORE_ERROR("DX12 is only available on Windows");
             return nullptr;
 #endif
         case RenderAPI::Vulkan:
-            return mem_new(mem::MemTag::Render) vk::VkGraphicsDevice(desc);
+            // return mem_new(mem::MemTag::Render) vk::VkGraphicsDevice(desc);
+            return stl::make_unique<vk::VkGraphicsDevice>(mem::MemTag::Render, desc);
         default:
             CORE_ERROR("Unknown render API");
             return nullptr;
