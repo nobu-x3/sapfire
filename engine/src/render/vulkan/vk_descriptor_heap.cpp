@@ -31,6 +31,8 @@ namespace sf::render::vk {
     }
 
     void VkDescriptorHeap::destroy_resources() {
+        if(m_Device == VK_NULL_HANDLE)
+            return;
         if (m_DescriptorSet != VK_NULL_HANDLE && m_DescriptorPool != VK_NULL_HANDLE) {
             vkFreeDescriptorSets(m_Device, m_DescriptorPool, 1, &m_DescriptorSet);
             m_DescriptorSet = VK_NULL_HANDLE;

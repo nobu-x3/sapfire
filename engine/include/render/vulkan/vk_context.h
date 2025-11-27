@@ -37,7 +37,7 @@ namespace sf::render::vk {
         stl::vector<VkBufferMemoryBarrier> m_BufferBarriers{mem::MemTag::Render};
     };
 
-    class VkGraphicsContext : public VkContext, public IGraphicsContext {
+    class VkGraphicsContext final: public VkContext, public IGraphicsContext {
     public:
         explicit VkGraphicsContext(VkGraphicsDevice* device);
         VkGraphicsContext() = default;
@@ -87,7 +87,7 @@ namespace sf::render::vk {
         VkFramebuffer m_CurrentFramebuffer = VK_NULL_HANDLE;
     };
 
-    class VkComputeContext : public VkContext, public IComputeContext {
+    class VkComputeContext final: public VkContext, public IComputeContext {
     public:
         explicit VkComputeContext(VkGraphicsDevice* device);
         VkComputeContext() = default;
@@ -120,7 +120,7 @@ namespace sf::render::vk {
 
     // Vulkan Copy Context
 
-    class VkCopyContext : public VkContext, public ICopyContext {
+    class VkCopyContext final: public VkContext, public ICopyContext {
     public:
         explicit VkCopyContext(VkGraphicsDevice* device);
         VkCopyContext() = default;

@@ -5,7 +5,7 @@
 
 namespace sf::render::vk {
 
-    class VkMemoryAllocator : public IMemoryAllocator {
+    class VkMemoryAllocator final: public IMemoryAllocator {
     public:
         explicit VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
         VkMemoryAllocator() = default;

@@ -19,6 +19,10 @@ namespace sf::render::vk {
     }
 
     void VkContext::destroy_resources() {
+        if(m_Device == VK_NULL_HANDLE)
+            return;
+        m_ImageBarriers.clear();
+        m_BufferBarriers.clear();
         if (m_Device != VK_NULL_HANDLE && m_CommandBuffer != VK_NULL_HANDLE) {
             vkFreeCommandBuffers(m_Device, m_CommandPool, 1, &m_CommandBuffer);
             m_CommandBuffer = VK_NULL_HANDLE;

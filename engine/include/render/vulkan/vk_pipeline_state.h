@@ -5,7 +5,7 @@
 
 namespace sf::render::vk {
 
-    class VkPipelineState : public IPipelineState {
+    class VkPipelineState final: public IPipelineState {
     public:
         VkPipelineState() = default;
         ~VkPipelineState() override;

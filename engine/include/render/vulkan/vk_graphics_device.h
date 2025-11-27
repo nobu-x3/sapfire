@@ -10,7 +10,7 @@
 
 namespace sf::render::vk {
 
-    class VkGraphicsDevice : public IGraphicsDevice {
+    class VkGraphicsDevice final: public IGraphicsDevice {
     public:
         explicit VkGraphicsDevice(const SwapchainCreationDesc& desc);
         ~VkGraphicsDevice() override;

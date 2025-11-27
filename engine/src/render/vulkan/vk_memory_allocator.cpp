@@ -25,6 +25,8 @@ namespace sf::render::vk {
     }
 
     void VkMemoryAllocator::destroy_resources() {
+        if(m_Device == VK_NULL_HANDLE)
+            return;
         if (m_Allocator != VK_NULL_HANDLE) {
             vmaDestroyAllocator(m_Allocator);
             m_Allocator = VK_NULL_HANDLE;
