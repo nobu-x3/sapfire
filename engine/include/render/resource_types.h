@@ -20,6 +20,7 @@ namespace sf::render {
 
     enum class BufferUsage : u8 {
         Upload, // CPU -> GPU upload buffer
+        Download, // GPU -> CPU download buffer
         Index, // Index buffer
         Structured, // Structured buffer (SRV/UAV)
         Constant, // Constant buffer (CBV)
@@ -40,6 +41,7 @@ namespace sf::render {
     struct BufferCreationDesc {
         BufferUsage usage = BufferUsage::Structured;
         u64 size_in_bytes = 0;
+        bool should_map = false;
         stl::wstring_view name = {};
         ResourceUsage resource_usage = ResourceUsage::None; // Additional usage flags
     };

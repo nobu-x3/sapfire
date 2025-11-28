@@ -15,7 +15,7 @@ namespace sf::render::vk {
     }
 
     void VkContext::destroy_resources() {
-        if(m_Device == VK_NULL_HANDLE)
+        if (m_Device == VK_NULL_HANDLE)
             return;
         m_ImageBarriers.clear();
         m_BufferBarriers.clear();
@@ -416,4 +416,20 @@ namespace sf::render::vk {
         vkCmdCopyBufferToImage(m_CommandBuffer, reinterpret_cast<VkBuffer>(src.resource), reinterpret_cast<VkImage>(dst.resource),
                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
     }
+
+    void VkCopyContext::copy_texture_to_buffer(Buffer& dst, Texture& src) {
+        VkBufferImageCopy copy_region{};
+        copy_region.bufferOffset = 0;
+        copy_region.bufferRowLength = 0; // Tightly packed
+        copy_region.bufferImageHeight = 0; // Tightly packed
+        copy_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        copy_region.imageSubresource.mipLevel = 0;
+        copy_region.imageSubresource.baseArrayLayer = 0;
+        copy_region.imageSubresource.layerCount = 1;
+        copy_region.imageOffset = {0, 0, 0};
+        copy_region.imageExtent = {src.width, src.height, 1};
+        vkCmdCopyImageToBuffer(m_CommandBuffer, reinterpret_cast<VkImage>(src.resource), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                               reinterpret_cast<VkBuffer>(dst.resource), 1, &copy_region);
+    }
+
 } // namespace sf::render::vk

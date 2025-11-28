@@ -97,6 +97,7 @@ namespace sf::render {
         virtual void copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset = 0, u64 src_offset = 0) = 0;
         virtual void copy_texture(Texture& dst, Texture& src) = 0;
         virtual void copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource = 0) = 0;
+        virtual void copy_texture_to_buffer(Buffer& dst, Texture& src) = 0;
     };
 
 } // namespace sf::render

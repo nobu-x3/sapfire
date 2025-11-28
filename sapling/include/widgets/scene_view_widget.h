@@ -1,10 +1,14 @@
 #pragma once
 
-#include <QWidget>
 #include "Sapfire.h"
 
+#include <QWidget>
+
 struct SDL_Window;
-class QWindow;
+class QImage;
+class QPaintEvent;
+class QResizeEvent;
+class QShowEvent;
 
 class SceneViewWidget : public QWidget {
     Q_OBJECT
@@ -13,6 +17,7 @@ public:
     ~SceneViewWidget() override;
     void update_frame(sf::f32 delta_time);
 protected:
+    void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void showEvent(QShowEvent* event) override;
 private:
@@ -20,6 +25,7 @@ private:
     void shutdown_rendering();
     void render();
 private:
+    QImage m_RenderedImage;
     SDL_Window* m_SDLWindow{nullptr};
     bool m_Initialized{false};
     bool m_NeedsResize{false};

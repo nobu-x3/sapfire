@@ -21,7 +21,7 @@ namespace sf::render::vk {
     }
 
     void VkMemoryAllocator::destroy_resources() {
-        if(m_Device == VK_NULL_HANDLE)
+        if (m_Device == VK_NULL_HANDLE)
             return;
         if (m_Allocator != VK_NULL_HANDLE) {
             vmaDestroyAllocator(m_Allocator);
@@ -34,11 +34,34 @@ namespace sf::render::vk {
         VkBufferCreateInfo buffer_info{};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = desc.size_in_bytes;
-        buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
+        switch (desc.usage) {
+        case BufferUsage::Upload:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+            alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            break;
+        case BufferUsage::Index:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Structured:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Constant:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Download:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+            alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            break;
+        }
+        buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         Buffer buffer{};
         VkBuffer vk_buffer;
         VmaAllocation allocation;
@@ -47,6 +70,13 @@ namespace sf::render::vk {
         buffer.resource = reinterpret_cast<void*>(vk_buffer);
         buffer.allocation = allocation;
         buffer.size_in_bytes = desc.size_in_bytes;
+        if (desc.should_map) {
+            auto res = vmaMapMemory(m_Allocator, allocation, &buffer.mapped_data);
+            if (res != VK_SUCCESS) {
+                free_buffer(buffer);
+                return stl::make_error<Buffer>("Failed to map buffer.");
+            }
+        }
         return buffer;
     }
 
@@ -83,6 +113,10 @@ namespace sf::render::vk {
     }
 
     void VkMemoryAllocator::free_buffer(Buffer& buffer) {
+        if(buffer.mapped_data) {
+            vmaUnmapMemory(m_Allocator, static_cast<VmaAllocation>(buffer.allocation));
+            buffer.mapped_data = nullptr;
+        }
         if (buffer.resource && buffer.allocation) {
             vmaDestroyBuffer(m_Allocator, reinterpret_cast<VkBuffer>(buffer.resource), static_cast<VmaAllocation>(buffer.allocation));
             buffer.resource = nullptr;

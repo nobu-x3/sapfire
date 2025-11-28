@@ -1,12 +1,14 @@
 #include "widgets/scene_view_widget.h"
 #include "editor_context.h"
 
-#include <core/logger.h>
-#include <stl/result.h>
-#include <SDL3/SDL.h>
+#include <QImage>
+#include <QPainter>
+#include <QResizeEvent>
 #include <QVBoxLayout>
 #include <QWindow>
-#include <QResizeEvent>
+#include <SDL3/SDL.h>
+#include <core/logger.h>
+#include <stl/result.h>
 
 SceneViewWidget::SceneViewWidget(QWidget* parent) : QWidget(parent) {
     setMinimumSize(320, 240);
@@ -15,9 +17,7 @@ SceneViewWidget::SceneViewWidget(QWidget* parent) : QWidget(parent) {
     layout->setSpacing(0);
 }
 
-SceneViewWidget::~SceneViewWidget() {
-    shutdown_rendering();
-}
+SceneViewWidget::~SceneViewWidget() { shutdown_rendering(); }
 
 void SceneViewWidget::showEvent(QShowEvent* event) {
     QWidget::showEvent(event);
@@ -31,7 +31,7 @@ void SceneViewWidget::initialize_rendering() {
         return;
     }
     CORE_INFO("Initializing SceneViewWidget rendering...");
-    m_SDLWindow = SDL_CreateWindow("Sapling Viewport", width(), height(), SDL_WINDOW_VULKAN);
+    m_SDLWindow = SDL_CreateWindow("Sapling Viewport", width(), height(), SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN);
     if (!m_SDLWindow) {
         CORE_ERROR("Failed to create SDL window: {}", SDL_GetError());
         return;
@@ -63,7 +63,7 @@ void SceneViewWidget::update_frame(sf::f32 delta_time) {
         auto* device = EditorContext::instance().graphics_device();
         if (device) {
             auto resize_result = device->resize_window(width(), height());
-            if(!resize_result) {
+            if (!resize_result) {
                 CLIENT_ERROR("Failed to resize scene view: {}", resize_result.error().c_str());
                 return;
             }
@@ -71,6 +71,13 @@ void SceneViewWidget::update_frame(sf::f32 delta_time) {
         m_NeedsResize = false;
     }
     render();
+}
+
+void SceneViewWidget::paintEvent(QPaintEvent* event) {
+    QPainter painter(this);
+    if (m_RenderedImage.isNull())
+        return;
+    painter.drawImage(rect(), m_RenderedImage);
 }
 
 void SceneViewWidget::render() {
@@ -83,7 +90,7 @@ void SceneViewWidget::render() {
     }
     auto result = device->begin_frame();
     if (!result.has_value()) {
-        CORE_CRITICAL("Failed to begin frame: {}", result.error().c_str());
+        CLIENT_CRITICAL("Failed to begin frame: {}", result.error().c_str());
         return;
     }
     auto& back_buffer = device->get_current_back_buffer();
@@ -92,6 +99,17 @@ void SceneViewWidget::render() {
     // TODO: render commands go here
     device->end_frame();
     device->present();
+    sf::u32 pixel_count = back_buffer.width * back_buffer.height;
+    size_t buffer_size = pixel_count * 4;
+    if(m_RenderedImage.width() != static_cast<int>(back_buffer.width) || m_RenderedImage.height() != static_cast<int>(back_buffer.height)) {
+        m_RenderedImage = QImage(back_buffer.width, back_buffer.height, QImage::Format_RGBA8888);
+    }
+    auto read_result = device->read_texture_pixels(back_buffer, m_RenderedImage.bits(), buffer_size);
+    if(!read_result) {
+        CLIENT_CRITICAL("Failed to read texture pixels: {}", read_result.error().c_str());
+        return;
+    }
+    update();
 }
 
 void SceneViewWidget::resizeEvent(QResizeEvent* event) {

@@ -36,7 +36,7 @@ namespace sf::render::vk {
         stl::vector<VkBufferMemoryBarrier> m_BufferBarriers{mem::MemTag::Render};
     };
 
-    class VkGraphicsContext final: public VkContext, public IGraphicsContext {
+    class VkGraphicsContext final : public VkContext, public IGraphicsContext {
     public:
         explicit VkGraphicsContext(VkGraphicsDevice* device);
 
@@ -85,7 +85,7 @@ namespace sf::render::vk {
         VkFramebuffer m_CurrentFramebuffer = VK_NULL_HANDLE;
     };
 
-    class VkComputeContext final: public VkContext, public IComputeContext {
+    class VkComputeContext final : public VkContext, public IComputeContext {
     public:
         explicit VkComputeContext(VkGraphicsDevice* device);
 
@@ -96,9 +96,11 @@ namespace sf::render::vk {
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
             VkContext::transition_barrier(buffer, before, after);
         }
+
         void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
             VkContext::transition_barrier(texture, before, after);
         }
+
         void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
 
         void* get_native_command_list() override { return VkContext::get_native_command_list(); }
@@ -117,7 +119,7 @@ namespace sf::render::vk {
 
     // Vulkan Copy Context
 
-    class VkCopyContext final: public VkContext, public ICopyContext {
+    class VkCopyContext final : public VkContext, public ICopyContext {
     public:
         explicit VkCopyContext(VkGraphicsDevice* device);
 
@@ -131,6 +133,7 @@ namespace sf::render::vk {
         void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
             VkContext::transition_barrier(texture, before, after);
         }
+
         void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
 
         void* get_native_command_list() override { return VkContext::get_native_command_list(); }
@@ -138,6 +141,7 @@ namespace sf::render::vk {
         void copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset = 0, u64 src_offset = 0) override;
         void copy_texture(Texture& dst, Texture& src) override;
         void copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource = 0) override;
+        void copy_texture_to_buffer(Buffer& dst, Texture& src) override;
 
     private:
         VkGraphicsDevice* m_DevicePtr{nullptr};

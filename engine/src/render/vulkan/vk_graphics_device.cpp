@@ -1,6 +1,8 @@
 #include "engpch.h"
 
 #include "core/logger.h"
+#include "render/render_api.h"
+#include "render/resource_types.h"
 #include "render/vulkan/vk_compat.h"
 #include "render/vulkan/vk_context.h"
 #include "render/vulkan/vk_descriptor_heap.h"
@@ -399,7 +401,7 @@ namespace sf::render::vk {
         create_info.imageColorSpace = surface_format.colorSpace;
         create_info.imageExtent = {desc.width, desc.height};
         create_info.imageArrayLayers = 1;
-        create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
         create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         create_info.preTransform = capabilities.currentTransform;
         create_info.compositeAlpha = composite_alpha;
@@ -791,6 +793,43 @@ namespace sf::render::vk {
         auto* ptr = pipeline.get();
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;
+    }
+
+    stl::result<> VkGraphicsDevice::read_texture_pixels(Texture& texture, void* out_data, size_t data_size) {
+        size_t required_size = static_cast<size_t>(texture.width) * texture.height * 4;
+        if (required_size > data_size) {
+            return stl::make_error("Buffer too swall for texture readback, need {} bytes, got {}.", required_size, data_size);
+        }
+        BufferCreationDesc staging_desc{};
+        staging_desc.usage = BufferUsage::Upload;
+        staging_desc.size_in_bytes = required_size;
+        staging_desc.name = L"Readback Staging Buffer";
+        staging_desc.should_map = true;
+        auto staging_res = create_buffer(staging_desc);
+        if (!staging_res) {
+            return stl::make_error("Failed to create staging buffer: {}", staging_res.error().c_str());
+        }
+        if (!staging_res->mapped_data) {
+            m_MemoryAllocator->free_buffer(*staging_res);
+            return stl::make_error("Failed to map staging buffer to readback.");
+        }
+        m_CopyContext->reset();
+        m_CopyContext->transition_barrier(texture, ResourceState::Present, ResourceState::CopySource);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->copy_texture_to_buffer(*staging_res, texture);
+        m_CopyContext->execute_resource_barriers();
+        m_CopyContext->close();
+        VkCommandBuffer cmb_buffer = m_CopyContext->get_vk_command_buffer();
+        VkQueue transfer_queue = static_cast<VkCommandQueue*>(m_TransferQueue.get())->get_vk_queue();
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmb_buffer;
+        VK_RETURN_ON_ERROR(vkQueueSubmit(transfer_queue, 1, &submit_info, VK_NULL_HANDLE), "Failed to submit queue in texture readback.");
+        wait_for_idle();
+        memcpy(out_data, staging_res->mapped_data, required_size);
+        m_MemoryAllocator->free_buffer(*staging_res);
+        return stl::success;
     }
 
     IGraphicsContext& VkGraphicsDevice::get_current_graphics_context() { return *m_GraphicsContexts[m_CurrentFrameIndex]; }

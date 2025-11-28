@@ -43,6 +43,9 @@ namespace sf::render::vk {
         stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
         stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
 
+        // Texture readback (screenshots, editor viewport, etc.)
+        stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) override;
+
         // Context Access
 
         IGraphicsContext& get_current_graphics_context() override;

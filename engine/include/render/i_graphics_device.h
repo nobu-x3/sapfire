@@ -86,6 +86,9 @@ namespace sf::render {
         virtual u32 get_current_frame_index() const = 0;
         virtual u32 get_frames_in_flight() const = 0;
 
+        // Texture readback (screenshots, editor viewport, etc.)
+        virtual stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) = 0;
+
         // Backend Information
 
         virtual RenderAPI get_api() const = 0;
