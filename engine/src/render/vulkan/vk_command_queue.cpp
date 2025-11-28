@@ -26,7 +26,7 @@ namespace sf::render::vk {
         stl::vector<VkCommandBuffer> command_buffers{mem::MemTag::Temp, count};
         for (u32 i = 0; i < count; ++i) {
             auto* vk_ctx = static_cast<VkContext*>(contexts[i]);
-            command_buffers.push_back(vk_ctx->get_vk_command_buffer());
+            command_buffers[i] = vk_ctx->get_vk_command_buffer();
         }
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
