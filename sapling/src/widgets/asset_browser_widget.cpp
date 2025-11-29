@@ -175,7 +175,7 @@ void AssetBrowserWidget::contextMenuEvent(QContextMenuEvent* event) {
 
 void AssetBrowserWidget::import_new_asset() {
     CLIENT_TRACE("Import new asset requested");
-    QString project_path = EditorContext::instance().project_manager()->current_project_path();
+    QString project_path = ProjectManager::instance().current_project_path();
     if (project_path.isEmpty()) {
         CLIENT_WARN("No project loaded, cannot import asset");
         return;

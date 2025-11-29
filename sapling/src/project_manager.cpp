@@ -21,15 +21,18 @@ bool ProjectManager::create_project(const QString& project_path, const QString& 
     }
     if (splash) {
         splash->set_status("Creating project configuration...");
-        splash->set_progress(30);
+        splash->set_progress(10);
     }
     if (!create_project_json(project_path, project_name)) {
         emit project_load_failed("Failed to create project configuration");
         return false;
     }
     if (splash) {
-        splash->set_status("Initializing project...");
-        splash->set_progress(60);
+        splash->set_status("Creating file system...");
+        splash->set_progress(30);
+    }
+    if (!project_path.isEmpty()) {
+        SQFileSystemModel::instance().init_model(project_path);
     }
     m_CurrentProjectPath = project_path;
     m_CurrentProjectName = project_name;
