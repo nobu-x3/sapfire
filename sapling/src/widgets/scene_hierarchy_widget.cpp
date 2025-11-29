@@ -1,15 +1,14 @@
 #include "widgets/scene_hierarchy_widget.h"
-#include "editor_context.h"
 #include "components/name_component.h"
 #include "components/transform.h"
+#include "editor_context.h"
 #include "editor_utils.h"
 
-#include <QVBoxLayout>
-#include <QMenu>
 #include <QAction>
+#include <QMenu>
+#include <QVBoxLayout>
 
-SceneHierarchyWidget::SceneHierarchyWidget(QWidget* parent)
-    : QWidget(parent) {
+SceneHierarchyWidget::SceneHierarchyWidget(QWidget* parent) : QWidget(parent) {
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     m_TreeWidget = new QTreeWidget(this);
@@ -18,10 +17,8 @@ SceneHierarchyWidget::SceneHierarchyWidget(QWidget* parent)
     m_TreeWidget->setDragDropMode(QAbstractItemView::InternalMove);
     m_TreeWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     layout->addWidget(m_TreeWidget);
-    connect(m_TreeWidget, &QTreeWidget::itemSelectionChanged,
-            this, &SceneHierarchyWidget::on_item_selection_changed);
-    connect(m_TreeWidget, &QTreeWidget::customContextMenuRequested,
-            this, &SceneHierarchyWidget::on_context_menu_requested);
+    connect(m_TreeWidget, &QTreeWidget::itemSelectionChanged, this, &SceneHierarchyWidget::on_item_selection_changed);
+    connect(m_TreeWidget, &QTreeWidget::customContextMenuRequested, this, &SceneHierarchyWidget::on_context_menu_requested);
     refresh();
 }
 
@@ -52,8 +49,7 @@ void SceneHierarchyWidget::build_tree() {
     m_TreeWidget->expandAll();
 }
 
-void SceneHierarchyWidget::build_tree_recursive(const sf::stl::vector<sf::stl::generational_index>& indices,
-                                                sf::u32 parent_index,
+void SceneHierarchyWidget::build_tree_recursive(const sf::stl::vector<sf::stl::generational_index>& indices, sf::u32 parent_index,
                                                 QTreeWidgetItem* parent_item) {
     auto* ec_manager = EditorContext::instance().ec_manager();
     if (!ec_manager) {

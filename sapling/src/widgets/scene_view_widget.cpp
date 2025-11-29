@@ -100,11 +100,12 @@ void SceneViewWidget::render() {
     ctx.set_render_target(back_buffer);
     // TODO: render commands go here
     device->end_frame();
-    device->present();  // In headless mode, this just advances the frame index
+    device->present(); // In headless mode, this just advances the frame index
     // Read pixels from offscreen render target to QImage for display in Qt widget
     sf::u32 pixel_count = back_buffer.width * back_buffer.height;
     size_t buffer_size = pixel_count * 4;
-    if (m_RenderedImage.width() != static_cast<int>(back_buffer.width) || m_RenderedImage.height() != static_cast<int>(back_buffer.height)) {
+    if (m_RenderedImage.width() != static_cast<int>(back_buffer.width) ||
+        m_RenderedImage.height() != static_cast<int>(back_buffer.height)) {
         m_RenderedImage = QImage(back_buffer.width, back_buffer.height, QImage::Format_RGBA8888);
     }
     auto read_result = device->read_texture_pixels(back_buffer, m_RenderedImage.bits(), buffer_size);
@@ -112,7 +113,7 @@ void SceneViewWidget::render() {
         CLIENT_CRITICAL("Failed to read texture pixels: {}", read_result.error().c_str());
         return;
     }
-    update();  // Trigger Qt paintEvent to display the image
+    update(); // Trigger Qt paintEvent to display the image
 }
 
 void SceneViewWidget::resizeEvent(QResizeEvent* event) {
