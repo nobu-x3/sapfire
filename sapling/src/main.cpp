@@ -6,11 +6,11 @@
 
 #include <memory/memory.h>
 #include <render/render_backend.h>
-#include "main_window.h"
 #include "editor_context.h"
+#include "main_window.h"
 #include "project_launcher_dialog.h"
-#include "splash_screen.h"
 #include "project_manager.h"
+#include "splash_screen.h"
 
 namespace sf {
     std::unordered_map<const char*, components::ComponentType> components::ComponentRegistry::s_ComponentTypes = {};
@@ -57,23 +57,16 @@ int main(int argc, char** argv) {
     splash.set_progress(15);
 
     // Handle project creation or loading
-    ProjectManager projectManager;
-    bool projectLoaded = false;
+    ProjectManager& project_manager = ProjectManager::instance();
+    bool is_loaded = false;
 
     if (launcher.should_create_new_project()) {
-        projectLoaded = projectManager.create_project(
-            launcher.selected_project_path(),
-            launcher.new_project_name(),
-            &splash
-        );
+        is_loaded = project_manager.create_project(launcher.selected_project_path(), launcher.new_project_name(), &splash);
     } else {
-        projectLoaded = projectManager.load_project(
-            launcher.selected_project_path(),
-            &splash
-        );
+        is_loaded = project_manager.load_project(launcher.selected_project_path(), &splash);
     }
 
-    if (!projectLoaded) {
+    if (!is_loaded) {
         splash.close();
         QMessageBox::critical(nullptr, "Error", "Failed to load project");
         sf::render::RenderBackend::shutdown();

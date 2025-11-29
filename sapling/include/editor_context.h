@@ -6,6 +6,7 @@
 
 struct SDL_Window;
 class QApplication;
+class ProjectManager;
 
 // Singleton that manages shared editor state and engine systems
 class EditorContext {
@@ -16,7 +17,7 @@ public:
     }
 
     static void set_theme(QApplication& app);
-    
+
     void initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 height);
 
     void shutdown();
@@ -24,6 +25,7 @@ public:
     sf::render::IGraphicsDevice* graphics_device() { return m_GraphicsDevice.get(); }
     sf::assets::AssetManager* asset_manager() { return m_AssetManager.get(); }
     sf::ECManager* ec_manager() { return m_ECManager.get(); }
+    ProjectManager* project_manager();
 
     bool is_initialized() const { return m_Initialized; }
 

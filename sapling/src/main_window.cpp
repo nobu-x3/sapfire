@@ -1,8 +1,10 @@
 #include "main_window.h"
 #include "editor_context.h"
 #include "memory/memory.h"
+#include "project_manager.h"
 #include "widgets/asset_browser_widget.h"
 #include "widgets/entity_inspector_widget.h"
+#include "widgets/file_system_model.h"
 #include "widgets/scene_hierarchy_widget.h"
 #include "widgets/scene_view_widget.h"
 
@@ -32,35 +34,35 @@ SaplingMainWindow::SaplingMainWindow(QWidget* parent) : QMainWindow(parent) {
 SaplingMainWindow::~SaplingMainWindow() { write_settings(); }
 
 void SaplingMainWindow::create_menus() {
-    auto* fileMenu = menuBar()->addMenu(tr("&File"));
-    auto* newSceneAction = fileMenu->addAction(tr("&New Scene"));
-    newSceneAction->setShortcut(QKeySequence::New);
-    connect(newSceneAction, &QAction::triggered, this, &SaplingMainWindow::on_new_scene);
-    auto* openSceneAction = fileMenu->addAction(tr("&Open Scene..."));
-    openSceneAction->setShortcut(QKeySequence::Open);
-    connect(openSceneAction, &QAction::triggered, this, &SaplingMainWindow::on_open_scene);
-    fileMenu->addSeparator();
-    auto* saveSceneAction = fileMenu->addAction(tr("&Save Scene"));
-    saveSceneAction->setShortcut(QKeySequence::Save);
-    connect(saveSceneAction, &QAction::triggered, this, &SaplingMainWindow::on_save_scene);
-    auto* saveSceneAsAction = fileMenu->addAction(tr("Save Scene &As..."));
-    saveSceneAsAction->setShortcut(QKeySequence::SaveAs);
-    connect(saveSceneAsAction, &QAction::triggered, this, &SaplingMainWindow::on_save_scene_as);
-    fileMenu->addSeparator();
-    auto* exitAction = fileMenu->addAction(tr("E&xit"));
-    exitAction->setShortcut(QKeySequence::Quit);
-    connect(exitAction, &QAction::triggered, this, &QWidget::close);
-    auto* editMenu = menuBar()->addMenu(tr("&Edit"));
-    auto* undoAction = editMenu->addAction(tr("&Undo"));
-    undoAction->setShortcut(QKeySequence::Undo);
-    undoAction->setEnabled(false); // TODO: Implement undo/redo
-    auto* redoAction = editMenu->addAction(tr("&Redo"));
-    redoAction->setShortcut(QKeySequence::Redo);
-    redoAction->setEnabled(false); // TODO: Implement undo/redo
-    auto* viewMenu = menuBar()->addMenu(tr("&View"));
-    auto* helpMenu = menuBar()->addMenu(tr("&Help"));
-    auto* aboutAction = helpMenu->addAction(tr("&About Sapling"));
-    connect(aboutAction, &QAction::triggered, [this]() {
+    auto* file_menu = menuBar()->addMenu(tr("&File"));
+    auto* new_scene_action = file_menu->addAction(tr("&New Scene"));
+    new_scene_action->setShortcut(QKeySequence::New);
+    connect(new_scene_action, &QAction::triggered, this, &SaplingMainWindow::on_new_scene);
+    auto* open_scene_action = file_menu->addAction(tr("&Open Scene..."));
+    open_scene_action->setShortcut(QKeySequence::Open);
+    connect(open_scene_action, &QAction::triggered, this, &SaplingMainWindow::on_open_scene);
+    file_menu->addSeparator();
+    auto* save_scene_action = file_menu->addAction(tr("&Save Scene"));
+    save_scene_action->setShortcut(QKeySequence::Save);
+    connect(save_scene_action, &QAction::triggered, this, &SaplingMainWindow::on_save_scene);
+    auto* save_scene_as_action = file_menu->addAction(tr("Save Scene &As..."));
+    save_scene_as_action->setShortcut(QKeySequence::SaveAs);
+    connect(save_scene_as_action, &QAction::triggered, this, &SaplingMainWindow::on_save_scene_as);
+    file_menu->addSeparator();
+    auto* exit_action = file_menu->addAction(tr("E&xit"));
+    exit_action->setShortcut(QKeySequence::Quit);
+    connect(exit_action, &QAction::triggered, this, &QWidget::close);
+    auto* edit_menu = menuBar()->addMenu(tr("&Edit"));
+    auto* undo_action = edit_menu->addAction(tr("&Undo"));
+    undo_action->setShortcut(QKeySequence::Undo);
+    undo_action->setEnabled(false); // TODO: Implement undo/redo
+    auto* redo_action = edit_menu->addAction(tr("&Redo"));
+    redo_action->setShortcut(QKeySequence::Redo);
+    redo_action->setEnabled(false); // TODO: Implement undo/redo
+    auto* view_menu = menuBar()->addMenu(tr("&View"));
+    auto* help_menu = menuBar()->addMenu(tr("&Help"));
+    auto* about_action = help_menu->addAction(tr("&About Sapling"));
+    connect(about_action, &QAction::triggered, [this]() {
         QMessageBox::about(this, tr("About Sapling"), tr("Sapling Editor\n\nA game editor built with Qt and Sapfire Engine."));
     });
 }
@@ -83,7 +85,7 @@ void SaplingMainWindow::create_docks() {
     menuBar()->actions()[2]->menu()->addAction(inspector_dock->toggleViewAction());
     auto* asset_dock = new QDockWidget(tr("Asset Browser"), this);
     asset_dock->setAllowedAreas(Qt::BottomDockWidgetArea | Qt::TopDockWidgetArea);
-    m_AssetBrowser = new AssetBrowserWidget(asset_dock);
+    m_AssetBrowser = new AssetBrowserWidget(&SQFileSystemModel::instance(), asset_dock);
     asset_dock->setWidget(m_AssetBrowser);
     addDockWidget(Qt::BottomDockWidgetArea, asset_dock);
     menuBar()->actions()[2]->menu()->addAction(asset_dock->toggleViewAction());

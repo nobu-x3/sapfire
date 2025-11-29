@@ -25,6 +25,9 @@ set(SAPLING_SOURCES
     src/widgets/scene_hierarchy_widget.cpp
     src/widgets/entity_inspector_widget.cpp
     src/widgets/asset_browser_widget.cpp
+    src/widgets/file_system_model.cpp
+    src/widgets/asset_delegate.cpp
+    src/widgets/asset_filter_proxy.cpp
 )
 
 set(SAPLING_HEADERS
@@ -39,12 +42,21 @@ set(SAPLING_HEADERS
     include/widgets/scene_hierarchy_widget.h
     include/widgets/entity_inspector_widget.h
     include/widgets/asset_browser_widget.h
+    include/widgets/file_system_model.h
+    include/widgets/asset_delegate.h
+    include/widgets/asset_filter_proxy.h
+)
+
+
+set(SAPLING_RESOURCES
+    resources/editor_icons.qrc
 )
 
 # Create executable
 add_executable(Sapling
     ${SAPLING_SOURCES}
     ${SAPLING_HEADERS}
+    ${SAPLING_RESOURCES}
 )
 
 # Include directories

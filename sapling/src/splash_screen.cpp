@@ -1,45 +1,39 @@
 #include "splash_screen.h"
 
-#include <QVBoxLayout>
+#include <QApplication>
+#include <QFile>
 #include <QHBoxLayout>
 #include <QPainter>
-#include <QApplication>
 #include <QScreen>
-#include <QFile>
+#include <QVBoxLayout>
 
-SplashScreen::SplashScreen(QWidget* parent)
-    : QWidget(parent, Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint) {
+SplashScreen::SplashScreen(QWidget* parent) : QWidget(parent, Qt::Window | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint) {
     setup_ui();
 }
 
 void SplashScreen::setup_ui() {
     setFixedSize(800, 450);
     setAttribute(Qt::WA_TranslucentBackground);
-    // Center on screen
     QScreen* screen = QApplication::primaryScreen();
-    QRect screenGeometry = screen->geometry();
-    int x = (screenGeometry.width() - width()) / 2;
-    int y = (screenGeometry.height() - height()) / 2;
+    QRect screen_geometry = screen->geometry();
+    int x = (screen_geometry.width() - width()) / 2;
+    int y = (screen_geometry.height() - height()) / 2;
     move(x, y);
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    mainLayout->setSpacing(0);
-    // Main container with black background
+    QVBoxLayout* main_layout = new QVBoxLayout(this);
+    main_layout->setContentsMargins(0, 0, 0, 0);
+    main_layout->setSpacing(0);
     QWidget* container = new QWidget();
     container->setStyleSheet("QWidget { background-color: #000000; }");
-    QVBoxLayout* containerLayout = new QVBoxLayout(container);
-    containerLayout->setContentsMargins(0, 0, 0, 0);
-    containerLayout->setSpacing(0);
-    // Top spacer to push logo toward center
-    containerLayout->addStretch(2);
-    // Logo
+    QVBoxLayout* container_layout = new QVBoxLayout(container);
+    container_layout->setContentsMargins(0, 0, 0, 0);
+    container_layout->setSpacing(0);
+    container_layout->addStretch(2);
     m_LogoLabel = new QLabel();
     m_LogoLabel->setAlignment(Qt::AlignCenter);
-    QString logoPath = QApplication::applicationDirPath() + "/editor_assets/logo.png";
-    if (QFile::exists(logoPath)) {
-        m_LogoPixmap.load(logoPath);
+    QString logo_path = QApplication::applicationDirPath() + "/editor_assets/logo.png";
+    if (QFile::exists(logo_path)) {
+        m_LogoPixmap.load(logo_path);
         if (!m_LogoPixmap.isNull()) {
-            // Scale logo to be large and prominent (Unreal Engine style)
             QPixmap scaledLogo = m_LogoPixmap.scaled(400, 250, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             m_LogoLabel->setPixmap(scaledLogo);
         } else {
@@ -47,45 +41,38 @@ void SplashScreen::setup_ui() {
             m_LogoLabel->setStyleSheet("color: #ffffff; font-size: 72px; font-weight: bold; letter-spacing: 4px;");
         }
     } else {
-        // Fallback text logo - large and bold like Unreal Engine
         m_LogoLabel->setText("SAPFIRE");
         m_LogoLabel->setStyleSheet("color: #ffffff; font-size: 72px; font-weight: bold; letter-spacing: 4px;");
     }
-    containerLayout->addWidget(m_LogoLabel);
-    containerLayout->addSpacing(15);
-    // Version label (small, subtle)
+    container_layout->addWidget(m_LogoLabel);
+    container_layout->addSpacing(15);
     m_VersionLabel = new QLabel("Version 0.1.0");
     m_VersionLabel->setAlignment(Qt::AlignCenter);
     m_VersionLabel->setStyleSheet("color: #606060; font-size: 11px;");
-    containerLayout->addWidget(m_VersionLabel);
-    // Spacer before status
-    containerLayout->addStretch(3);
-    // Status label at bottom
+    container_layout->addWidget(m_VersionLabel);
+    container_layout->addStretch(3);
     m_StatusLabel = new QLabel("Initializing...");
     m_StatusLabel->setAlignment(Qt::AlignCenter);
     m_StatusLabel->setStyleSheet("color: #a0a0a0; font-size: 13px; padding-bottom: 15px;");
     m_StatusLabel->setMinimumHeight(40);
-    containerLayout->addWidget(m_StatusLabel);
-    // Progress bar at very bottom edge (Unreal Engine style - thin line at bottom)
+    container_layout->addWidget(m_StatusLabel);
     m_ProgressBar = new QProgressBar();
     m_ProgressBar->setRange(0, 100);
     m_ProgressBar->setValue(0);
     m_ProgressBar->setTextVisible(false);
     m_ProgressBar->setFixedHeight(4);
-    m_ProgressBar->setStyleSheet(
-        "QProgressBar {"
-        "   border: none;"
-        "   background-color: #1a1a1a;"
-        "   border-radius: 0px;"
-        "   margin: 0px;"
-        "}"
-        "QProgressBar::chunk {"
-        "   background-color: #00aaff;"
-        "   border-radius: 0px;"
-        "}"
-    );
-    containerLayout->addWidget(m_ProgressBar);
-    mainLayout->addWidget(container);
+    m_ProgressBar->setStyleSheet("QProgressBar {"
+                                 "   border: none;"
+                                 "   background-color: #1a1a1a;"
+                                 "   border-radius: 0px;"
+                                 "   margin: 0px;"
+                                 "}"
+                                 "QProgressBar::chunk {"
+                                 "   background-color: #00aaff;"
+                                 "   border-radius: 0px;"
+                                 "}");
+    container_layout->addWidget(m_ProgressBar);
+    main_layout->addWidget(container);
 }
 
 void SplashScreen::set_status(const QString& message) {
@@ -98,12 +85,8 @@ void SplashScreen::set_progress(int value) {
     QApplication::processEvents();
 }
 
-void SplashScreen::finish() {
-    close();
-}
+void SplashScreen::finish() { close(); }
 
 void SplashScreen::paintEvent(QPaintEvent* event) {
-    Q_UNUSED(event);
-    // Custom painting handled by stylesheets
     QWidget::paintEvent(event);
 }

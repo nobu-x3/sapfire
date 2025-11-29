@@ -1,36 +1,52 @@
 #pragma once
 
+#include <QModelIndexList>
 #include <QWidget>
-#include <QListWidget>
-#include <QPushButton>
-#include <QLineEdit>
-#include <QComboBox>
-#include "Sapfire.h"
 
-// AssetBrowserWidget: Browse, import, and manage project assets
-class AssetBrowserWidget : public QWidget {
+class QListView;
+class QTableView;
+class QLabel;
+class QPushButton;
+class QLineEdit;
+class SQFileSystemModel;
+class SQAssetFilterProxyModel;
+
+class AssetBrowserWidget final : public QWidget {
     Q_OBJECT
+  public:
+    explicit AssetBrowserWidget(SQFileSystemModel* model, QWidget *parent = nullptr);
+    ~AssetBrowserWidget();
 
-public:
-    explicit AssetBrowserWidget(QWidget* parent = nullptr);
+    enum class ViewType : char { List, Table, Loading };
+    void set_view_type(ViewType type);
+    QModelIndexList get_selected_assets() const;
+    void import_new_asset();
 
-    void refresh();
+  protected:
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
-private slots:
-    void on_import_asset_clicked();
-    void on_filter_changed(const QString& text);
-    void on_asset_type_changed(int index);
-    void on_asset_double_clicked(QListWidgetItem* item);
+  private slots:
+    void on_loading_finished();
+    void on_search_changed(const QString& text);
+    void on_filter_button_toggled();
 
-private:
-    void populate_asset_list();
-    void filter_assets();
+  private:
+    void update_filter();
 
-private:
-    QListWidget* m_AssetList{nullptr};
-    QLineEdit* m_SearchBox{nullptr};
-    QComboBox* m_TypeFilter{nullptr};
-    QPushButton* m_ImportButton{nullptr};
-    sf::stl::string m_CurrentFilter;
-    int m_CurrentTypeFilter{0}; // 0 = All, 1 = Meshes, 2 = Textures, etc.
+  private:
+    SQFileSystemModel *m_FSModel;
+    SQAssetFilterProxyModel *m_FilterProxy;
+    QListView *m_ListView;
+    QTableView *m_TableView;
+    QLabel *m_LoadingLabel;
+    QPushButton *m_ViewSwitchButton;
+    QLineEdit *m_SearchBox;
+    QPushButton *m_TextureFilter;
+    QPushButton *m_MeshFilter;
+    QPushButton *m_MaterialFilter;
+    QPushButton *m_ShaderFilter;
+    QPushButton *m_SceneFilter;
+    QAction* m_ImportAssetAction;
+    bool m_HasFinishedLoading;
+    ViewType m_CurrentViewType;
 };

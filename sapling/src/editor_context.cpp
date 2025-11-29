@@ -1,4 +1,5 @@
 #include "editor_context.h"
+#include "project_manager.h"
 #include <core/logger.h>
 #include <render/render_backend.h>
 
@@ -81,4 +82,8 @@ void EditorContext::shutdown() {
     m_AssetManager.reset();
     m_Initialized = false;
     CLIENT_INFO("EditorContext shutdown complete.");
+}
+
+ProjectManager* EditorContext::project_manager() {
+    return &ProjectManager::instance();
 }

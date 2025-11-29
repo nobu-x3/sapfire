@@ -9,8 +9,10 @@ class ProjectManager : public QObject {
     Q_OBJECT
 
 public:
-    explicit ProjectManager(QObject* parent = nullptr);
-    ~ProjectManager() override = default;
+    static ProjectManager& instance() {
+        static ProjectManager s_Instance;
+        return s_Instance;
+    }
 
     bool create_project(const QString& projectPath, const QString& projectName, SplashScreen* splash = nullptr);
     bool load_project(const QString& projectPath, SplashScreen* splash = nullptr);
@@ -23,6 +25,12 @@ signals:
     void project_load_failed(const QString& error);
 
 private:
+    explicit ProjectManager(QObject* parent = nullptr);
+    ~ProjectManager() override = default;
+
+    ProjectManager(const ProjectManager&) = delete;
+    ProjectManager& operator=(const ProjectManager&) = delete;
+
     bool create_project_structure(const QString& projectPath, const QString& projectName);
     bool create_project_json(const QString& projectPath, const QString& projectName);
     bool validate_project(const QString& projectPath);

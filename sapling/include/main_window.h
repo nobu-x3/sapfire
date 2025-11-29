@@ -11,6 +11,7 @@ class SceneViewWidget;
 class SceneHierarchyWidget;
 class EntityInspectorWidget;
 class AssetBrowserWidget;
+class SQFileSystemModel;
 
 class SaplingMainWindow : public QMainWindow {
     Q_OBJECT

@@ -11,8 +11,8 @@
 struct ProjectInfo {
     QString name;
     QString path;
-    QString lastModified;
-    QString engineVersion;
+    QString last_modified;
+    QString engine_version;
 };
 
 class ProjectLauncherDialog : public QDialog {
