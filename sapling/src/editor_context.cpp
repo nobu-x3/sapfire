@@ -37,14 +37,15 @@ void EditorContext::set_theme(QApplication& app) {
     dark_palette.setColor(QPalette::Disabled, QPalette::WindowText, QColor(100, 100, 100));
     dark_palette.setColor(QPalette::Disabled, QPalette::ButtonText, QColor(100, 100, 100));
     app.setPalette(dark_palette);
+    CLIENT_INFO("Sapling theme set to dark mode!");
 }
 
 void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 height) {
     if (m_Initialized) {
-        CORE_WARN("EditorContext already initialized!");
+        CLIENT_WARN("EditorContext already initialized!");
         return;
     }
-    CORE_INFO("Initializing EditorContext...");
+    CLIENT_INFO("Initializing EditorContext...");
     m_GraphicsDevice = sf::render::RenderBackend::create_device({
         .window_handle = sdl_window,
         .width = width,
@@ -55,7 +56,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         .headless = true, // Enable headless mode for editor viewport (offscreen rendering)
     });
     if (!m_GraphicsDevice) {
-        CORE_ERROR("Failed to create graphics device!");
+        CLIENT_ERROR("Failed to create graphics device!");
         return;
     }
     m_AssetManager = sf::stl::make_unique<sf::assets::AssetManager>(
@@ -67,17 +68,17 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         });
     m_ECManager = sf::stl::make_unique<sf::ECManager>(sf::mem::MemTag::Application);
     m_Initialized = true;
-    CORE_INFO("EditorContext initialized successfully!");
+    CLIENT_INFO("EditorContext initialized successfully!");
 }
 
 void EditorContext::shutdown() {
     if (!m_Initialized) {
         return;
     }
-    CORE_INFO("Shutting down EditorContext...");
+    CLIENT_INFO("Shutting down EditorContext...");
     m_GraphicsDevice.reset();
     m_ECManager.reset();
     m_AssetManager.reset();
     m_Initialized = false;
-    CORE_INFO("EditorContext shutdown complete.");
+    CLIENT_INFO("EditorContext shutdown complete.");
 }
