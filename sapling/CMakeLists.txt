@@ -91,5 +91,5 @@ add_custom_command(TARGET Sapling POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Sapling>/assets
 )
 add_custom_command(TARGET Sapling POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/editor_assets $<TARGET_FILE_DIR:Sapling>/editor_assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/sapling/editor_assets $<TARGET_FILE_DIR:Sapling>/editor_assets
 )
