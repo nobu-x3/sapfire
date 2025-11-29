@@ -10,6 +10,8 @@
 #include <qnamespace.h>
 #include <qvariant.h>
 
+QSet<QString> ignored_extensions{".json", ".meta"};
+
 SQFileSystemModel& SQFileSystemModel::instance() {
     static SQFileSystemModel model{};
     return model;
@@ -96,7 +98,14 @@ public:
             EAssetType type = get_assetpath_from_path(path);
             QFileInfo fi = it.fileInfo();
             QString filename = fi.fileName();
-            if (filename.endsWith(".meta"))
+            bool should_ignore = false;
+            for (auto&& ext_to_ignore : ignored_extensions) {
+                if (filename.endsWith(ext_to_ignore)) {
+                    should_ignore = true;
+                    break;
+                }
+            }
+            if (should_ignore)
                 continue;
             names.append(filename);
             QString abs_path = fi.absoluteFilePath();
@@ -152,7 +161,14 @@ void SQFileSystemModel::init_model(QStringView project_path) {
         EAssetType type = get_assetpath_from_path(path);
         QFileInfo fi = it.fileInfo();
         QString filename = fi.fileName();
-        if (filename.endsWith(".meta"))
+        bool should_ignore = false;
+        for (auto&& ext_to_ignore : ignored_extensions) {
+            if (filename.endsWith(ext_to_ignore)) {
+                should_ignore = true;
+                break;
+            }
+        }
+        if (should_ignore)
             continue;
         m_Names.append(filename);
         QString abs_path = fi.absoluteFilePath();
