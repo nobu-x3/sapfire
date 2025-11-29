@@ -17,6 +17,9 @@ set(SAPLING_SOURCES
     src/main.cpp
     src/editor_context.cpp
     src/main_window.cpp
+    src/project_launcher_dialog.cpp
+    src/splash_screen.cpp
+    src/project_manager.cpp
     src/widgets/rtti_drawer.cpp
     src/widgets/scene_view_widget.cpp
     src/widgets/scene_hierarchy_widget.cpp
@@ -28,6 +31,9 @@ set(SAPLING_HEADERS
     include/editor_context.h
     include/main_window.h
     include/editor_utils.h
+    include/project_launcher_dialog.h
+    include/splash_screen.h
+    include/project_manager.h
     include/widgets/rtti_drawer.h
     include/widgets/scene_view_widget.h
     include/widgets/scene_hierarchy_widget.h
