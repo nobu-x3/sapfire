@@ -127,7 +127,7 @@ AssetBrowserWidget::AssetBrowserWidget(SQFileSystemModel* model, QWidget* parent
     else
         connect(m_FSModel, &SQFileSystemModel::loading_finished, this, &AssetBrowserWidget::on_loading_finished);
     m_ImportAssetAction = new QAction{"Import new asset"};
-    connect(m_ImportAssetAction, &QAction::triggered, [this](bool) { import_new_asset(); });
+    connect(m_ImportAssetAction, &QAction::triggered, this, &AssetBrowserWidget::on_import_new_action_pressed);
 }
 
 AssetBrowserWidget::~AssetBrowserWidget() {}
@@ -206,6 +206,10 @@ void AssetBrowserWidget::on_search_changed(const QString& text) {
 }
 
 void AssetBrowserWidget::on_filter_button_toggled() { update_filter(); }
+
+void AssetBrowserWidget::on_import_new_action_pressed(bool) {
+    import_new_asset();
+}
 
 void AssetBrowserWidget::update_filter() {
     if (!m_FilterProxy)

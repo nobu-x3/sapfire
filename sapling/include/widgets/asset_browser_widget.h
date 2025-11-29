@@ -29,6 +29,7 @@ class AssetBrowserWidget final : public QWidget {
     void on_loading_finished();
     void on_search_changed(const QString& text);
     void on_filter_button_toggled();
+    void on_import_new_action_pressed(bool);
 
   private:
     void update_filter();
