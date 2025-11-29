@@ -30,26 +30,25 @@ void SceneViewWidget::initialize_rendering() {
     if (m_Initialized) {
         return;
     }
-    CORE_INFO("Initializing SceneViewWidget rendering...");
-    // Note: Cannot use SDL_WINDOW_HIDDEN on Wayland - the compositor blocks vkQueuePresentKHR
-    // on hidden surfaces, causing the application to hang. The window must be visible for
-    // presentation to work, even if we're copying the framebuffer to a QImage later.
-    m_SDLWindow = SDL_CreateWindow("Sapling Viewport", width(), height(), SDL_WINDOW_VULKAN);
+    CLIENT_INFO("Initializing SceneViewWidget rendering...");
+    // In headless mode, we still need an SDL window to create the Vulkan instance
+    // but it's never shown or used for presentation
+    m_SDLWindow = SDL_CreateWindow("Sapling Viewport (Hidden)", 1, 1, SDL_WINDOW_VULKAN | SDL_WINDOW_HIDDEN);
     if (!m_SDLWindow) {
-        CORE_ERROR("Failed to create SDL window: {}", SDL_GetError());
+        CLIENT_ERROR("Failed to create SDL window: {}", SDL_GetError());
         return;
     }
     auto& ctx = EditorContext::instance();
     ctx.initialize(m_SDLWindow, width(), height());
     m_Initialized = true;
-    CORE_INFO("SceneViewWidget initialized successfully!");
+    CLIENT_INFO("SceneViewWidget initialized successfully!");
 }
 
 void SceneViewWidget::shutdown_rendering() {
     if (!m_Initialized) {
         return;
     }
-    CORE_INFO("Shutting down SceneViewWidget...");
+    CLIENT_INFO("Shutting down SceneViewWidget...");
     EditorContext::instance().shutdown();
     if (m_SDLWindow) {
         SDL_DestroyWindow(m_SDLWindow);
@@ -84,7 +83,6 @@ void SceneViewWidget::paintEvent(QPaintEvent* event) {
 }
 
 void SceneViewWidget::render() {
-    CLIENT_TRACE("Render");
     if (!m_Initialized) {
         return;
     }
@@ -92,31 +90,29 @@ void SceneViewWidget::render() {
     if (!device) {
         return;
     }
-    CLIENT_TRACE("PRE BEGIN");
     auto result = device->begin_frame();
     if (!result.has_value()) {
         CLIENT_CRITICAL("Failed to begin frame: {}", result.error().c_str());
         return;
     }
-    CLIENT_TRACE("BEGIN");
     auto& back_buffer = device->get_current_back_buffer();
     auto& ctx = device->get_current_graphics_context();
     ctx.set_render_target(back_buffer);
     // TODO: render commands go here
     device->end_frame();
-    device->present();
-    CLIENT_TRACE("PRESENT");
-    // sf::u32 pixel_count = back_buffer.width * back_buffer.height;
-    // size_t buffer_size = pixel_count * 4;
-    // if(m_RenderedImage.width() != static_cast<int>(back_buffer.width) || m_RenderedImage.height() != static_cast<int>(back_buffer.height)) {
-    //     m_RenderedImage = QImage(back_buffer.width, back_buffer.height, QImage::Format_RGBA8888);
-    // }
-    // auto read_result = device->read_texture_pixels(back_buffer, m_RenderedImage.bits(), buffer_size);
-    // if(!read_result) {
-    //     CLIENT_CRITICAL("Failed to read texture pixels: {}", read_result.error().c_str());
-    //     return;
-    // }
-    // update();
+    device->present();  // In headless mode, this just advances the frame index
+    // Read pixels from offscreen render target to QImage for display in Qt widget
+    sf::u32 pixel_count = back_buffer.width * back_buffer.height;
+    size_t buffer_size = pixel_count * 4;
+    if (m_RenderedImage.width() != static_cast<int>(back_buffer.width) || m_RenderedImage.height() != static_cast<int>(back_buffer.height)) {
+        m_RenderedImage = QImage(back_buffer.width, back_buffer.height, QImage::Format_RGBA8888);
+    }
+    auto read_result = device->read_texture_pixels(back_buffer, m_RenderedImage.bits(), buffer_size);
+    if (!read_result) {
+        CLIENT_CRITICAL("Failed to read texture pixels: {}", read_result.error().c_str());
+        return;
+    }
+    update();  // Trigger Qt paintEvent to display the image
 }
 
 void SceneViewWidget::resizeEvent(QResizeEvent* event) {

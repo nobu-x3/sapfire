@@ -113,6 +113,7 @@ namespace sf::render::vk {
         stl::result<> init_bindless_pipeline_layout();
         stl::result<> init_render_pass();
         stl::result<> create_swapchain_framebuffers();
+        stl::result<> create_offscreen_render_targets(const SwapchainCreationDesc& desc);
         void cleanup_swapchain();
 
         u32 find_queue_family(VkQueueFlags flags);
@@ -167,6 +168,7 @@ namespace sf::render::vk {
         void* m_WindowHandle = nullptr;
         u32 m_WindowWidth = 0;
         u32 m_WindowHeight = 0;
+        bool m_Headless = false; // True for offscreen rendering (editor viewports)
 
         // Queue families
         u32 m_GraphicsQueueFamily = UINT32_MAX;

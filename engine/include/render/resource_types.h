@@ -197,6 +197,7 @@ namespace sf::render {
         u32 buffer_count = 3;
         Format format = Format::RGBA16_FLOAT;
         u32 refresh_rate = 60;
+        bool headless = false; // If true, create offscreen render targets instead of swapchain (for editor viewports)
     };
 
 } // namespace sf::render

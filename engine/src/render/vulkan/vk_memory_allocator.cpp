@@ -92,8 +92,14 @@ namespace sf::render::vk {
         image_info.format = to_vk_format(desc.format);
         image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
         image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        // Base usage flags for all textures
+        image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        // Add attachment usage based on texture type
+        if (desc.usage == TextureUsage::DepthStencil) {
+            image_info.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        } else {
+            image_info.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        }
         image_info.samples = VK_SAMPLE_COUNT_1_BIT;
         image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         VmaAllocationCreateInfo alloc_info{};

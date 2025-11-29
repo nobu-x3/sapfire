@@ -15,6 +15,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         .buffer_count = sf::render::MAX_FRAMES_IN_FLIGHT,
         .format = sf::render::Format::RGBA8_UNORM,
         .refresh_rate = 60,
+        .headless = true,  // Enable headless mode for editor viewport (offscreen rendering)
     });
     if (!m_GraphicsDevice) {
         CORE_ERROR("Failed to create graphics device!");

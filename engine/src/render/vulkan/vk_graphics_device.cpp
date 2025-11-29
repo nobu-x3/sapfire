@@ -56,17 +56,24 @@ namespace sf::render::vk {
         m_WindowWidth = desc.width;
         m_WindowHeight = desc.height;
         m_BackBufferFormat = desc.format;
+        m_Headless = desc.headless;
+
         // Initialize all components and log errors if any fail
         auto instance_result = init_instance();
         if (!instance_result) {
             CORE_CRITICAL(instance_result.error().c_str());
             return;
         }
-        auto surface_result = init_surface(desc);
-        if (!surface_result) {
-            CORE_CRITICAL(surface_result.error().c_str());
-            return;
+
+        // Skip surface/swapchain creation in headless mode
+        if (!m_Headless) {
+            auto surface_result = init_surface(desc);
+            if (!surface_result) {
+                CORE_CRITICAL(surface_result.error().c_str());
+                return;
+            }
         }
+
         auto physical_device_result = init_physical_device();
         if (!physical_device_result) {
             CORE_CRITICAL(physical_device_result.error().c_str());
@@ -77,11 +84,16 @@ namespace sf::render::vk {
             CORE_CRITICAL(logical_device_result.error().c_str());
             return;
         }
-        auto swapchain_result = init_swapchain(desc);
-        if (!swapchain_result) {
-            CORE_CRITICAL(swapchain_result.error().c_str());
-            return;
+
+        // In headless mode, skip swapchain and create custom render targets instead
+        if (!m_Headless) {
+            auto swapchain_result = init_swapchain(desc);
+            if (!swapchain_result) {
+                CORE_CRITICAL(swapchain_result.error().c_str());
+                return;
+            }
         }
+
         auto sync_objs_result = init_sync_objects();
         if (!sync_objs_result) {
             CORE_CRITICAL(sync_objs_result.error().c_str());
@@ -112,17 +124,34 @@ namespace sf::render::vk {
             CORE_CRITICAL(pipeline_layout_result.error().c_str());
             return;
         }
-        auto framebuffers_result = create_swapchain_framebuffers();
-        if (!framebuffers_result) {
-            CORE_CRITICAL(framebuffers_result.error().c_str());
-            return;
+
+        // Create framebuffers (swapchain or offscreen depending on mode)
+        if (!m_Headless) {
+            auto framebuffers_result = create_swapchain_framebuffers();
+            if (!framebuffers_result) {
+                CORE_CRITICAL(framebuffers_result.error().c_str());
+                return;
+            }
+        } else {
+            // Create offscreen render targets
+            auto offscreen_result = create_offscreen_render_targets(desc);
+            if (!offscreen_result) {
+                CORE_CRITICAL(offscreen_result.error().c_str());
+                return;
+            }
         }
+
         auto contexts_result = init_contexts();
         if (!contexts_result) {
             CORE_CRITICAL(contexts_result.error().c_str());
             return;
         }
-        CORE_INFO("Vulkan graphics device initialized successfully");
+
+        if (m_Headless) {
+            CORE_INFO("Vulkan graphics device initialized successfully (headless mode)");
+        } else {
+            CORE_INFO("Vulkan graphics device initialized successfully");
+        }
     }
 
     VkGraphicsDevice::~VkGraphicsDevice() {
@@ -554,6 +583,56 @@ namespace sf::render::vk {
         return stl::success;
     }
 
+    stl::result<> VkGraphicsDevice::create_offscreen_render_targets(const SwapchainCreationDesc& desc) {
+        // Create custom render target textures for headless rendering (editor viewports)
+        CORE_INFO("Creating {} offscreen render targets ({}x{})", m_FramesInFlight, m_WindowWidth, m_WindowHeight);
+        for (u32 i = 0; i < m_FramesInFlight && i < MAX_FRAMES_IN_FLIGHT; ++i) {
+            TextureCreationDesc texture_desc{};
+            texture_desc.width = m_WindowWidth;
+            texture_desc.height = m_WindowHeight;
+            texture_desc.format = m_BackBufferFormat;
+            texture_desc.usage = TextureUsage::RenderTarget;
+            texture_desc.name = L"Offscreen Render Target";
+            auto texture_result = create_texture(texture_desc);
+            if (!texture_result) {
+                CORE_CRITICAL("Failed to create offscreen render target {}: {}", i, texture_result.error().c_str());
+                return stl::make_error(texture_result.error().c_str());
+            }
+            m_BackBuffers[i] = std::move(texture_result.value());
+            VkImage vk_image = reinterpret_cast<VkImage>(m_BackBuffers[i].resource);
+            VkImageViewCreateInfo view_info{};
+            view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+            view_info.image = vk_image;
+            view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            view_info.format = to_vk_format(m_BackBufferFormat);
+            view_info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+            view_info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+            view_info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+            view_info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            view_info.subresourceRange.baseMipLevel = 0;
+            view_info.subresourceRange.levelCount = 1;
+            view_info.subresourceRange.baseArrayLayer = 0;
+            view_info.subresourceRange.layerCount = 1;
+            VK_RETURN_ON_ERROR(vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]),
+                               "Failed to create offscreen render target image view {}", i);
+            VkImageView attachments[] = {m_SwapchainImageViews[i]};
+            VkFramebufferCreateInfo framebuffer_info{};
+            framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebuffer_info.renderPass = m_MainRenderPass;
+            framebuffer_info.attachmentCount = 1;
+            framebuffer_info.pAttachments = attachments;
+            framebuffer_info.width = m_WindowWidth;
+            framebuffer_info.height = m_WindowHeight;
+            framebuffer_info.layers = 1;
+            VK_RETURN_ON_ERROR(vkCreateFramebuffer(m_Device, &framebuffer_info, nullptr, &m_SwapchainFramebuffers[i]),
+                               "Failed to create offscreen framebuffer {}", i);
+        }
+        m_BackBufferCount = m_FramesInFlight;
+        CORE_INFO("Offscreen render targets created successfully");
+        return stl::success;
+    }
+
     void VkGraphicsDevice::cleanup_swapchain() {
         wait_for_idle();
         for (auto& framebuffer : m_SwapchainFramebuffers) {
@@ -566,6 +645,14 @@ namespace sf::render::vk {
             if (image_view != VK_NULL_HANDLE) {
                 vkDestroyImageView(m_Device, image_view, nullptr);
                 image_view = VK_NULL_HANDLE;
+            }
+        }
+        if (m_Headless) {
+            for (auto& back_buffer : m_BackBuffers) {
+                if (back_buffer.resource != nullptr) {
+                    m_MemoryAllocator->free_texture(back_buffer);
+                    back_buffer = Texture{};
+                }
             }
         }
         if (m_Swapchain != VK_NULL_HANDLE) {
@@ -603,9 +690,15 @@ namespace sf::render::vk {
                            "Failed to wait for fences when beginning frame.");
         VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex]),
                            "Failed to reset fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex],
-                                                 VK_NULL_HANDLE, &m_CurrentBackBufferIndex),
-                           "Failed to acquire next swapchain image when beginning frame");
+        if (m_Headless) {
+            // In headless mode, we cycle through our custom render targets manually
+            m_CurrentBackBufferIndex = m_CurrentFrameIndex;
+        } else {
+            // In swapchain mode, acquire the next image from the swapchain
+            VK_RETURN_ON_ERROR(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex],
+                                                     VK_NULL_HANDLE, &m_CurrentBackBufferIndex),
+                               "Failed to acquire next swapchain image when beginning frame");
+        }
         return get_current_graphics_context().reset();
     }
 
@@ -616,17 +709,23 @@ namespace sf::render::vk {
         }
         VkSubmitInfo submit_info{};
         submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphores[m_CurrentFrameIndex]};
-        VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-        submit_info.waitSemaphoreCount = 1;
-        submit_info.pWaitSemaphores = wait_semaphores;
-        submit_info.pWaitDstStageMask = wait_stages;
         VkCommandBuffer cmd_buffer = reinterpret_cast<VkCommandBuffer>(get_current_graphics_context().get_native_command_list());
         submit_info.commandBufferCount = 1;
         submit_info.pCommandBuffers = &cmd_buffer;
-        VkSemaphore signal_semaphores[] = {m_RenderFinishedSemaphores[m_CurrentFrameIndex]};
-        submit_info.signalSemaphoreCount = 1;
-        submit_info.pSignalSemaphores = signal_semaphores;
+        if (m_Headless) {
+            // In headless mode, no semaphore synchronization with swapchain needed
+            // Just signal the fence for CPU-GPU sync
+        } else {
+            // In swapchain mode, wait for image available and signal render finished
+            VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphores[m_CurrentFrameIndex]};
+            VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+            submit_info.waitSemaphoreCount = 1;
+            submit_info.pWaitSemaphores = wait_semaphores;
+            submit_info.pWaitDstStageMask = wait_stages;
+            VkSemaphore signal_semaphores[] = {m_RenderFinishedSemaphores[m_CurrentFrameIndex]};
+            submit_info.signalSemaphoreCount = 1;
+            submit_info.pSignalSemaphores = signal_semaphores;
+        }
         VkQueue graphics_queue;
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
         VK_RETURN_ON_ERROR(vkQueueSubmit(graphics_queue, 1, &submit_info, m_InFlightFences[m_CurrentFrameIndex]),
@@ -635,6 +734,12 @@ namespace sf::render::vk {
     }
 
     stl::result<> VkGraphicsDevice::present() {
+        if (m_Headless) {
+            // In headless mode, no presentation needed - just advance frame index
+            m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % m_FramesInFlight;
+            return stl::success;
+        }
+        // Swapchain mode: present to the window
         VkPresentInfoKHR present_info{};
         present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         present_info.waitSemaphoreCount = 1;
@@ -667,20 +772,34 @@ namespace sf::render::vk {
         if (!wait_result) {
             return wait_result;
         }
+
         cleanup_swapchain();
+
         SwapchainCreationDesc swapchain_desc{};
         swapchain_desc.width = width;
         swapchain_desc.height = height;
         swapchain_desc.format = m_BackBufferFormat;
         swapchain_desc.buffer_count = m_BackBufferCount;
-        auto swapchain_result = init_swapchain(swapchain_desc);
-        if (!swapchain_result) {
-            return swapchain_result;
+        swapchain_desc.headless = m_Headless;
+
+        if (m_Headless) {
+            // Recreate offscreen render targets with new size
+            auto offscreen_result = create_offscreen_render_targets(swapchain_desc);
+            if (!offscreen_result) {
+                return offscreen_result;
+            }
+        } else {
+            // Recreate swapchain for windowed mode
+            auto swapchain_result = init_swapchain(swapchain_desc);
+            if (!swapchain_result) {
+                return swapchain_result;
+            }
+            auto framebuffers_result = create_swapchain_framebuffers();
+            if (!framebuffers_result) {
+                return framebuffers_result;
+            }
         }
-        auto framebuffers_result = create_swapchain_framebuffers();
-        if (!framebuffers_result) {
-            return framebuffers_result;
-        }
+
         CORE_INFO("Window resized to {}x{}", width, height);
         return stl::success;
     }
