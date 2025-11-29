@@ -14,6 +14,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QSettings>
+#include <SDL3/SDL.h>
 
 SaplingMainWindow::SaplingMainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("Sapling Editor");
@@ -89,6 +90,8 @@ void SaplingMainWindow::create_docks() {
 }
 
 void SaplingMainWindow::on_update_timer() {
+    // Process SDL events to keep the hidden SDL window responsive (critical for Wayland)
+    SDL_PumpEvents();
     sf::f32 delta_time = m_DeltaTimer.restart() / 1000.0f;
     if (m_SceneView) {
         m_SceneView->update_frame(delta_time);
