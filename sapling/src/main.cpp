@@ -1,9 +1,12 @@
 #include <QApplication>
+
 #include <SDL3/SDL.h>
 #include <core/logger.h>
+
 #include <memory/memory.h>
 #include <render/render_backend.h>
 #include "main_window.h"
+#include "editor_context.h"
 
 namespace sf {
     std::unordered_map<const char*, components::ComponentType> components::ComponentRegistry::s_ComponentTypes = {};
@@ -24,6 +27,7 @@ int main(int argc, char** argv) {
     QApplication app(argc, argv);
     app.setOrganizationName("Sapfire");
     app.setApplicationName("Sapling");
+    EditorContext::set_theme(app);
 #ifdef _WIN32
     sf::render::RenderBackend::initialize(sf::render::RenderAPI::DX12);
 #else

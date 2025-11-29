@@ -5,6 +5,7 @@
 #include <components/ec_manager.h>
 
 struct SDL_Window;
+class QApplication;
 
 // Singleton that manages shared editor state and engine systems
 class EditorContext {
@@ -14,6 +15,8 @@ public:
         return s_Instance;
     }
 
+    static void set_theme(QApplication& app);
+    
     void initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 height);
 
     void shutdown();
