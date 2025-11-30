@@ -81,6 +81,11 @@ void SaplingMainWindow::create_docks() {
     inspector_dock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
     m_EntityInspector = new EntityInspectorWidget(inspector_dock);
     inspector_dock->setWidget(m_EntityInspector);
+    // When components change in the inspector (eg. name changes), refresh the hierarchy
+    connect(m_EntityInspector, &EntityInspectorWidget::entity_component_changed, [this](sf::Entity) {
+        if (m_SceneHierarchy)
+            m_SceneHierarchy->refresh();
+    });
     addDockWidget(Qt::RightDockWidgetArea, inspector_dock);
     menuBar()->actions()[2]->menu()->addAction(inspector_dock->toggleViewAction());
     auto* asset_dock = new QDockWidget(tr("Asset Browser"), this);

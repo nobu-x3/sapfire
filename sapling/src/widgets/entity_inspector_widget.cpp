@@ -4,8 +4,10 @@
 #include "editor_context.h"
 #include "editor_utils.h"
 
+#include <QDialog>
 #include <QGroupBox>
 #include <QLabel>
+#include <QListWidget>
 #include <QScrollArea>
 #include <QVBoxLayout>
 
@@ -20,6 +22,19 @@ EntityInspectorWidget::EntityInspectorWidget(QWidget* parent) : QWidget(parent) 
     auto* main_layout = new QVBoxLayout(this);
     main_layout->setContentsMargins(0, 0, 0, 0);
     main_layout->addWidget(scroll_area);
+    m_PlaceholderLabel = new QLabel("No entity selected", this);
+    m_PlaceholderLabel->setAlignment(Qt::AlignCenter);
+    m_PlaceholderLabel->setStyleSheet("QLabel { color: gray; margin: 20px; }");
+    auto* add_bar = new QWidget(this);
+    auto* add_bar_layout = new QHBoxLayout(add_bar);
+    add_bar_layout->setContentsMargins(4, 4, 4, 4);
+    add_bar_layout->addStretch(1);
+    m_AddButton = new QPushButton("+", add_bar);
+    m_AddButton->setToolTip("Add component");
+    add_bar_layout->addWidget(m_AddButton);
+    main_layout->addWidget(add_bar);
+    connect(m_AddButton, &QPushButton::clicked, this, &EntityInspectorWidget::on_add_component_clicked);
+    m_AddButton->setVisible(false);
     clear_inspector();
 }
 
@@ -32,23 +47,25 @@ void EntityInspectorWidget::clear_inspector() {
     while (m_MainLayout->count() > 0) {
         auto* item = m_MainLayout->takeAt(0);
         if (item->widget()) {
-            item->widget()->deleteLater();
+            // if this is the cached placeholder, keep it alive and just hide it
+            if (item->widget() == m_PlaceholderLabel) {
+                m_PlaceholderLabel->hide();
+            } else {
+                item->widget()->deleteLater();
+            }
         }
         delete item;
     }
-    m_NameEdit = nullptr;
-    m_PosX = m_PosY = m_PosZ = nullptr;
-    m_RotX = m_RotY = m_RotZ = nullptr;
-    m_ScaleX = m_ScaleY = m_ScaleZ = nullptr;
-    auto* placeholder = new QLabel("No entity selected");
-    placeholder->setAlignment(Qt::AlignCenter);
-    placeholder->setStyleSheet("QLabel { color: gray; margin: 20px; }");
-    m_MainLayout->addRow(placeholder);
 }
 
 void EntityInspectorWidget::populate_inspector() {
     clear_inspector();
     if (!m_CurrentEntity.has_value()) {
+        if (m_MainLayout->indexOf(m_PlaceholderLabel) == -1)
+            m_MainLayout->addRow(m_PlaceholderLabel);
+        m_PlaceholderLabel->show();
+        if (m_AddButton)
+            m_AddButton->setVisible(false);
         return;
     }
     auto* ec_manager = EditorContext::instance().ec_manager();
@@ -56,129 +73,101 @@ void EntityInspectorWidget::populate_inspector() {
         return;
     }
     m_UpdatingUI = true;
-    create_name_section();
-    create_transform_section();
-    // TODO: Add more component sections (RenderComponent, etc.)
+    create_component_sections();
     m_UpdatingUI = false;
 }
 
-void EntityInspectorWidget::create_name_section() {
+void EntityInspectorWidget::create_component_sections() {
     auto* ec_manager = EditorContext::instance().ec_manager();
-    if (!ec_manager || !m_CurrentEntity.has_value()) {
+    if (!ec_manager || !m_CurrentEntity.has_value())
         return;
+    for (auto& [type_name, list] : sf::components::ComponentRegistry::s_EngineComponentLists) {
+        if (!ec_manager->has_component(m_CurrentEntity.value(), sf::stl::string(type_name.c_str())))
+            continue;
+        auto* group = new QGroupBox(QString::fromLatin1(list->to_string().c_str()));
+        auto* group_layout = new QFormLayout(group);
+        auto* drawer = new RttiDrawer(group);
+        connect(drawer, &RttiDrawer::rtti_changed, [this, e = m_CurrentEntity.value()]() { emit entity_component_changed(e); });
+        sf::rtti::rtti_object* obj =
+            EditorContext::instance().ec_manager()->rtti_for(m_CurrentEntity.value(), sf::stl::string(type_name.c_str()));
+        if (obj)
+            drawer->draw_rtti(*obj);
+        group_layout->addRow(drawer);
+        m_MainLayout->addRow(group);
     }
-    auto& name_comp = ec_manager->engine_component<sf::components::NameComponent>(m_CurrentEntity.value());
-    auto* group = new QGroupBox("Name");
-    auto* group_layout = new QFormLayout(group);
-    m_NameEdit = new QLineEdit(str2q(name_comp.name()));
-    connect(m_NameEdit, &QLineEdit::textChanged, this, &EntityInspectorWidget::on_name_changed);
-    group_layout->addRow("Name:", m_NameEdit);
-    m_MainLayout->addRow(group);
+    auto custom_components = ec_manager->components(m_CurrentEntity.value());
+    for (auto& comp : custom_components) {
+        if (!comp)
+            continue;
+        auto* group = new QGroupBox(QString::fromLatin1(comp->to_string().c_str()));
+        auto* group_layout = new QFormLayout(group);
+        auto* drawer = new RttiDrawer(group);
+        connect(drawer, &RttiDrawer::rtti_changed, [this, e = m_CurrentEntity.value()]() { emit entity_component_changed(e); });
+        drawer->draw_rtti(comp->get_rtti());
+        group_layout->addRow(drawer);
+        m_MainLayout->addRow(group);
+    }
+    if (m_AddButton)
+        m_AddButton->setVisible(true);
 }
 
-void EntityInspectorWidget::create_transform_section() {
-    auto* ec_manager = EditorContext::instance().ec_manager();
-    if (!ec_manager || !m_CurrentEntity.has_value()) {
+void EntityInspectorWidget::on_add_component_clicked() {
+    if (!m_CurrentEntity.has_value())
         return;
+    QDialog* dlg = new QDialog(this, Qt::Popup);
+    dlg->setWindowTitle("Add Component");
+    auto* layout = new QVBoxLayout(dlg);
+    auto* search = new QLineEdit(dlg);
+    search->setPlaceholderText("Search components...");
+    layout->addWidget(search);
+    auto* list = new QListWidget(dlg);
+    list->setSelectionMode(QAbstractItemView::SingleSelection);
+    list->setUniformItemSizes(true);
+    list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    layout->addWidget(list);
+    list->clear();
+    for (auto& [type_name, comp_list] : sf::components::ComponentRegistry::s_EngineComponentLists) {
+        QString display = QString::fromLatin1(comp_list->to_string().c_str());
+        auto* item = new QListWidgetItem(display, list);
+        item->setData(Qt::UserRole, QString::fromLatin1(type_name.c_str()));
     }
-    auto& transform = ec_manager->engine_component<sf::components::Transform>(m_CurrentEntity.value());
-    auto* group = new QGroupBox("Transform");
-    auto* group_layout = new QFormLayout(group);
-    auto create_spin_box = []() {
-        auto* spin = new QDoubleSpinBox();
-        spin->setRange(-100000.0, 100000.0);
-        spin->setDecimals(3);
-        spin->setSingleStep(0.1);
-        return spin;
-    };
-    m_PosX = create_spin_box();
-    m_PosY = create_spin_box();
-    m_PosZ = create_spin_box();
-    m_PosX->setValue(transform.position().x);
-    m_PosY->setValue(transform.position().y);
-    m_PosZ->setValue(transform.position().z);
-    auto* pos_layout = new QHBoxLayout();
-    pos_layout->addWidget(new QLabel("X:"));
-    pos_layout->addWidget(m_PosX);
-    pos_layout->addWidget(new QLabel("Y:"));
-    pos_layout->addWidget(m_PosY);
-    pos_layout->addWidget(new QLabel("Z:"));
-    pos_layout->addWidget(m_PosZ);
-    group_layout->addRow("Position:", pos_layout);
-    m_RotX = create_spin_box();
-    m_RotY = create_spin_box();
-    m_RotZ = create_spin_box();
-    m_RotX->setRange(-360.0, 360.0);
-    m_RotY->setRange(-360.0, 360.0);
-    m_RotZ->setRange(-360.0, 360.0);
-    m_RotX->setValue(transform.rotation().x);
-    m_RotY->setValue(transform.rotation().y);
-    m_RotZ->setValue(transform.rotation().z);
-    auto* rot_layout = new QHBoxLayout();
-    rot_layout->addWidget(new QLabel("X:"));
-    rot_layout->addWidget(m_RotX);
-    rot_layout->addWidget(new QLabel("Y:"));
-    rot_layout->addWidget(m_RotY);
-    rot_layout->addWidget(new QLabel("Z:"));
-    rot_layout->addWidget(m_RotZ);
-    group_layout->addRow("Rotation:", rot_layout);
-    m_ScaleX = create_spin_box();
-    m_ScaleY = create_spin_box();
-    m_ScaleZ = create_spin_box();
-    m_ScaleX->setValue(transform.scale().x);
-    m_ScaleY->setValue(transform.scale().y);
-    m_ScaleZ->setValue(transform.scale().z);
-    auto* scale_layout = new QHBoxLayout();
-    scale_layout->addWidget(new QLabel("X:"));
-    scale_layout->addWidget(m_ScaleX);
-    scale_layout->addWidget(new QLabel("Y:"));
-    scale_layout->addWidget(m_ScaleY);
-    scale_layout->addWidget(new QLabel("Z:"));
-    scale_layout->addWidget(m_ScaleZ);
-    group_layout->addRow("Scale:", scale_layout);
-    connect(m_PosX, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_PosY, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_PosZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_RotX, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_RotY, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_RotZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_ScaleX, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_ScaleY, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    connect(m_ScaleZ, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, &EntityInspectorWidget::on_transform_changed);
-    m_MainLayout->addRow(group);
+    for (auto& [type_name, comp_list] : sf::components::ComponentRegistry::s_CustomComponentLists) {
+        QString display = QString::fromLatin1(comp_list->to_string().c_str());
+        auto* item = new QListWidgetItem(display, list);
+        item->setData(Qt::UserRole, QString::fromLatin1(type_name.c_str()));
+    }
+    connect(search, &QLineEdit::textChanged, [list](const QString& txt) {
+        for (int i = 0; i < list->count(); ++i) {
+            auto* item = list->item(i);
+            bool show = item->text().contains(txt, Qt::CaseInsensitive);
+            item->setHidden(!show);
+        }
+    });
+    connect(list, &QListWidget::itemActivated, [this, dlg](QListWidgetItem* item) {
+        if (!item)
+            return;
+        // TODO: maybe add proper filtering if this causes performance issues when there are a lot of components.
+        QString type_name = item->data(Qt::UserRole).toString();
+        on_pick_component(type_name);
+        dlg->close();
+    });
+    QPoint pos = m_AddButton->mapToGlobal(QPoint(0, m_AddButton->height()));
+    dlg->move(pos);
+    dlg->setModal(false);
+    dlg->show();
 }
 
-void EntityInspectorWidget::on_name_changed() {
-    if (m_UpdatingUI || !m_CurrentEntity.has_value() || !m_NameEdit) {
+void EntityInspectorWidget::on_pick_component(const QString& qtype_name) {
+    if (!m_CurrentEntity.has_value())
         return;
-    }
+    auto type_name = sf::stl::string(sf::mem::MemTag::Temp, qtype_name.toLatin1().data());
     auto* ec_manager = EditorContext::instance().ec_manager();
-    if (!ec_manager) {
+    if (!ec_manager)
         return;
+    if (ec_manager->has_component(m_CurrentEntity.value(), type_name)) {
+        ec_manager->reset_component(m_CurrentEntity.value(), type_name);
+    } else {
+        ec_manager->add_component(m_CurrentEntity.value(), type_name);
     }
-    auto& name_comp = ec_manager->engine_component<sf::components::NameComponent>(m_CurrentEntity.value());
-    name_comp.name(m_NameEdit->text().toLatin1().data());
-}
-
-void EntityInspectorWidget::on_transform_changed() {
-    if (m_UpdatingUI || !m_CurrentEntity.has_value()) {
-        return;
-    }
-    auto* ec_manager = EditorContext::instance().ec_manager();
-    if (!ec_manager) {
-        return;
-    }
-    auto& transform = ec_manager->engine_component<sf::components::Transform>(m_CurrentEntity.value());
-    if (m_PosX && m_PosY && m_PosZ) {
-        transform.position(sf::math::vec4{static_cast<sf::f32>(m_PosX->value()), static_cast<sf::f32>(m_PosY->value()),
-                                          static_cast<sf::f32>(m_PosZ->value()), 1.0f});
-    }
-    if (m_RotX && m_RotY && m_RotZ) {
-        transform.rotation(sf::math::quat::from_euler(static_cast<sf::f32>(m_RotX->value()), static_cast<sf::f32>(m_RotY->value()),
-                                                      static_cast<sf::f32>(m_RotZ->value())));
-    }
-    if (m_ScaleX && m_ScaleY && m_ScaleZ) {
-        transform.scale(sf::math::vec4{static_cast<sf::f32>(m_ScaleX->value()), static_cast<sf::f32>(m_ScaleY->value()),
-                                       static_cast<sf::f32>(m_ScaleZ->value()), 1.0f});
-    }
+    populate_inspector();
 }

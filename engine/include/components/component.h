@@ -25,13 +25,21 @@ namespace sf::components {
     public:
         virtual ~IComponentList() = default;
         virtual void entity_destroyed(Entity entity) = 0;
-        virtual stl::string to_tstring() = 0;
+        virtual stl::string to_string() = 0;
+        // Query whether this list has a component for the given entity
+        virtual bool exists(Entity entity) = 0;
+        // Insert a default/empty component instance for the given entity
+        virtual void insert_default(Entity entity) = 0;
+        // Reset the component for the entity back to a default instance (if present)
+        virtual void reset(Entity entity) = 0;
+        // Return the rtti_object for the component instance belonging to the entity, or nullptr
+        virtual ::sf::rtti::rtti_object* rtti_for_entity(Entity entity) = 0;
     };
 
     template <typename T>
     class EngineComponentList : public IComponentList {
     public:
-        stl::string to_tstring() override { return T::to_tstring(); }
+        stl::string to_string() override { return T::to_tstring(); }
 
         void insert(Entity entity, T component) {
             if (m_EntityToIndexMap.contains(entity)) {
@@ -45,7 +53,7 @@ namespace sf::components {
             m_Components.push_back(component);
         }
 
-        bool exists(Entity entity) { return m_EntityToIndexMap.contains(entity); }
+        bool exists(Entity entity) override { return m_EntityToIndexMap.contains(entity); }
 
         void remove(Entity entity) {
             if (m_Components.size() <= 0)
@@ -69,6 +77,21 @@ namespace sf::components {
             if (m_EntityToIndexMap.find(entity) != m_EntityToIndexMap.end()) {
                 remove(entity);
             }
+        }
+
+        void insert_default(Entity entity) override { insert(entity, T()); }
+
+        void reset(Entity entity) override {
+            if (!m_EntityToIndexMap.contains(entity))
+                return;
+            auto idx = m_EntityToIndexMap[entity];
+            m_Components[idx] = T();
+        }
+
+        ::sf::rtti::rtti_object* rtti_for_entity(Entity entity) override {
+            if (!m_EntityToIndexMap.contains(entity))
+                return nullptr;
+            return &m_Components[m_EntityToIndexMap[entity]].get_rtti();
         }
 
         stl::vector<T>& components() { return m_Components; }
@@ -108,11 +131,15 @@ namespace sf::components {
         CustomComponentList& operator=(const CustomComponentList&) = default;
         CustomComponentList& operator=(CustomComponentList&&) noexcept = default;
         stl::shared_ptr<IComponent> default_component;
-        stl::string to_tstring() override;
+        stl::string to_string() override;
         void insert(Entity entity, stl::shared_ptr<IComponent>& component);
         void remove(Entity entity);
         stl::shared_ptr<IComponent> get(Entity entity);
         void entity_destroyed(Entity entity) override;
+        bool exists(Entity entity) override;
+        void insert_default(Entity entity) override;
+        void reset(Entity entity) override;
+        ::sf::rtti::rtti_object* rtti_for_entity(Entity entity) override;
         const stl::vector<stl::shared_ptr<IComponent>>& components() const { return m_Components; }
 
     private:
@@ -247,6 +274,12 @@ namespace sf::components {
         stl::shared_ptr<IComponent> component(Entity entity, const char* type_name);
         stl::vector<stl::shared_ptr<IComponent>> components(Entity entity, Signature signature);
         void entity_destroyed(Entity entity);
+
+        // Runtime helpers for working with components by name/type (works for both engine and custom lists)
+        bool has_component(Entity entity, const stl::string& type_name);
+        void add_component(Entity entity, const stl::string& type_name);
+        void reset_component(Entity entity, const stl::string& type_name);
+        ::sf::rtti::rtti_object* rtti_for(Entity entity, const stl::string& type_name);
 
     private:
         stl::unordered_map<stl::string, ComponentType> m_ComponentTypes;

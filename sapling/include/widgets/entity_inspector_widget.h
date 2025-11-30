@@ -5,6 +5,8 @@
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QLabel>
+#include <QPushButton>
+#include "widgets/rtti_drawer.h"
 #include "Sapfire.h"
 
 // EntityInspectorWidget: Displays and edits properties of the selected entity
@@ -19,25 +21,19 @@ public:
 private:
     void clear_inspector();
     void populate_inspector();
-    void create_transform_section();
-    void create_name_section();
+    void create_component_sections();
+signals:
+    void entity_component_changed(::sf::Entity entity);
 
 private slots:
-    void on_name_changed();
-    void on_transform_changed();
+    void on_add_component_clicked();
+    void on_pick_component(const QString&);
 
 private:
     QFormLayout* m_MainLayout{nullptr};
     sf::stl::optional<sf::Entity> m_CurrentEntity;
-    QLineEdit* m_NameEdit{nullptr};
-    QDoubleSpinBox* m_PosX{nullptr};
-    QDoubleSpinBox* m_PosY{nullptr};
-    QDoubleSpinBox* m_PosZ{nullptr};
-    QDoubleSpinBox* m_RotX{nullptr};
-    QDoubleSpinBox* m_RotY{nullptr};
-    QDoubleSpinBox* m_RotZ{nullptr};
-    QDoubleSpinBox* m_ScaleX{nullptr};
-    QDoubleSpinBox* m_ScaleY{nullptr};
-    QDoubleSpinBox* m_ScaleZ{nullptr};
-    bool m_UpdatingUI{false}; // Prevent feedback loops
+    QPushButton* m_AddButton{nullptr};
+    QLabel* m_PlaceholderLabel{nullptr};
+    sf::stl::vector<sf::stl::string> m_AvailableComponentTypeNames{sf::mem::MemTag::Logic};
+    bool m_UpdatingUI{false};
 };

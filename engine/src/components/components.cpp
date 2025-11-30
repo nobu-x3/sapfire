@@ -96,7 +96,7 @@ namespace sf::components {
     }
 
     CustomComponentList::CustomComponentList(const stl::shared_ptr<IComponent>& def_comp) : default_component(def_comp) {}
-    stl::string CustomComponentList::to_tstring() { return default_component->to_string(); }
+    stl::string CustomComponentList::to_string() { return default_component->to_string(); }
 
     void CustomComponentList::insert(Entity entity, stl::shared_ptr<IComponent>& component) {
         if (m_EntityToIndexMap.size() > 0 && m_EntityToIndexMap.contains(entity)) {
@@ -128,6 +128,29 @@ namespace sf::components {
         if (m_EntityToIndexMap.find(entity) != m_EntityToIndexMap.end()) {
             remove(entity);
         }
+    }
+
+    bool CustomComponentList::exists(Entity entity) { return m_EntityToIndexMap.contains(entity); }
+
+    void CustomComponentList::insert_default(Entity entity) {
+        stl::shared_ptr<IComponent> component;
+        default_component->copy(component);
+        insert(entity, component);
+    }
+
+    void CustomComponentList::reset(Entity entity) {
+        if (!m_EntityToIndexMap.contains(entity))
+            return;
+        stl::shared_ptr<IComponent> component;
+        default_component->copy(component);
+        auto idx = m_EntityToIndexMap[entity];
+        m_Components[idx] = component;
+    }
+
+    ::sf::rtti::rtti_object* CustomComponentList::rtti_for_entity(Entity entity) {
+        if (!m_EntityToIndexMap.contains(entity))
+            return nullptr;
+        return &m_Components[m_EntityToIndexMap[entity]]->get_rtti();
     }
 
     void ComponentRegistry::add_component(Entity entity, stl::shared_ptr<IComponent>& component) {
@@ -186,5 +209,49 @@ namespace sf::components {
             if (component_list)
                 component_list->entity_destroyed(entity);
         }
+    }
+
+    bool ComponentRegistry::has_component(Entity entity, const stl::string& type_name) {
+        if (m_EngineComponentLists.contains(type_name)) {
+            return m_EngineComponentLists[type_name]->exists(entity);
+        }
+        if (m_CustomComponentLists.contains(type_name)) {
+            return m_CustomComponentLists[type_name]->exists(entity);
+        }
+        return false;
+    }
+
+    void ComponentRegistry::add_component(Entity entity, const stl::string& type_name) {
+        if (m_EngineComponentLists.contains(type_name)) {
+            m_EngineComponentLists[type_name]->insert_default(entity);
+            return;
+        }
+        if (m_CustomComponentLists.contains(type_name)) {
+            m_CustomComponentLists[type_name]->insert_default(entity);
+            return;
+        }
+        CORE_WARN("add_component: unknown component type '%s'", type_name.c_str());
+    }
+
+    void ComponentRegistry::reset_component(Entity entity, const stl::string& type_name) {
+        if (m_EngineComponentLists.contains(type_name)) {
+            m_EngineComponentLists[type_name]->reset(entity);
+            return;
+        }
+        if (m_CustomComponentLists.contains(type_name)) {
+            m_CustomComponentLists[type_name]->reset(entity);
+            return;
+        }
+        CORE_WARN("reset_component: unknown component type '%s'", type_name.c_str());
+    }
+
+    ::sf::rtti::rtti_object* ComponentRegistry::rtti_for(Entity entity, const stl::string& type_name) {
+        if (m_EngineComponentLists.contains(type_name)) {
+            return m_EngineComponentLists[type_name]->rtti_for_entity(entity);
+        }
+        if (m_CustomComponentLists.contains(type_name)) {
+            return m_CustomComponentLists[type_name]->rtti_for_entity(entity);
+        }
+        return nullptr;
     }
 } // namespace sf::components

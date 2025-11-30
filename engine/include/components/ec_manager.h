@@ -104,6 +104,24 @@ namespace sf {
             return m_ComponentRegistry->components(entity, m_EntityRegistry->signature(entity));
         }
 
+        // Runtime operations by component type name
+        bool has_component(Entity entity, const stl::string& type_name) { return m_ComponentRegistry->has_component(entity, type_name); }
+        void add_component(Entity entity, const stl::string& type_name) {
+            m_ComponentRegistry->add_component(entity, type_name);
+            auto signature = m_EntityRegistry->signature(entity);
+            std::string key = type_name.c_str();
+            auto it = ::sf::components::ComponentRegistry::s_ComponentTypes.find(key);
+            if (it != ::sf::components::ComponentRegistry::s_ComponentTypes.end())
+                signature.set(it->second, true);
+            m_EntityRegistry->signature(entity, signature);
+        }
+
+        void reset_component(Entity entity, const stl::string& type_name) {
+            m_ComponentRegistry->reset_component(entity, type_name);
+        }
+
+        ::sf::rtti::rtti_object* rtti_for(Entity entity, const stl::string& type_name) { return m_ComponentRegistry->rtti_for(entity, type_name); }
+
     private:
         stl::unique_ptr<components::ComponentRegistry> m_ComponentRegistry;
         stl::unique_ptr<EntityRegistry> m_EntityRegistry;
