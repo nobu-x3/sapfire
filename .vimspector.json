@@ -25,7 +25,7 @@
       "configuration": {
         "request": "launch",
         "program": "${workspaceFolder}/build/sapling/Sapling",
-        "cwd": "${workspaceFolder}/build",
+        "cwd": "${workspaceFolder}/build/sapling",
         "environment": [],
         "externalConsole": true,
         "MIMode": "gdb",
