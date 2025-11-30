@@ -1,0 +1,5 @@
+<a href="https://www.flaticon.com/free-icons/picture" title="picture icons">Picture icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/object" title="object icons">Object icons created by LAFS - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/material" title="material icons">Material icons created by Freepik - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/coding" title="coding icons">Coding icons created by Kiranshastry - Flaticon</a>
+<a href="https://www.flaticon.com/free-icons/map" title="map icons">Map icons created by Freepik - Flaticon</a>

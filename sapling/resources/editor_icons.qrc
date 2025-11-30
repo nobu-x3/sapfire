@@ -1,10 +1,9 @@
 <RCC>
     <qresource prefix="/icons">
-        <file alias="mesh_16.png">../editor_assets/icons/mesh_icon_16.png</file>
-        <file alias="mesh_24.png">../editor_assets/icons/mesh_icon_24.png</file>
-        <file alias="mesh_32.png">../editor_assets/icons/mesh_icon_32.png</file>
-        <file alias="image_16.png">../editor_assets/icons/image_icon_16.png</file>
-        <file alias="image_24.png">../editor_assets/icons/image_icon_24.png</file>
-        <file alias="image_32.png">../editor_assets/icons/image_icon_32.png</file>
+        <file alias="mesh_32">icons/mesh_32.png</file>
+        <file alias="texture_32">icons/texture_32.png</file>
+        <file alias="material_32">icons/material_32.png</file>
+        <file alias="shader_32">icons/shader_32.png</file>
+        <file alias="scene_32">icons/scene_32.png</file>
     </qresource>
 </RCC>
