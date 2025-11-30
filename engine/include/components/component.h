@@ -93,9 +93,9 @@ namespace sf::components {
         }
 
     private:
-        stl::vector<T> m_Components;
-        stl::unordered_map<Entity, size_t> m_EntityToIndexMap;
-        stl::unordered_map<size_t, Entity> m_IndexToEntityMap;
+        stl::vector<T> m_Components{mem::MemTag::Logic};
+        stl::unordered_map<Entity, size_t> m_EntityToIndexMap{mem::MemTag::Logic};
+        stl::unordered_map<size_t, Entity> m_IndexToEntityMap{mem::MemTag::Logic};
     };
 
     class CustomComponentList : public IComponentList {
@@ -225,17 +225,17 @@ namespace sf::components {
         void entity_destroyed(Entity entity);
 
     private:
-        stl::unordered_map<const char*, ComponentType> m_ComponentTypes{};
-        stl::unordered_map<ComponentType, const char*> m_ComponentTypeNameMap{};
-        stl::unordered_map<const char*, stl::shared_ptr<IComponentList>> m_EngineComponentLists{};
-        stl::unordered_map<const char*, stl::shared_ptr<CustomComponentList>> m_CustomComponentLists{};
+        stl::unordered_map<const char*, ComponentType> m_ComponentTypes;
+        stl::unordered_map<ComponentType, const char*> m_ComponentTypeNameMap;
+        stl::unordered_map<const char*, std::shared_ptr<IComponentList>> m_EngineComponentLists;
+        stl::unordered_map<const char*, std::shared_ptr<CustomComponentList>> m_CustomComponentLists;
         ComponentType m_NextComponentTypeNumber{};
 
     public:
         static std::unordered_map<const char*, ComponentType> s_ComponentTypes;
         static std::unordered_map<ComponentType, const char*> s_ComponentTypeNameMap;
-        static std::unordered_map<const char*, stl::shared_ptr<IComponentList>> s_EngineComponentLists;
-        static std::unordered_map<const char*, stl::shared_ptr<CustomComponentList>> s_CustomComponentLists;
+        static std::unordered_map<const char*, std::shared_ptr<IComponentList>> s_EngineComponentLists;
+        static std::unordered_map<const char*, std::shared_ptr<CustomComponentList>> s_CustomComponentLists;
         static ComponentType s_NextComponentTypeNumber;
     };
 

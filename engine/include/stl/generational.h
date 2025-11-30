@@ -3,8 +3,8 @@
 #include <iostream>
 #include <vector>
 #include "core/core.h"
-#include "stl/vector.h"
 #include "stl/types.h"
+#include "stl/vector.h"
 
 namespace sf::stl {
 
@@ -15,6 +15,8 @@ namespace sf::stl {
 
     class SFAPI generational_index_allocator {
     public:
+        generational_index_allocator(mem::MemTag tag) : m_Entries(tag), m_FreeIndices(tag) {}
+
         generational_index allocate() {
             if (m_FreeIndices.size() > 0) {
                 u32 index = m_FreeIndices.back();
@@ -44,8 +46,8 @@ namespace sf::stl {
             bool is_alive = false;
             u32 generation = 0;
         };
-        std::vector<entry> m_Entries{};
-        std::vector<u32> m_FreeIndices{};
+        stl::vector<entry> m_Entries;
+        stl::vector<u32> m_FreeIndices;
     };
 
     template <typename T>
@@ -55,6 +57,8 @@ namespace sf::stl {
             u32 generation;
             T value;
         };
+
+        generational_vector(mem::MemTag tag) : m_Entries(tag) {}
 
         void set(generational_index index, T val) {
             while (m_Entries.size() <= index.index)
@@ -128,7 +132,7 @@ namespace sf::stl {
         auto end() const { return m_Entries.end(); }
 
     private:
-        std::vector<stl::optional<entry>> m_Entries;
+        stl::vector<stl::optional<entry>> m_Entries;
     };
 
 } // namespace sf::stl

@@ -23,6 +23,7 @@ namespace sf::components {
         }
         m_NextComponentTypeNumber = s_NextComponentTypeNumber;
     }
+
     CustomComponentList::CustomComponentList(const stl::shared_ptr<IComponent>& def_comp) : default_component(def_comp) {}
     stl::string CustomComponentList::to_tstring() { return default_component->to_string(); }
 

@@ -7,6 +7,7 @@
 
 namespace sf::components {
     ENGINE_COMPONENT_IMPL(Transform);
+
     Transform::Transform(const Transform& other) {
         m_Transform = other.m_Transform;
         m_Rotation = other.m_Rotation;
@@ -21,6 +22,7 @@ namespace sf::components {
         m_Dirty = other.m_Dirty;
         register_rtti();
     }
+
     Transform::Transform(Transform&& other) noexcept {
         m_Transform = std::move(other.m_Transform);
         m_Rotation = std::move(other.m_Rotation);
@@ -35,6 +37,7 @@ namespace sf::components {
         m_Dirty = std::move(other.m_Dirty);
         register_rtti();
     }
+
     Transform& Transform::operator=(const Transform& other) {
         m_Transform = other.m_Transform;
         m_Rotation = other.m_Rotation;
@@ -50,6 +53,7 @@ namespace sf::components {
         register_rtti();
         return *this;
     }
+
     Transform& Transform::operator=(Transform&& other) noexcept {
         m_Transform = std::move(other.m_Transform);
         m_Rotation = std::move(other.m_Rotation);
