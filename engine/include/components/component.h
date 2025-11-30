@@ -124,6 +124,7 @@ namespace sf::components {
     class ComponentRegistry {
     public:
         ComponentRegistry();
+        ~ComponentRegistry();
 
         // Helper: Create a registration lambda that properly captures type info at definition time
         template <typename T>
@@ -132,7 +133,7 @@ namespace sf::components {
             return [type_name]() {
                 s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
                 s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-                s_EngineComponentLists[type_name] = stl::make_shared<EngineComponentList<T>>(mem::MemTag::Logic);
+                s_EngineComponentLists[type_name] = std::make_shared<EngineComponentList<T>>();
                 s_NextComponentTypeNumber++;
             };
         }
@@ -149,7 +150,7 @@ namespace sf::components {
                 const char* type_name = type_str.c_str();
                 s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
                 s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-                s_CustomComponentLists[type_name] = stl::make_shared<CustomComponentList>(mem::MemTag::Logic, component);
+                s_CustomComponentLists[type_name] = std::make_shared<CustomComponentList>(component);
                 s_NextComponentTypeNumber++;
             });
         }
@@ -159,7 +160,11 @@ namespace sf::components {
         // Internal: Register a component registration function to be called during process_queued_registrations
         static void register_component_registration_func(std::function<void()> func);
 
+        static void shutdown();
+
     private:
+        static void register_instance(ComponentRegistry* inst);
+        static void unregister_instance(ComponentRegistry* inst);
         static void queue_registration(std::function<void()> registration_func);
 
     public:
@@ -244,17 +249,17 @@ namespace sf::components {
         void entity_destroyed(Entity entity);
 
     private:
-        stl::unordered_map<const char*, ComponentType> m_ComponentTypes;
-        stl::unordered_map<ComponentType, const char*> m_ComponentTypeNameMap;
-        stl::unordered_map<const char*, std::shared_ptr<IComponentList>> m_EngineComponentLists;
-        stl::unordered_map<const char*, std::shared_ptr<CustomComponentList>> m_CustomComponentLists;
+        stl::unordered_map<stl::string, ComponentType> m_ComponentTypes;
+        stl::unordered_map<ComponentType, stl::string> m_ComponentTypeNameMap;
+        stl::unordered_map<stl::string, std::shared_ptr<IComponentList>> m_EngineComponentLists;
+        stl::unordered_map<stl::string, std::shared_ptr<CustomComponentList>> m_CustomComponentLists;
         ComponentType m_NextComponentTypeNumber{};
 
     public:
-        static std::unordered_map<const char*, ComponentType> s_ComponentTypes;
-        static std::unordered_map<ComponentType, const char*> s_ComponentTypeNameMap;
-        static std::unordered_map<const char*, std::shared_ptr<IComponentList>> s_EngineComponentLists;
-        static std::unordered_map<const char*, std::shared_ptr<CustomComponentList>> s_CustomComponentLists;
+        static std::unordered_map<std::string, ComponentType> s_ComponentTypes;
+        static std::unordered_map<ComponentType, std::string> s_ComponentTypeNameMap;
+        static std::unordered_map<std::string, std::shared_ptr<IComponentList>> s_EngineComponentLists;
+        static std::unordered_map<std::string, std::shared_ptr<CustomComponentList>> s_CustomComponentLists;
         static ComponentType s_NextComponentTypeNumber;
     };
 

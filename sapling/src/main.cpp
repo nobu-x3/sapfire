@@ -6,6 +6,7 @@
 
 #include <memory/memory.h>
 #include <render/render_backend.h>
+#include "components/component.h"
 #include "editor_context.h"
 #include "main_window.h"
 #include "project_launcher_dialog.h"
@@ -78,5 +79,6 @@ int main(int argc, char** argv) {
     }
     sf::render::RenderBackend::shutdown();
     SDL_Quit();
+    sf::components::ComponentRegistry::shutdown();
     return result;
 }

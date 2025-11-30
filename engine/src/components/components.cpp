@@ -5,12 +5,17 @@
 
 namespace sf::components {
 
-    std::unordered_map<const char*, ComponentType> ComponentRegistry::s_ComponentTypes = {};
-    std::unordered_map<ComponentType, const char*> ComponentRegistry::s_ComponentTypeNameMap = {};
-    std::unordered_map<const char*, stl::shared_ptr<IComponentList>> ComponentRegistry::s_EngineComponentLists = {};
-    std::unordered_map<const char*, stl::shared_ptr<CustomComponentList>>
-        ComponentRegistry::s_CustomComponentLists{};
+    std::unordered_map<std::string, ComponentType> ComponentRegistry::s_ComponentTypes = {};
+    std::unordered_map<ComponentType, std::string> ComponentRegistry::s_ComponentTypeNameMap = {};
+    std::unordered_map<std::string, std::shared_ptr<IComponentList>> ComponentRegistry::s_EngineComponentLists = {};
+    std::unordered_map<std::string, std::shared_ptr<CustomComponentList>> ComponentRegistry::s_CustomComponentLists{};
     ComponentType ComponentRegistry::s_NextComponentTypeNumber = 0;
+
+    // Track live ComponentRegistry instances so shutdown() can clear their member maps
+    static std::vector<ComponentRegistry*>& get_instance_list() {
+        static std::vector<ComponentRegistry*> instances;
+        return instances;
+    }
 
     // Two queues: one for registration functions, one for actual registrations
     static std::vector<std::function<void()>>& get_registration_func_list() {
@@ -31,6 +36,20 @@ namespace sf::components {
         get_registration_queue().push_back(registration_func);
     }
 
+    void ComponentRegistry::shutdown() {
+        s_ComponentTypes.clear();
+        s_ComponentTypeNameMap.clear();
+        s_EngineComponentLists.clear();
+        s_CustomComponentLists.clear();
+        for (auto* inst : get_instance_list()) {
+            inst->m_EngineComponentLists.clear();
+            inst->m_CustomComponentLists.clear();
+            inst->m_ComponentTypes.clear();
+            inst->m_ComponentTypeNameMap.clear();
+            inst->m_NextComponentTypeNumber = 0;
+        }
+    }
+
     void ComponentRegistry::process_queued_registrations() {
         for (auto& func : get_registration_func_list()) {
             func();
@@ -49,18 +68,31 @@ namespace sf::components {
         // Copy from static members to instance members
         // Cannot use copy constructors due to different allocators
         for (const auto& [key, value] : s_ComponentTypes) {
-            m_ComponentTypes[key] = value;
+            m_ComponentTypes.emplace(stl::string(mem::MemTag::Strings, key.c_str()), value);
         }
         for (const auto& [key, value] : s_ComponentTypeNameMap) {
-            m_ComponentTypeNameMap[key] = value;
+            m_ComponentTypeNameMap.emplace(key, stl::string(mem::MemTag::Strings, value.c_str()));
         }
         for (const auto& [key, value] : s_EngineComponentLists) {
-            m_EngineComponentLists[key] = value;
+            m_EngineComponentLists.emplace(stl::string(mem::MemTag::Strings, key.c_str()), value);
         }
         for (const auto& [key, value] : s_CustomComponentLists) {
-            m_CustomComponentLists[key] = value;
+            m_CustomComponentLists.emplace(stl::string(mem::MemTag::Strings, key.c_str()), value);
         }
         m_NextComponentTypeNumber = s_NextComponentTypeNumber;
+        // register this instance so shutdown() can clear it
+        get_instance_list().push_back(this);
+    }
+
+    ComponentRegistry::~ComponentRegistry() {
+        auto& list = get_instance_list();
+        auto it = std::find(list.begin(), list.end(), this);
+        if (it != list.end())
+            list.erase(it);
+        m_EngineComponentLists.clear();
+        m_CustomComponentLists.clear();
+        m_ComponentTypes.clear();
+        m_ComponentTypeNameMap.clear();
     }
 
     CustomComponentList::CustomComponentList(const stl::shared_ptr<IComponent>& def_comp) : default_component(def_comp) {}
@@ -99,7 +131,7 @@ namespace sf::components {
     }
 
     void ComponentRegistry::add_component(Entity entity, stl::shared_ptr<IComponent>& component) {
-        const char* type_name = m_ComponentTypeNameMap[component->component_type()];
+        const stl::string& type_name = m_ComponentTypeNameMap[component->component_type()];
         stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
         if (!component_list)
             component_list = stl::make_shared<CustomComponentList>(mem::MemTag::Logic);
@@ -107,7 +139,7 @@ namespace sf::components {
     }
 
     void ComponentRegistry::add_component(Entity entity, ComponentType component_type) {
-        const char* type_name = m_ComponentTypeNameMap[component_type];
+        const stl::string& type_name = m_ComponentTypeNameMap[component_type];
         stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
         if (!component_list)
             component_list = stl::make_shared<CustomComponentList>(mem::MemTag::Logic);
@@ -117,13 +149,13 @@ namespace sf::components {
     }
 
     void ComponentRegistry::remove_component(Entity entity, stl::shared_ptr<IComponent>& component) {
-        const char* type_name = m_ComponentTypeNameMap[component->component_type()];
+        const stl::string& type_name = m_ComponentTypeNameMap[component->component_type()];
         const stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
         component_list->remove(entity);
     }
 
     stl::shared_ptr<IComponent> ComponentRegistry::component(Entity entity, ComponentType type) {
-        const char* type_name = m_ComponentTypeNameMap[type];
+        const stl::string& type_name = m_ComponentTypeNameMap[type];
         const stl::shared_ptr<CustomComponentList>& component_list = m_CustomComponentLists[type_name];
         return component_list->get(entity);
     }
@@ -138,7 +170,7 @@ namespace sf::components {
         for (int i = 0; i < signature.size(); ++i) {
             if (!signature[i])
                 continue;
-            const char* component_name = m_ComponentTypeNameMap[static_cast<ComponentType>(i)];
+            const stl::string& component_name = m_ComponentTypeNameMap[static_cast<ComponentType>(i)];
             const stl::shared_ptr<CustomComponentList> component_list = m_CustomComponentLists[component_name];
             if (component_list)
                 return_vector.push_back(component_list->get(entity));
