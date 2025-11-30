@@ -57,7 +57,7 @@ void create_default_meta_for_type(EAssetType type, const QString& meta_full_path
     if (type == EAssetType::Scene)
         return;
     QFile meta_file{meta_full_path};
-    meta_file.open(QFile::OpenModeFlag::ReadWrite);
+    bool is_open = meta_file.open(QFile::OpenModeFlag::ReadWrite);
     switch (type) {
     case EAssetType::Texture:
         meta_file.write("{\"deps\":[]}");
