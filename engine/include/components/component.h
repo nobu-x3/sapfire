@@ -125,23 +125,42 @@ namespace sf::components {
     public:
         ComponentRegistry();
 
+        // Helper: Create a registration lambda that properly captures type info at definition time
         template <typename T>
-        static void global_register_engine_component() {
+        static std::function<void()> make_engine_registration_lambda() {
             const char* type_name = typeid(T).name();
-            s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
-            s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-            s_EngineComponentLists[type_name] = std::make_shared<EngineComponentList<T>>();
-            s_NextComponentTypeNumber++;
+            return [type_name]() {
+                s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
+                s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
+                s_EngineComponentLists[type_name] = stl::make_shared<EngineComponentList<T>>(mem::MemTag::Logic);
+                s_NextComponentTypeNumber++;
+            };
         }
 
-        static void global_register_custom_component(stl::shared_ptr<IComponent> component) {
-            auto type_str = component->to_string();
-            const char* type_name = type_str.c_str();
-            s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
-            s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
-            s_CustomComponentLists[type_name] = std::make_shared<CustomComponentList>(component);
-            s_NextComponentTypeNumber++;
+        template <typename T>
+        static void queue_engine_component_registration() {
+            queue_registration(make_engine_registration_lambda<T>());
         }
+
+        static void queue_custom_component_registration(std::function<stl::shared_ptr<IComponent>()> factory) {
+            queue_registration([factory]() {
+                auto component = factory();
+                auto type_str = component->to_string();
+                const char* type_name = type_str.c_str();
+                s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
+                s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
+                s_CustomComponentLists[type_name] = stl::make_shared<CustomComponentList>(mem::MemTag::Logic, component);
+                s_NextComponentTypeNumber++;
+            });
+        }
+
+        static void process_queued_registrations();
+
+        // Internal: Register a component registration function to be called during process_queued_registrations
+        static void register_component_registration_func(std::function<void()> func);
+
+    private:
+        static void queue_registration(std::function<void()> registration_func);
 
     public:
         template <typename T>
@@ -253,18 +272,26 @@ private:                                                                        
 
 #define COMPONENT_IMPL(type)                                                                                                               \
     const char* type::s_ComponentName = #type;                                                                                             \
-    ::sf::components::ComponentType type::s_ComponentType = ::sf::components::ComponentRegistry::s_NextComponentTypeNumber;                \
-    ::sf::stl::shared_ptr<type> default_component_##type = ::sf::stl::make_shared<type>(::sf::mem::MemTag::Logic);                         \
-    struct RegisteredComponent##type {                                                                                                     \
-        RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_custom_component(default_component_##type); }   \
+    ::sf::components::ComponentType type::s_ComponentType = 0; /* Will be set during registration */                                       \
+    void register_custom_component_##type() {                                                                                              \
+        ::sf::components::ComponentRegistry::queue_custom_component_registration(                                                          \
+            []() { return ::sf::stl::make_shared<type>(::sf::mem::MemTag::Logic); });                                                      \
+    }                                                                                                                                      \
+    struct RegisterCustomComponent##type {                                                                                                 \
+        RegisterCustomComponent##type() {                                                                                                  \
+            ::sf::components::ComponentRegistry::register_component_registration_func(register_custom_component_##type);                   \
+        }                                                                                                                                  \
     };                                                                                                                                     \
-    inline RegisteredComponent##type _registered_component;
+    inline RegisterCustomComponent##type _register_custom_component_##type;
 
 #define ENGINE_COMPONENT_IMPL(type)                                                                                                        \
-    struct RegisteredComponent##type {                                                                                                     \
-        RegisteredComponent##type() { ::sf::components::ComponentRegistry::global_register_engine_component<type>(); }                     \
+    void register_engine_component_##type() { ::sf::components::ComponentRegistry::queue_engine_component_registration<type>(); }          \
+    struct RegisterEngineComponent##type {                                                                                                 \
+        RegisterEngineComponent##type() {                                                                                                  \
+            ::sf::components::ComponentRegistry::register_component_registration_func(register_engine_component_##type);                   \
+        }                                                                                                                                  \
     };                                                                                                                                     \
-    inline RegisteredComponent##type _registered_component;
+    inline RegisterEngineComponent##type _register_engine_component_##type;
 
 #define ENGINE_COMPONENT(type)                                                                                                             \
 public:                                                                                                                                    \

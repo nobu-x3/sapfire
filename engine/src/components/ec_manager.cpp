@@ -14,6 +14,7 @@ namespace sf {
         m_ComponentRegistry = stl::make_unique<components::ComponentRegistry>(mem::MemTag::Logic);
         m_EntityRegistry = stl::make_unique<EntityRegistry>(mem::MemTag::Logic);
     }
+
     Entity ECManager::create_entity(UUID uuid) {
         auto entity = m_EntityRegistry->create_entity(uuid);
         m_ComponentRegistry->add_engine_component<components::NameComponent>(entity, {});

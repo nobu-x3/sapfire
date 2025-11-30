@@ -12,15 +12,6 @@
 #include "project_manager.h"
 #include "splash_screen.h"
 
-namespace sf {
-    std::unordered_map<const char*, components::ComponentType> components::ComponentRegistry::s_ComponentTypes = {};
-    std::unordered_map<components::ComponentType, const char*> components::ComponentRegistry::s_ComponentTypeNameMap = {};
-    std::unordered_map<const char*, stl::shared_ptr<components::IComponentList>> components::ComponentRegistry::s_EngineComponentLists = {};
-    std::unordered_map<const char*, stl::shared_ptr<components::CustomComponentList>>
-        components::ComponentRegistry::s_CustomComponentLists{};
-    components::ComponentType components::ComponentRegistry::s_NextComponentTypeNumber = 0;
-} // namespace sf
-
 int main(int argc, char** argv) {
     sf::Log::Init();
     if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -28,6 +19,7 @@ int main(int argc, char** argv) {
     }
     sf::mem::Budgets budgets{};
     sf::mem::MemoryManager memory_manager(budgets);
+    sf::components::ComponentRegistry::process_queued_registrations();
     QApplication app(argc, argv);
     app.setOrganizationName("Sapfire");
     app.setApplicationName("Sapling");
