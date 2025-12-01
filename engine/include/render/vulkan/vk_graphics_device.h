@@ -154,6 +154,10 @@ namespace sf::render::vk {
         VkRenderPass m_MainRenderPass = VK_NULL_HANDLE;
         VkPipelineLayout m_BindlessPipelineLayout = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_PerFrameDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_ResourceDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_DummyDescriptorSetLayout = VK_NULL_HANDLE; // Empty layout for unused set 1
 
         // Init-only data (cold)
         VkInstance m_Instance = VK_NULL_HANDLE;

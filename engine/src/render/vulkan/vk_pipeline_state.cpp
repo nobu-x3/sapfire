@@ -26,17 +26,18 @@ namespace sf::render::vk {
             destroy_shader_module(device, fragment_shader);
             return stl::make_error<>("Failed to load shaders for graphics pipeline");
         }
-        // Shader stages
+        // Shader stages - use entry points from descriptor
+        // Note: string_view data() returns a pointer that remains valid as long as the original string exists
         VkPipelineShaderStageCreateInfo vertex_stage{};
         vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
         vertex_stage.module = vertex_shader.module;
-        vertex_stage.pName = "main"; // Entry point
+        vertex_stage.pName = desc.shader_module.vertex_entry_point.data(); // Entry point from descriptor
         VkPipelineShaderStageCreateInfo fragment_stage{};
         fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         fragment_stage.module = fragment_shader.module;
-        fragment_stage.pName = "main"; // Entry point
+        fragment_stage.pName = desc.shader_module.pixel_entry_point.data(); // Entry point from descriptor
         VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage, fragment_stage};
         // Vertex input state (for now, assume no vertex input - bindless rendering)
         VkPipelineVertexInputStateCreateInfo vertex_input{};
@@ -149,7 +150,7 @@ namespace sf::render::vk {
         shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shader_stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         shader_stage.module = compute_shader.module;
-        shader_stage.pName = "main"; // Entry point
+        shader_stage.pName = desc.entry_point.data(); // Entry point from descriptor
         // Create compute pipeline
         VkComputePipelineCreateInfo pipeline_info{};
         pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
