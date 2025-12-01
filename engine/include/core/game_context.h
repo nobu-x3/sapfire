@@ -41,7 +41,6 @@ namespace sf {
         stl::string material_path;
     };
 
-    constexpr f32 CAMERA_FOV = sf::math::to_radians(45.0f);
     class SFAPI GameContext {
     public:
         GameContext(const GameContextCreationDesc& desc);

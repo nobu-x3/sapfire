@@ -17,12 +17,12 @@ void SandboxGameContext::load_contents() {
     auto pipeline_result = m_GraphicsDevice->create_graphics_pipeline({
 		.shader_module =
 			{
-				.vertex_shader_path = L"bindless.hlsl",
-				.vertex_entry_point = L"VS",
-				.pixel_shader_path = L"bindless.hlsl",
-				.pixel_entry_point = L"PS",
+				.vertex_shader_path = "bindless.hlsl",
+				.vertex_entry_point = "VS",
+				.pixel_shader_path = "bindless.hlsl",
+				.pixel_entry_point = "PS",
 			},
-		.name = L"Bindless Pipeline",
+		.name = "Bindless Pipeline",
 	});
     if(!pipeline_result) {
         CLIENT_CRITICAL("Failed to create bindless pipeline.");
@@ -32,7 +32,7 @@ void SandboxGameContext::load_contents() {
     auto cbv_result = m_GraphicsDevice->create_buffer(sf::render::BufferCreationDesc{
 		.usage = sf::render::BufferUsage::Constant,
 		.size_in_bytes = sizeof(PassConstants),
-		.name = L"Main Pass Constant Buffer",
+		.name = "Main Pass Constant Buffer",
 	});
     if(!cbv_result) {
         CLIENT_CRITICAL("Failed to create main pass constant buffer.");
@@ -45,7 +45,7 @@ void SandboxGameContext::load_contents() {
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.name = L"Depth Texture",
+		.name = "Depth Texture",
 	});
     if(!depth_result) {
         CLIENT_CRITICAL("Failed to create depth texture.");
@@ -208,7 +208,7 @@ void SandboxGameContext::resize_depth_texture() {
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
 		.height = static_cast<u32>(m_ClientExtent->height),
-		.name = L"Depth Texture",
+		.name = "Depth Texture",
 	});
     if(!depth_result) {
         CLIENT_CRITICAL("Failed to create depth texture while resizing.");

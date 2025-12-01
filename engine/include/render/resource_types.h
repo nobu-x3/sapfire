@@ -42,7 +42,7 @@ namespace sf::render {
         BufferUsage usage = BufferUsage::Structured;
         u64 size_in_bytes = 0;
         bool should_map = false;
-        stl::wstring_view name = {};
+        stl::string_view name = {};
         ResourceUsage resource_usage = ResourceUsage::None; // Additional usage flags
     };
 
@@ -56,8 +56,8 @@ namespace sf::render {
         u32 mip_levels = 1;
         ResourceState initial_state = ResourceState::Common;
         ResourceUsage resource_usage = ResourceUsage::None;
-        stl::wstring_view name = {};
-        std::wstring path = {}; // For loading from file
+        stl::string_view name = {};
+        stl::string path = {}; // For loading from file
     };
 
     // Descriptor View Creation
@@ -146,15 +146,15 @@ namespace sf::render {
 
     struct ShaderModuleDesc {
         // For graphics shaders
-        stl::wstring_view vertex_shader_path = {};
-        stl::wstring_view vertex_entry_point = L"VS";
+        stl::string_view vertex_shader_path = {};
+        stl::string_view vertex_entry_point = "VS";
 
-        stl::wstring_view pixel_shader_path = {};
-        stl::wstring_view pixel_entry_point = L"PS";
+        stl::string_view pixel_shader_path = {};
+        stl::string_view pixel_entry_point = "PS";
 
         // For compute shaders
-        stl::wstring_view compute_shader_path = {};
-        stl::wstring_view compute_entry_point = L"CS";
+        stl::string_view compute_shader_path = {};
+        stl::string_view compute_entry_point = "CS";
     };
 
     // Pipeline State Creation
@@ -179,13 +179,13 @@ namespace sf::render {
         // Primitive topology
         PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
 
-        stl::wstring_view name = {};
+        stl::string_view name = {};
     };
 
     struct ComputePipelineStateDesc {
-        stl::wstring_view shader_path = {};
-        stl::wstring_view entry_point = L"CS";
-        stl::wstring_view name = {};
+        stl::string_view shader_path = {};
+        stl::string_view entry_point = "CS";
+        stl::string_view name = {};
     };
 
     // Swapchain Creation

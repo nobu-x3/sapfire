@@ -63,7 +63,7 @@ namespace sf {
                 auto transform_result = m_GraphicsDevice->create_buffer({
                     .usage = sf::render::BufferUsage::Constant,
                     .size_in_bytes = sizeof(ObjectConstants),
-                    .name = L"Transform buffer " + std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
+                    .name = "Transform buffer " + std::string(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
                 });
                 if (!transform_result) {
                     return stl::make_error("Failed to create transform buffer: {}", transform_result.error().data());
@@ -73,13 +73,13 @@ namespace sf {
             bool should_add_tangent = false;
             const bool should_allocate_mesh = !m_AssetManager->mesh_resource_exists(resource_paths.mesh_path);
             if (should_allocate_mesh) {
-                const std::wstring name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
-                    ? L"Default Mesh"
-                    : std::wstring(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
+                const std::string name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
+                    ? "Default Mesh"
+                    : std::string(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
                 auto index_buffer_result = m_GraphicsDevice->create_buffer<u16>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Index,
-                        .name = L"Index buffer " + name,
+                        .name = "Index buffer " + name,
                     },
                     mesh_asset->data->indices16());
                 if (!index_buffer_result) {
@@ -89,7 +89,7 @@ namespace sf {
                 auto vertex_pos_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
-                        .name = L"Vertex Pos buffer " + name,
+                        .name = "Vertex Pos buffer " + name,
                     },
                     mesh_asset->data->positions);
                 if (!vertex_pos_buffer_result) {
@@ -99,7 +99,7 @@ namespace sf {
                 auto vertex_normal_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
-                        .name = L"Vertex Norm buffer " + name,
+                        .name = "Vertex Norm buffer " + name,
                     },
                     mesh_asset->data->normals);
                 if (!vertex_normal_buffer_result) {
@@ -110,7 +110,7 @@ namespace sf {
                     auto tangentus_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
                         sf::render::BufferCreationDesc{
                             .usage = sf::render::BufferUsage::Structured,
-                            .name = L"Vertex Tang buffer " + name,
+                            .name = "Vertex Tang buffer " + name,
                         },
                         mesh_asset->data->tangentus);
                     if (!tangentus_buffer_result) {
@@ -122,7 +122,7 @@ namespace sf {
                 auto uv_result = m_GraphicsDevice->create_buffer<sf::math::vec2>(
                     sf::render::BufferCreationDesc{
                         .usage = sf::render::BufferUsage::Structured,
-                        .name = L"Vertex UV buffer " + name,
+                        .name = "Vertex UV buffer " + name,
                     },
                     mesh_asset->data->texcs);
                 if (!uv_result) {

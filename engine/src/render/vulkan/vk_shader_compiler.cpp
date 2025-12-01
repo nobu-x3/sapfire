@@ -23,6 +23,7 @@ namespace sf::render::vk {
         file.close();
         return buffer;
     }
+
     Shader compile(VkDevice device, ShaderType type, const stl::string_view path, const stl::string_view entry_point) {
         Shader shader{};
         // Convert path to full path and append .spv extension if not present
@@ -54,6 +55,7 @@ namespace sf::render::vk {
         CORE_INFO("Loaded SPIR-V shader: {}", shader_path);
         return shader;
     }
+
     Shader compile(VkDevice device, ShaderType type, const stl::wstring_view path, const stl::wstring_view entry_point) {
         stl::string narrow_path(path.begin(), path.end());
         stl::string narrow_entry(entry_point.begin(), entry_point.end());

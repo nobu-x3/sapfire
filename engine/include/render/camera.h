@@ -4,7 +4,11 @@
 #include "core/input.h"
 #include "math/math.h"
 
+
 namespace sf {
+
+    constexpr f32 CAMERA_FOV = sf::math::to_radians(45.0f);
+
     struct SFAPI Camera {
         Camera() = default;
         Camera(f32 fov, f32 aspect, f32 near_plane, f32 far_plane);

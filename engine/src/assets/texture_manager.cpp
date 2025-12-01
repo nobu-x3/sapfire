@@ -30,7 +30,7 @@ namespace sf::assets {
         i32 width{};
         i32 height{};
         void* data = tools::texture_loader::load(fs::full_path(path).c_str(), width, height, 4);
-        auto name = sf::string_utils::to_wstring(path);
+        auto name = path;
         if (m_PathToTextureAssetMap.contains(path))
             return stl::success;
         auto result = device->create_texture_with_data(
@@ -39,7 +39,7 @@ namespace sf::assets {
                 .width = static_cast<u32>(width),
                 .height = static_cast<u32>(height),
                 .name = name,
-                .path = sf::string_utils::to_wstring(fs::full_path(path)),
+                .path = fs::full_path(path),
             },
             data, width * height * 4);
         if (!result) {
@@ -53,7 +53,7 @@ namespace sf::assets {
                     .width = static_cast<u32>(width),
                     .height = static_cast<u32>(height),
                     .name = name,
-                    .path = sf::string_utils::to_wstring(path),
+                    .path = path,
                 },
             .data = std::move(*result),
         };
@@ -63,13 +63,13 @@ namespace sf::assets {
 
     stl::result<> TextureRegistry::import_texture(sf::render::IGraphicsDevice* device, const stl::string& path,
                                                   const sf::render::TextureCreationDesc& desc, UUID uuid) {
-        auto name = sf::string_utils::to_wstring(path);
+        auto name = path;
         if (m_PathToTextureAssetMap.contains(path))
             return stl::success;
         auto result = device->create_texture(sf::render::TextureCreationDesc{
             .usage = sf::render::TextureUsage::ShaderResource,
             .name = name,
-            .path = sf::string_utils::to_wstring(fs::full_path(path)),
+            .path = fs::full_path(path),
         });
         if (!result) {
             return stl::make_error("Failed to import texture at path {}: {}", path.data(), result.error().data());
@@ -91,14 +91,14 @@ namespace sf::assets {
             i32 width{};
             i32 height{};
             void* data = tools::texture_loader::load(new_path.c_str(), width, height, 4);
-            auto name = sf::string_utils::to_wstring(new_path);
+            auto name = new_path;
             auto result = device->create_texture_with_data(
                 sf::render::TextureCreationDesc{
                     .usage = sf::render::TextureUsage::ShaderResource,
                     .width = static_cast<u32>(width),
                     .height = static_cast<u32>(height),
                     .name = name,
-                    .path = sf::string_utils::to_wstring(new_path),
+                    .path = new_path,
                 },
                 data, width * height * 4);
             if (!result) {
@@ -112,7 +112,7 @@ namespace sf::assets {
                         .width = static_cast<u32>(width),
                         .height = static_cast<u32>(height),
                         .name = name,
-                        .path = sf::string_utils::to_wstring(new_path),
+                        .path = new_path,
                     },
                 .data = std::move(*result),
             };
@@ -269,7 +269,7 @@ namespace sf::assets {
             desc.width = description["width"];
             desc.height = description["height"];
             desc.usage = description["usage"];
-            desc.path = sf::string_utils::to_wstring(path);
+            desc.path = path;
             desc.format = description["format"];
             desc.mip_levels = description["mip_levels"];
             desc.depth_or_array_size = description["depth_or_array_size"];
@@ -289,7 +289,7 @@ namespace sf::assets {
         .height = 256,
         .depth_or_array_size = 1,
         .mip_levels = 1,
-        .name = L"Default texture",
+        .name = "Default texture",
     };
 
     static char* default_texture_data() {

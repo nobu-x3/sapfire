@@ -19,8 +19,8 @@ namespace sf::assets {
             texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
             auto texture_result = m_Device->create_texture(sf::render::TextureCreationDesc{
                 .usage = sf::render::TextureUsage::ShaderResource,
-                .name = sf::string_utils::to_wstring(relative_path),
-                .path = sf::string_utils::to_wstring(fs::full_path(texture_path)),
+                .name = relative_path,
+                .path = fs::full_path(texture_path),
             });
             if(!texture_result) {
                 return stl::make_error("Failed to load runtime texture: {}", texture_result.error().data());
@@ -47,8 +47,8 @@ namespace sf::assets {
             texture->data.srv_index == sf::render::INVALID_DESCRIPTOR_INDEX) {
             auto texture_result = m_Device->create_texture(sf::render::TextureCreationDesc{
                 .usage = sf::render::TextureUsage::ShaderResource,
-                .name = sf::string_utils::to_wstring(relative_path),
-                .path = sf::string_utils::to_wstring(fs::full_path(path)),
+                .name = relative_path,
+                .path = fs::full_path(path),
             });
             if(!texture_result) {
                 return stl::make_error("Failed to import texture: ", texture_result.error().data());

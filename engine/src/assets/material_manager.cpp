@@ -19,6 +19,7 @@ namespace sf::assets {
         material_resources[path] = resource;
         uuid_to_path_map[uuid] = path;
     }
+
     MaterialRegistry::MaterialRegistry(const stl::string& registry_file_path) : m_RegistryFilePath(fs::full_path(registry_file_path)) {}
 
     void MaterialRegistry::create_default(const stl::string& filepath) {
@@ -66,7 +67,7 @@ namespace sf::assets {
         auto result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
-            .name = sf::string_utils::to_wstring(material.name),
+            .name = material.name,
         });
         if (!result) {
             return stl::make_error("Failed to create buffer for material at path {}: {}", path.data(), result.error().data());
@@ -113,7 +114,7 @@ namespace sf::assets {
         auto buffer_result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
-            .name = sf::string_utils::to_wstring(material.name),
+            .name = material.name,
         });
         if (!buffer_result) {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
@@ -136,7 +137,7 @@ namespace sf::assets {
         auto buffer_result = device->create_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
-            .name = sf::string_utils::to_wstring(asset.material.name),
+            .name = asset.material.name,
         });
         if (!buffer_result) {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
@@ -287,7 +288,7 @@ namespace sf::assets {
     }
 
     MaterialAsset* MaterialRegistry::default_material(sf::render::IGraphicsDevice* device) {
-        const static std::wstring name = sf::string_utils::to_wstring(DEFAULT_MATERIAL_NAME);
+        const static std::string name = DEFAULT_MATERIAL_NAME;
         static sf::render::MaterialConstants default_material_constants{
             .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
             .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
