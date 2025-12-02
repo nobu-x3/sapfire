@@ -52,9 +52,9 @@ namespace sf::render {
         virtual void set_viewport(const Viewport& viewport) = 0;
         virtual void set_scissor_rect(const ScissorRect& scissor) = 0;
 
-        // Render targets
-        virtual void set_render_target(Texture& render_target, Texture* depth_stencil = nullptr) = 0;
-        virtual void set_render_targets(stl::span<Texture*> render_targets, Texture* depth_stencil = nullptr) = 0;
+        // Render pass management
+        virtual void begin_render_pass(Texture& render_target, Texture* depth_stencil = nullptr) = 0;
+        virtual void end_render_pass() = 0;
 
         // Index buffer
         virtual void set_index_buffer(Buffer& buffer, Format format = Format::R32_UINT) = 0;

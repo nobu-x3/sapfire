@@ -496,7 +496,7 @@ namespace sf::render::vk {
     stl::result<stl::unique_ptr<ICommandQueue>> VkGraphicsDevice::create_direct_queue(const char* name) {
         VkQueue vk_queue;
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &vk_queue);
-        auto queue = stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, vk_queue, CommandQueueType::Direct, name);
+        auto queue = stl::make_unique<VkCommandQueue>(mem::MemTag::Render, this, m_Device, vk_queue, CommandQueueType::Direct, name);
         return stl::unique_ptr<ICommandQueue>(queue.release());
     }
 
@@ -660,8 +660,8 @@ namespace sf::render::vk {
         color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        color_attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        color_attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         VkAttachmentReference color_attachment_ref{};
         color_attachment_ref.attachment = 0;
         color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -861,9 +861,10 @@ namespace sf::render::vk {
     }
 
     stl::result<> VkGraphicsDevice::begin_frame() {
-        VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex], VK_TRUE, UINT64_MAX),
+        u32 fence_index = m_Headless ? 0 : m_CurrentFrameIndex;
+        VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[fence_index], VK_TRUE, UINT64_MAX),
                            "Failed to wait for fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[m_CurrentFrameIndex]),
+        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[fence_index]),
                            "Failed to reset fences when beginning frame.");
         if (m_Headless) {
             // In headless mode, we cycle through our custom render targets manually
@@ -878,10 +879,38 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::end_frame() {
-        // In stateless API, user handles command buffer submission via ICommandQueue
-        // Device only manages swapchain synchronization primitives
-        // User should submit their command buffers to queues before calling end_frame
+    stl::result<> VkGraphicsDevice::end_frame(IGraphicsContext* context) {
+        if (!context) {
+            return stl::make_error<>("VkGraphicsDevice::end_frame - context is null");
+        }
+        auto close_result = context->close();
+        if (!close_result) {
+            return close_result;
+        }
+        VkSubmitInfo submit_info{};
+        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        VkCommandBuffer cmd_buffer = reinterpret_cast<VkCommandBuffer>(context->get_native_command_list());
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &cmd_buffer;
+        u32 fence_index = m_Headless ? 0 : m_CurrentFrameIndex;
+        if (m_Headless) {
+            // In headless mode, no semaphore synchronization with swapchain needed
+            // Just signal the fence for CPU-GPU sync
+        } else {
+            // In swapchain mode, wait for image available and signal render finished
+            VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphores[m_CurrentFrameIndex]};
+            VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+            submit_info.waitSemaphoreCount = 1;
+            submit_info.pWaitSemaphores = wait_semaphores;
+            submit_info.pWaitDstStageMask = wait_stages;
+            VkSemaphore signal_semaphores[] = {m_RenderFinishedSemaphores[m_CurrentFrameIndex]};
+            submit_info.signalSemaphoreCount = 1;
+            submit_info.pSignalSemaphores = signal_semaphores;
+        }
+        VkQueue graphics_queue;
+        vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
+        VK_RETURN_ON_ERROR(vkQueueSubmit(graphics_queue, 1, &submit_info, m_InFlightFences[fence_index]),
+                           "Failed to submit command buffer in end_frame");
         return stl::success;
     }
 
@@ -955,26 +984,6 @@ namespace sf::render::vk {
 
     Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
 
-    stl::result<Buffer> VkGraphicsDevice::create_buffer(const BufferCreationDesc& desc) {
-        // User must create their own memory allocator to allocate buffers
-        return stl::make_error<Buffer>("create_buffer requires a user-owned IMemoryAllocator. Use IMemoryAllocator::allocate_buffer() instead.");
-    }
-
-    stl::result<Buffer> VkGraphicsDevice::create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) {
-        // User must handle buffer uploads explicitly using their own allocator, contexts, and queues
-        return stl::make_error<Buffer>("create_buffer_with_data not supported in stateless API. Create buffer via IMemoryAllocator, then upload using ICopyContext.");
-    }
-
-    stl::result<Texture> VkGraphicsDevice::create_texture(const TextureCreationDesc& desc) {
-        // User must create their own memory allocator to allocate textures
-        return stl::make_error<Texture>("create_texture requires a user-owned IMemoryAllocator. Use IMemoryAllocator::allocate_texture() instead.");
-    }
-
-    stl::result<Texture> VkGraphicsDevice::create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) {
-        // User must handle texture uploads explicitly using their own allocator, contexts, and queues
-        return stl::make_error<Texture>("create_texture_with_data not supported in stateless API. Create texture via IMemoryAllocator, then upload using ICopyContext.");
-    }
-
     stl::result<IPipelineState*> VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
         auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
         auto create_result = pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
@@ -995,11 +1004,6 @@ namespace sf::render::vk {
         auto* ptr = pipeline.get();
         m_PipelineStates.push_back(std::move(pipeline));
         return ptr;
-    }
-
-    stl::result<> VkGraphicsDevice::read_texture_pixels(Texture& texture, void* out_data, size_t data_size) {
-        // User must handle texture readback explicitly using their own allocator, contexts, and queues
-        return stl::make_error("read_texture_pixels not supported in stateless API. Use ICopyContext to copy texture to staging buffer, then read mapped data.");
     }
 
 } // namespace sf::render::vk

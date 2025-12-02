@@ -5,6 +5,7 @@
 #include "components/render_component.h"
 #include "components/test_custom_component.h"
 #include "core/game_context.h"
+#include "render/i_descriptor_heap.h"
 
 using namespace sf;
 
@@ -29,18 +30,20 @@ void SandboxGameContext::load_contents() {
         return;
     }
 	m_PipelineState = std::move(*pipeline_result);
-    auto cbv_result = m_GraphicsDevice->create_buffer(sf::render::BufferCreationDesc{
+
+    auto cbv_result = m_MemoryAllocator->allocate_buffer(sf::render::BufferCreationDesc{
 		.usage = sf::render::BufferUsage::Constant,
 		.size_in_bytes = sizeof(PassConstants),
 		.name = "Main Pass Constant Buffer",
 	});
     if(!cbv_result) {
-        CLIENT_CRITICAL("Failed to create main pass constant buffer.");
+        CLIENT_CRITICAL("Failed to create main pass constant buffer: {}", cbv_result.error().c_str());
         return;
     }
+	cbv_result->cbv_index = m_CbvSrvUavHeap->allocate_cbv(*cbv_result);
 	m_MainPassCB = std::move(*cbv_result);
-	// textures:
-    auto depth_result = m_GraphicsDevice->create_texture({
+
+    auto depth_result = m_MemoryAllocator->allocate_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
@@ -48,7 +51,7 @@ void SandboxGameContext::load_contents() {
 		.name = "Depth Texture",
 	});
     if(!depth_result) {
-        CLIENT_CRITICAL("Failed to create depth texture.");
+        CLIENT_CRITICAL("Failed to create depth texture: {}", depth_result.error().c_str());
         return;
     }
 	m_DepthTexture = std::move(*depth_result);
@@ -63,7 +66,7 @@ void SandboxGameContext::update(f32 delta_time) {
 	PROFILE_SCOPE("SandboxGameContext::update");
 	m_MainCamera.update(delta_time);
 	// Wait for render to happen
-	m_GraphicsDevice->get_direct_queue()->wait_for_idle();
+	m_DirectQueue->wait_for_idle();
 	// update buffers
 	update_pass_cb(delta_time);
 	update_materials(delta_time);
@@ -133,7 +136,7 @@ void SandboxGameContext::render() {
         CORE_CRITICAL("Failed to begin frame: {}", begin_frame_res.error().c_str());
         return;
     }
-	auto& gfx_ctx = m_GraphicsDevice->get_current_graphics_context();
+	auto& gfx_ctx = *m_GraphicsContext;
 	auto& current_backbuffer = m_GraphicsDevice->get_current_back_buffer();
 	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
 	gfx_ctx.execute_resource_barriers();
@@ -143,7 +146,7 @@ void SandboxGameContext::render() {
 	// TODO: setup barriers for all passes
 	gfx_ctx.set_pipeline_state(m_PipelineState);
 	gfx_ctx.set_root_signature();
-	gfx_ctx.set_render_target(current_backbuffer, &m_DepthTexture);
+	gfx_ctx.begin_render_pass(current_backbuffer, &m_DepthTexture);
 	gfx_ctx.set_viewport({
 		.x = 0.0f,
 		.y = 0.0f,
@@ -154,7 +157,8 @@ void SandboxGameContext::render() {
 	});
 	// TODO: rendering
 	{
-		gfx_ctx.set_descriptor_heaps();
+        sf::stl::array<render::IDescriptorHeap*, 2> heaps {m_CbvSrvUavHeap.get(), m_SamplerHeap.get()};
+		gfx_ctx.set_descriptor_heaps(heaps);
 		gfx_ctx.set_primitive_topology(sf::render::PrimitiveTopology::TriangleList);
 		sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
 		sf::math::mat4 view = m_MainCamera.view();
@@ -181,21 +185,17 @@ void SandboxGameContext::render() {
 			}
 		}
 	}
+    gfx_ctx.end_render_pass();
 	gfx_ctx.transition_barrier(current_backbuffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
 	gfx_ctx.execute_resource_barriers();
-	auto close_res = gfx_ctx.close();
-    if(!close_res) {
-        CORE_CRITICAL(close_res.error());
+	auto end_frame_res = m_GraphicsDevice->end_frame(&gfx_ctx);
+    if(!end_frame_res) {
+        CORE_CRITICAL("Failed to end frame: {}", end_frame_res.error().c_str());
         return;
     }
-	m_GraphicsDevice->get_direct_queue()->execute_command_list(&gfx_ctx);
 	auto present_result = m_GraphicsDevice->present();
     if(!present_result) {
         CORE_CRITICAL("Failed to present: {}", present_result.error().c_str());
-    }
-	auto end_frame_res = m_GraphicsDevice->end_frame();
-    if(!end_frame_res) {
-        CORE_CRITICAL("Failed to end frame: {}", end_frame_res.error().c_str());
     }
 }
 
@@ -203,7 +203,7 @@ void SandboxGameContext::resize_depth_texture() {
 	m_MainCamera = {CAMERA_FOV, static_cast<f32>(m_ClientExtent->width) / m_ClientExtent->height, 0.1f, 1000.f};
 	// Release old texture by reassigning
     // TODO: make this return stl::result
-    auto depth_result = m_GraphicsDevice->create_texture({
+    auto depth_result = m_MemoryAllocator->allocate_texture({
 		.usage = sf::render::TextureUsage::DepthStencil,
 		.format = sf::render::Format::D32_FLOAT,
 		.width = static_cast<u32>(m_ClientExtent->width),
@@ -211,7 +211,7 @@ void SandboxGameContext::resize_depth_texture() {
 		.name = "Depth Texture",
 	});
     if(!depth_result) {
-        CLIENT_CRITICAL("Failed to create depth texture while resizing.");
+        CLIENT_CRITICAL("Failed to create depth texture while resizing: {}", depth_result.error().c_str());
         return;
     }
 	m_DepthTexture = std::move(*depth_result);

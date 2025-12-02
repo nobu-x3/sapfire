@@ -39,20 +39,20 @@ namespace sf::assets {
         MaterialRegistry& operator=(const MaterialRegistry&) = delete;
         MaterialRegistry& operator=(MaterialRegistry&&) = delete;
         stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path);
-        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path);
         stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path, UUID uuid);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path);
         stl::result<> move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
         stl::result<> release_material(const stl::string& path);
         void serialize();
         void serialize(const MaterialAsset& asset) const;
-        void deserialize(sf::render::IGraphicsDevice* device, const stl::string& data);
+        void deserialize(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& data);
         MaterialAsset* get(const stl::string& path) const;
         MaterialAsset* get(UUID uuid) const;
         stl::string get_path(UUID uuid) const;
         stl::unordered_map<stl::string, MaterialAsset>& path_asset_map() { return m_PathToMaterialAssetMap; }
         stl::string to_string();
 
-        static MaterialAsset* default_material(sf::render::IGraphicsDevice* device = nullptr);
+        static MaterialAsset* default_material(sf::render::IMemoryAllocator* allocator = nullptr, sf::render::IDescriptorHeap* heap = nullptr);
 
         static void create_default(const stl::string& registry_file_path);
 

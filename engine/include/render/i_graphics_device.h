@@ -28,7 +28,7 @@ namespace sf::render {
         // Swapchain Management (device owns this)
 
         virtual stl::result<> begin_frame() = 0;
-        virtual stl::result<> end_frame() = 0;
+        virtual stl::result<> end_frame(IGraphicsContext* context) = 0;
         virtual stl::result<> present() = 0;
         virtual stl::result<> wait_for_idle() = 0;
         virtual stl::result<> resize_window(u32 width, u32 height) = 0;
@@ -42,13 +42,6 @@ namespace sf::render {
         virtual u32 get_current_frame_index() const = 0;
 
         // Resource Creation Factories (user owns the created resources)
-
-        virtual stl::result<Buffer> create_buffer(const BufferCreationDesc& desc) = 0;
-        virtual stl::result<Buffer> create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) = 0;
-
-        virtual stl::result<Texture> create_texture(const TextureCreationDesc& desc) = 0;
-        virtual stl::result<Texture> create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) = 0;
-
         virtual stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) = 0;
         virtual stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) = 0;
 
@@ -71,21 +64,10 @@ namespace sf::render {
         // Memory Allocator Creation Factory (user owns the allocator)
         virtual stl::result<stl::unique_ptr<IMemoryAllocator>> create_memory_allocator() = 0;
 
-        // Utility Operations
-        virtual stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) = 0;
-
         // Backend Information
         virtual RenderAPI get_api() const = 0;
         virtual const char* get_api_name() const = 0;
         virtual void* get_native_device() = 0;
-
-        // Helper template for buffer creation with data
-        template <typename T>
-        stl::result<Buffer> create_buffer(const BufferCreationDesc& desc, stl::span<T> data) {
-            BufferCreationDesc buffer_desc = desc;
-            buffer_desc.size_in_bytes = data.size_bytes();
-            return create_buffer_with_data(buffer_desc, data.data(), data.size_bytes());
-        }
     };
 
 } // namespace sf::render

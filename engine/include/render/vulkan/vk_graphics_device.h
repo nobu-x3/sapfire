@@ -18,7 +18,7 @@ namespace sf::render::vk {
         // Frame Management
 
         stl::result<> begin_frame() override;
-        stl::result<> end_frame() override;
+        stl::result<> end_frame(IGraphicsContext* context) override;
         stl::result<> present() override;
         stl::result<> wait_for_idle() override;
 
@@ -33,18 +33,8 @@ namespace sf::render::vk {
         inline u32 get_back_buffer_count() const override { return m_BackBufferCount; }
 
         // Resource Creation
-
-        stl::result<Buffer> create_buffer(const BufferCreationDesc& desc) override;
-        stl::result<Buffer> create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
-
-        stl::result<Texture> create_texture(const TextureCreationDesc& desc) override;
-        stl::result<Texture> create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) override;
-
         stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
         stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
-
-        // Texture readback (screenshots, editor viewport, etc.)
-        stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) override;
 
         // Context Creation Factories
 
@@ -93,6 +83,12 @@ namespace sf::render::vk {
         inline VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
         inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
         inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
+
+        // Swapchain synchronization primitives
+        inline VkSemaphore get_image_available_semaphore() const { return m_ImageAvailableSemaphores[m_CurrentFrameIndex]; }
+        inline VkSemaphore get_render_finished_semaphore() const { return m_RenderFinishedSemaphores[m_CurrentFrameIndex]; }
+        inline VkFence get_in_flight_fence() const { return m_InFlightFences[m_Headless ? 0 : m_CurrentFrameIndex]; }
+        inline bool is_headless() const { return m_Headless; }
 
         // Get descriptor set layouts for explicit initialization by user
         inline VkDescriptorSetLayout get_per_frame_descriptor_set_layout() const { return m_PerFrameDescriptorSetLayout; }

@@ -5,9 +5,12 @@
 
 namespace sf::render::vk {
 
+    class VkGraphicsDevice;
+
     class VkCommandQueue final: public ICommandQueue {
     public:
         explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
+        explicit VkCommandQueue(VkGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
 
         void destroy_resources();
 
@@ -27,6 +30,7 @@ namespace sf::render::vk {
         bool is_fence_complete(u64 fence_value) const;
 
     private:
+        VkGraphicsDevice* m_GraphicsDevice{nullptr};
         VkDevice m_Device{VK_NULL_HANDLE};
         VkQueue m_Queue{VK_NULL_HANDLE};
         VkFence m_Fence{VK_NULL_HANDLE};

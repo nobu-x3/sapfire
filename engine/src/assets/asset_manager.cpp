@@ -20,7 +20,7 @@ namespace sf::assets {
             auto texture_result = m_MemoryAllocator->allocate_texture(sf::render::TextureCreationDesc{
                 .usage = sf::render::TextureUsage::ShaderResource,
                 .name = relative_path,
-                .path = fs::full_path(texture_path),
+                .path = fs::full_path(texture_path).c_str(),
             });
             if(!texture_result) {
                 return stl::make_error("Failed to load runtime texture: {}", texture_result.error().data());
@@ -49,7 +49,7 @@ namespace sf::assets {
             auto texture_result = m_MemoryAllocator->allocate_texture(sf::render::TextureCreationDesc{
                 .usage = sf::render::TextureUsage::ShaderResource,
                 .name = relative_path,
-                .path = fs::full_path(path),
+                .path = fs::full_path(path).c_str(),
             });
             if(!texture_result) {
                 return stl::make_error("Failed to import texture: ", texture_result.error().data());
@@ -67,7 +67,7 @@ namespace sf::assets {
     }
 
     bool AssetManager::is_texture_loaded_for_runtime(UUID uuid) {
-        if (uuid == TextureRegistry::default_texture(m_Device)->uuid) {
+        if (uuid == TextureRegistry::default_texture(m_MemoryAllocator, m_CbvSrvUavHeap)->uuid) {
             return true;
         }
         bool loaded = true;
@@ -97,7 +97,7 @@ namespace sf::assets {
     void AssetManager::deserialize(const stl::string& data) {
         m_MeshRegistry.deserialize(data);
         m_TextureRegistry.deserialize(m_Device, data);
-        m_MaterialRegistry.deserialize(m_Device, data);
+        m_MaterialRegistry.deserialize(m_MemoryAllocator, m_CbvSrvUavHeap, data);
     }
 
     void AssetManager::serialize(const MaterialAsset& asset) { m_MaterialRegistry.serialize(asset); }

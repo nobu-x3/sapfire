@@ -33,7 +33,7 @@ namespace sf::assets {
         file.close();
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
         std::ifstream file{path.c_str()};
@@ -64,7 +64,7 @@ namespace sf::assets {
         material.roughness = j["roughness"];
         material.diffuse_albedo =
             sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
-        auto result = device->create_buffer({
+        auto result = allocator->allocate_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = material.name,
@@ -73,6 +73,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create buffer for material at path {}: {}", path.data(), result.error().data());
         }
         material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
+        result->cbv_index = heap->allocate_cbv(*result);
         material.material_buffer = std::move(*result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -83,7 +84,7 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path, UUID uuid) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
         std::ifstream file{path.c_str()};
@@ -111,7 +112,7 @@ namespace sf::assets {
         material.diffuse_albedo =
             sf::math::vec4(j["diffuse_albedo"][0], j["diffuse_albedo"][1], j["diffuse_albedo"][2], j["diffuse_albedo"][3]);
         material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-        auto buffer_result = device->create_buffer({
+        auto buffer_result = allocator->allocate_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = material.name,
@@ -120,6 +121,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
+        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
         material.material_buffer = std::move(*buffer_result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -130,11 +132,11 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path)) {
             return stl::success;
         }
-        auto buffer_result = device->create_buffer({
+        auto buffer_result = allocator->allocate_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = asset.material.name,
@@ -143,6 +145,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
+        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
         asset.material.name = fs::file_name(path);
         asset.material.material_buffer = std::move(*buffer_result);
         asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
@@ -226,7 +229,7 @@ namespace sf::assets {
         }
     }
 
-    void MaterialRegistry::deserialize(sf::render::IGraphicsDevice* device, const stl::string& data) {
+    void MaterialRegistry::deserialize(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& data) {
         nlohmann::json j = nlohmann::json::parse(data)["assets"];
         for (auto&& asset : j["material_registry"]) {
             if (!asset.contains("path")) {
@@ -243,7 +246,7 @@ namespace sf::assets {
                 CORE_ERROR("Material with path {} does not exist.", relative_path);
                 continue;
             }
-            import_material(device, relative_path);
+            import_material(allocator, heap, relative_path);
         }
     }
 
@@ -287,14 +290,14 @@ namespace sf::assets {
         return m_UUIDToPathMap.at(uuid);
     }
 
-    MaterialAsset* MaterialRegistry::default_material(sf::render::IGraphicsDevice* device) {
+    MaterialAsset* MaterialRegistry::default_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap) {
         const static std::string name = DEFAULT_MATERIAL_NAME;
         static sf::render::MaterialConstants default_material_constants{
             .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
             .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
             .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
         };
-        static auto buffer_result = device->create_buffer({
+        static auto buffer_result = allocator->allocate_buffer({
             .usage = sf::render::BufferUsage::Constant,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = name,
@@ -303,6 +306,7 @@ namespace sf::assets {
             CORE_CRITICAL("Failed to load default material buffer.");
             return nullptr;
         }
+        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
         static MaterialAsset default_mat{
             .uuid = DEFAULT_MATERIAL_UUID,
             .material{

@@ -193,6 +193,42 @@ namespace sf::render::vk {
         }
     }
 
+    void VkGraphicsContext::begin_render_pass(Texture& render_target, Texture* depth_stencil) {
+        if (m_CurrentRenderPass != VK_NULL_HANDLE) {
+            vkCmdEndRenderPass(m_CommandBuffer);
+            m_CurrentRenderPass = VK_NULL_HANDLE;
+            m_CurrentFramebuffer = VK_NULL_HANDLE;
+        }
+        VkRenderPass render_pass = m_DevicePtr->get_main_render_pass();
+        u32 back_buffer_index = m_DevicePtr->get_current_back_buffer_index();
+        VkFramebuffer framebuffer = m_DevicePtr->get_vk_swapchain_framebuffer(back_buffer_index);
+        if (framebuffer == VK_NULL_HANDLE) {
+            CORE_ERROR("VkGraphicsContext::begin_render_pass - Failed to get framebuffer for back buffer index {}", back_buffer_index);
+            return;
+        }
+        VkRenderPassBeginInfo begin_info{};
+        begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        begin_info.renderPass = render_pass;
+        begin_info.framebuffer = framebuffer;
+        begin_info.renderArea.offset = {0, 0};
+        begin_info.renderArea.extent = {render_target.width, render_target.height};
+        VkClearValue clear_value{};
+        clear_value.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+        begin_info.clearValueCount = 1;
+        begin_info.pClearValues = &clear_value;
+        vkCmdBeginRenderPass(m_CommandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
+        m_CurrentRenderPass = render_pass;
+        m_CurrentFramebuffer = framebuffer;
+    }
+
+    void VkGraphicsContext::end_render_pass() {
+        if (m_CurrentRenderPass != VK_NULL_HANDLE) {
+            vkCmdEndRenderPass(m_CommandBuffer);
+            m_CurrentRenderPass = VK_NULL_HANDLE;
+            m_CurrentFramebuffer = VK_NULL_HANDLE;
+        }
+    }
+
     void VkGraphicsContext::set_pipeline_state(IPipelineState* pipeline) {
         if (pipeline) {
             auto* vk_pipeline = static_cast<VkPipelineState*>(pipeline);
@@ -256,42 +292,6 @@ namespace sf::render::vk {
         vk_scissor.offset = {static_cast<i32>(scissor.left), static_cast<i32>(scissor.top)};
         vk_scissor.extent = {static_cast<u32>(scissor.right - scissor.left), static_cast<u32>(scissor.bottom - scissor.top)};
         vkCmdSetScissor(m_CommandBuffer, 0, 1, &vk_scissor);
-    }
-
-    void VkGraphicsContext::set_render_target(Texture& render_target, Texture* depth_stencil) {
-        if (m_CurrentRenderPass != VK_NULL_HANDLE) {
-            vkCmdEndRenderPass(m_CommandBuffer);
-            m_CurrentRenderPass = VK_NULL_HANDLE;
-            m_CurrentFramebuffer = VK_NULL_HANDLE;
-        }
-        // This is a simplified version that works with the main render pass
-        VkRenderPass render_pass = m_DevicePtr->get_main_render_pass();
-        u32 back_buffer_index = m_DevicePtr->get_current_back_buffer_index();
-        VkFramebuffer framebuffer = m_DevicePtr->get_vk_swapchain_framebuffer(back_buffer_index);
-        if (framebuffer == VK_NULL_HANDLE) {
-            CORE_ERROR("Invalid framebuffer for render target");
-            return;
-        }
-        VkRenderPassBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        begin_info.renderPass = render_pass;
-        begin_info.framebuffer = framebuffer;
-        begin_info.renderArea.offset = {0, 0};
-        begin_info.renderArea.extent = {render_target.width, render_target.height};
-        VkClearValue clear_value{};
-        clear_value.color = {{0.1f, 0.1f, 0.1f, 1.0f}};
-        begin_info.clearValueCount = 1;
-        begin_info.pClearValues = &clear_value;
-        vkCmdBeginRenderPass(m_CommandBuffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
-        m_CurrentRenderPass = render_pass;
-        m_CurrentFramebuffer = framebuffer;
-    }
-
-    void VkGraphicsContext::set_render_targets(stl::span<Texture*> render_targets, Texture* depth_stencil) {
-        // For now, just use the first render target
-        if (!render_targets.empty() && render_targets[0]) {
-            set_render_target(*render_targets[0], depth_stencil);
-        }
     }
 
     void VkGraphicsContext::set_index_buffer(Buffer& buffer, Format format) {

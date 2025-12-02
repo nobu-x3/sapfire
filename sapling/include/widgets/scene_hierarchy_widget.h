@@ -1,7 +1,7 @@
 #pragma once
 
-#include <QWidget>
 #include <QTreeWidget>
+#include <QWidget>
 #include "Sapfire.h"
 
 // SceneHierarchyWidget: Displays the scene entity hierarchy as a tree
@@ -25,9 +25,8 @@ private slots:
 private:
     void build_tree();
     QTreeWidgetItem* create_tree_item_for_entity(const sf::Entity& entity);
-    void build_tree_recursive(const sf::stl::vector<sf::stl::generational_index>& indices,
-                             sf::u32 parent_index,
-                             QTreeWidgetItem* parent_item);
+    void build_tree_recursive(const sf::stl::vector<sf::stl::generational_index>& indices, sf::u32 parent_index,
+                              QTreeWidgetItem* parent_item);
 
 private:
     QTreeWidget* m_TreeWidget{nullptr};

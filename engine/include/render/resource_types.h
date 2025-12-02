@@ -57,7 +57,7 @@ namespace sf::render {
         ResourceState initial_state = ResourceState::Common;
         ResourceUsage resource_usage = ResourceUsage::None;
         stl::string_view name = {};
-        stl::string path = {}; // For loading from file
+        std::string path; // For loading from file
     };
 
     // Descriptor View Creation

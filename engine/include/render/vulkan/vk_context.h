@@ -59,6 +59,9 @@ namespace sf::render::vk {
         void clear_render_target_view(Texture& texture, stl::span<f32, 4> clear_color) override;
         void clear_depth_stencil_view(Texture& texture, f32 depth = 1.0f, u8 stencil = 0) override;
 
+        void begin_render_pass(Texture& render_target, Texture* depth_stencil = nullptr) override;
+        void end_render_pass() override;
+
         void set_pipeline_state(IPipelineState* pipeline) override;
         void set_root_signature() override;
         void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) override;
@@ -67,9 +70,6 @@ namespace sf::render::vk {
 
         void set_viewport(const Viewport& viewport) override;
         void set_scissor_rect(const ScissorRect& scissor) override;
-
-        void set_render_target(Texture& render_target, Texture* depth_stencil = nullptr) override;
-        void set_render_targets(stl::span<Texture*> render_targets, Texture* depth_stencil = nullptr) override;
 
         void set_index_buffer(Buffer& buffer, Format format = Format::R32_UINT) override;
 

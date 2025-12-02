@@ -60,6 +60,53 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         CLIENT_ERROR("Failed to create graphics device!");
         return;
     }
+    auto cbv_heap_result = m_GraphicsDevice->create_cbv_srv_uav_heap({
+        .descriptor_count = 3000000,
+        .name = "Editor CBV/SRV/UAV Heap",
+    });
+    if (!cbv_heap_result) {
+        CLIENT_ERROR("Failed to create CBV/SRV/UAV heap: {}", cbv_heap_result.error().c_str());
+        return;
+    }
+    m_CbvSrvUavHeap = std::move(*cbv_heap_result);
+    auto sampler_heap_result = m_GraphicsDevice->create_sampler_heap({
+        .descriptor_count = 1000000,
+        .name = "Editor Sampler Heap",
+    });
+    if (!sampler_heap_result) {
+        CLIENT_ERROR("Failed to create sampler heap: {}", sampler_heap_result.error().c_str());
+        return;
+    }
+    m_SamplerHeap = std::move(*sampler_heap_result);
+    // Allocate descriptor sets (Vulkan-specific, no-op on DX12)
+    auto cbv_alloc_result = m_CbvSrvUavHeap->allocate_descriptor_set();
+    if (!cbv_alloc_result) {
+        CLIENT_ERROR("Failed to allocate CBV/SRV/UAV descriptor set: {}", cbv_alloc_result.error().c_str());
+        return;
+    }
+    auto sampler_alloc_result = m_SamplerHeap->allocate_descriptor_set();
+    if (!sampler_alloc_result) {
+        CLIENT_ERROR("Failed to allocate sampler descriptor set: {}", sampler_alloc_result.error().c_str());
+        return;
+    }
+    auto queue_result = m_GraphicsDevice->create_direct_queue("Editor Direct Queue");
+    if (!queue_result) {
+        CLIENT_ERROR("Failed to create direct queue: {}", queue_result.error().c_str());
+        return;
+    }
+    m_DirectQueue = std::move(*queue_result);
+    auto context_result = m_GraphicsDevice->create_graphics_context();
+    if (!context_result) {
+        CLIENT_ERROR("Failed to create graphics context: {}", context_result.error().c_str());
+        return;
+    }
+    m_GraphicsContext = std::move(*context_result);
+    auto allocator_result = m_GraphicsDevice->create_memory_allocator();
+    if (!allocator_result) {
+        CLIENT_ERROR("Failed to create memory allocator: {}", allocator_result.error().c_str());
+        return;
+    }
+    m_MemoryAllocator = std::move(*allocator_result);
     m_AssetManager = sf::stl::make_unique<sf::assets::AssetManager>(
         sf::mem::MemTag::Application,
         sf::assets::AssetManagerCreationDesc{
@@ -77,6 +124,11 @@ void EditorContext::shutdown() {
         return;
     }
     CLIENT_INFO("Shutting down EditorContext...");
+    m_MemoryAllocator.reset();
+    m_GraphicsContext.reset();
+    m_DirectQueue.reset();
+    m_SamplerHeap.reset();
+    m_CbvSrvUavHeap.reset();
     m_GraphicsDevice.reset();
     m_ECManager.reset();
     m_AssetManager.reset();

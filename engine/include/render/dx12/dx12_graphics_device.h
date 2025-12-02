@@ -22,7 +22,7 @@ namespace sf::render::dx12 {
         // Frame Management
 
         stl::result<> begin_frame() override;
-        stl::result<> end_frame() override;
+        stl::result<> end_frame(IGraphicsContext* context) override;
         stl::result<> present() override;
         stl::result<> wait_for_idle() override;
 

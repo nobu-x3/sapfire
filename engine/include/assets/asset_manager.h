@@ -66,7 +66,7 @@ namespace sf::assets {
             if (path.empty())
                 return;
             auto relative_path = fs::relative_path(path);
-            m_MaterialRegistry.import_material(m_Device, relative_path);
+            m_MaterialRegistry.import_material(m_MemoryAllocator, m_CbvSrvUavHeap, relative_path);
             m_MaterialManager.add(relative_path, m_MaterialRegistry.get(relative_path)->uuid,
                                   {.gpu_idx = static_cast<u32>(m_MaterialRegistry.get(relative_path)->material.material_cb_index)});
         }
@@ -75,7 +75,7 @@ namespace sf::assets {
                 return;
             }
             auto relative_path = fs::relative_path(path);
-            m_MaterialRegistry.import_material(m_Device, std::move(material), relative_path);
+            m_MaterialRegistry.import_material(m_MemoryAllocator, m_CbvSrvUavHeap, std::move(material), relative_path);
             m_MaterialManager.add(relative_path, m_MaterialRegistry.get(relative_path)->uuid,
                                   {.gpu_idx = static_cast<u32>(m_MaterialRegistry.get(relative_path)->material.material_cb_index)});
         }
@@ -94,7 +94,7 @@ namespace sf::assets {
         }
 
         inline bool material_resource_exists(const UUID& uuid) const {
-            if (uuid == MaterialRegistry::default_material(m_Device)->uuid)
+            if (uuid == MaterialRegistry::default_material(m_MemoryAllocator, m_CbvSrvUavHeap)->uuid)
                 return true;
             return m_MaterialManager.uuid_to_path_map.contains(uuid);
         }

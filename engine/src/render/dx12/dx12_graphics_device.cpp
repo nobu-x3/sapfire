@@ -22,27 +22,36 @@ namespace sf::render::dx12 {
     }
     // Frame Management
 
-    void DX12GraphicsDevice::begin_frame() { m_GraphicsContexts[m_CurrentFrameIndex]->reset(); }
+    stl::result<> DX12GraphicsDevice::begin_frame() {
+        m_GraphicsContexts[m_CurrentFrameIndex]->reset();
+        return stl::success;
+    }
 
-    void DX12GraphicsDevice::end_frame() {
+    stl::result<> DX12GraphicsDevice::end_frame(IGraphicsContext* context) {
+        // DX12 backend not yet refactored - stub implementation
         m_FenceValues[m_CurrentFrameIndex] = m_DirectQueue->signal();
         m_CurrentBackBufferIndex = m_Swapchain->GetCurrentBackBufferIndex();
         m_DirectQueue->wait_for_fence_value(m_FenceValues[m_CurrentFrameIndex]);
+        return stl::success;
     }
 
-    void DX12GraphicsDevice::present() { dx12_check(m_Swapchain->Present(1, 0)); }
+    stl::result<> DX12GraphicsDevice::present() {
+        dx12_check(m_Swapchain->Present(1, 0));
+        return stl::success;
+    }
 
-    void DX12GraphicsDevice::wait_for_idle() {
+    stl::result<> DX12GraphicsDevice::wait_for_idle() {
         if (m_DirectQueue)
             m_DirectQueue->wait_for_idle();
         if (m_ComputeQueue)
             m_ComputeQueue->wait_for_idle();
         if (m_CopyQueue)
             m_CopyQueue->wait_for_idle();
+        return stl::success;
     }
     // Window / Swapchain Management
 
-    void DX12GraphicsDevice::resize_window(u32 width, u32 height) {
+    stl::result<> DX12GraphicsDevice::resize_window(u32 width, u32 height) {
         m_DirectQueue->wait_for_idle();
         m_CopyQueue->wait_for_idle();
         for (u32 i = 0; i < m_BackBufferCount; ++i) {
@@ -56,6 +65,7 @@ namespace sf::render::dx12 {
         m_WindowHeight = height;
         m_CurrentBackBufferIndex = m_Swapchain->GetCurrentBackBufferIndex();
         create_backbuffer_rtvs();
+        return stl::success;
     }
     Texture& DX12GraphicsDevice::get_current_back_buffer() { return m_BackBuffers[m_CurrentBackBufferIndex]; }
     Texture& DX12GraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }

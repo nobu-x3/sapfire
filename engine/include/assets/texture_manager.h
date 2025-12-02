@@ -7,6 +7,8 @@
 namespace sf {
     namespace render {
         class IGraphicsDevice;
+        class IMemoryAllocator;
+        class IDescriptorHeap;
     }
 } // namespace sf
 
@@ -52,7 +54,7 @@ namespace sf::assets {
         stl::string to_string();
 
         static void create_default(const stl::string& registry_file_path);
-        static TextureAsset* default_texture(sf::render::IGraphicsDevice* device = nullptr);
+        static TextureAsset* default_texture(sf::render::IMemoryAllocator* allocator = nullptr, sf::render::IDescriptorHeap* heap = nullptr);
 
     private:
         stl::string m_RegistryFilePath;
