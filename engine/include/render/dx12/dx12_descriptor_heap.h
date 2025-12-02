@@ -26,6 +26,8 @@ namespace sf::render::dx12 {
 
         u32 allocate_sampler(const SamplerDesc& desc) override;
 
+        stl::result<> allocate_descriptor_set() override;
+
         u32 get_descriptor_count() const override { return m_DescriptorCount; }
         u32 get_allocated_count() const override { return m_CurrentIndex; }
 

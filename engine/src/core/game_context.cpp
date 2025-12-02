@@ -22,6 +22,62 @@ namespace sf {
                                                                                        .buffer_count = 3,
                                                                                        .format = sf::render::Format::RGBA16_FLOAT,
                                                                                        .refresh_rate = 120});
+
+        // Create rendering resources using factory methods
+        auto cbv_heap_result = m_GraphicsDevice->create_cbv_srv_uav_heap({
+            .descriptor_count = 3000000,
+            .name = "Game CBV/SRV/UAV Heap",
+        });
+        if (!cbv_heap_result) {
+            CORE_ERROR("Failed to create CBV/SRV/UAV heap: {}", cbv_heap_result.error().c_str());
+            return;
+        }
+        m_CbvSrvUavHeap = std::move(*cbv_heap_result);
+
+        auto sampler_heap_result = m_GraphicsDevice->create_sampler_heap({
+            .descriptor_count = 1000000,
+            .name = "Game Sampler Heap",
+        });
+        if (!sampler_heap_result) {
+            CORE_ERROR("Failed to create sampler heap: {}", sampler_heap_result.error().c_str());
+            return;
+        }
+        m_SamplerHeap = std::move(*sampler_heap_result);
+
+        // Allocate descriptor sets (Vulkan-specific, no-op on DX12)
+        auto cbv_alloc_result = m_CbvSrvUavHeap->allocate_descriptor_set();
+        if (!cbv_alloc_result) {
+            CORE_ERROR("Failed to allocate CBV/SRV/UAV descriptor set: {}", cbv_alloc_result.error().c_str());
+            return;
+        }
+
+        auto sampler_alloc_result = m_SamplerHeap->allocate_descriptor_set();
+        if (!sampler_alloc_result) {
+            CORE_ERROR("Failed to allocate sampler descriptor set: {}", sampler_alloc_result.error().c_str());
+            return;
+        }
+
+        auto queue_result = m_GraphicsDevice->create_direct_queue("Game Direct Queue");
+        if (!queue_result) {
+            CORE_ERROR("Failed to create direct queue: {}", queue_result.error().c_str());
+            return;
+        }
+        m_DirectQueue = std::move(*queue_result);
+
+        auto context_result = m_GraphicsDevice->create_graphics_context();
+        if (!context_result) {
+            CORE_ERROR("Failed to create graphics context: {}", context_result.error().c_str());
+            return;
+        }
+        m_GraphicsContext = std::move(*context_result);
+
+        auto allocator_result = m_GraphicsDevice->create_memory_allocator();
+        if (!allocator_result) {
+            CORE_ERROR("Failed to create memory allocator: {}", allocator_result.error().c_str());
+            return;
+        }
+        m_MemoryAllocator = std::move(*allocator_result);
+
         m_AssetManager = stl::make_unique<assets::AssetManager>(mem::MemTag::Logic,
                                                                 assets::AssetManagerCreationDesc{
                                                                     .device = m_GraphicsDevice.get(),
@@ -60,7 +116,7 @@ namespace sf {
             assert(mesh_asset->data->normals.size() > 0);
             assert(mesh_asset->data->texcs.size() > 0);
             if (!already_has_component) {
-                auto transform_result = m_GraphicsDevice->create_buffer({
+                auto transform_result = m_MemoryAllocator->allocate_buffer({
                     .usage = sf::render::BufferUsage::Constant,
                     .size_in_bytes = sizeof(ObjectConstants),
                     .name = "Transform buffer " + std::string(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end()),
@@ -68,6 +124,7 @@ namespace sf {
                 if (!transform_result) {
                     return stl::make_error("Failed to create transform buffer: {}", transform_result.error().data());
                 }
+                transform_result->cbv_index = m_CbvSrvUavHeap->allocate_cbv(*transform_result);
                 m_TransformBuffers.emplace_back(std::move(*transform_result));
             }
             bool should_add_tangent = false;
@@ -76,58 +133,70 @@ namespace sf {
                 const std::string name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
                     ? "Default Mesh"
                     : std::string(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
-                auto index_buffer_result = m_GraphicsDevice->create_buffer<u16>(
-                    sf::render::BufferCreationDesc{
-                        .usage = sf::render::BufferUsage::Index,
-                        .name = "Index buffer " + name,
-                    },
-                    mesh_asset->data->indices16());
+
+                // Create index buffer with data
+                sf::render::BufferCreationDesc index_desc{
+                    .usage = sf::render::BufferUsage::Index,
+                    .size_in_bytes = mesh_asset->data->indices16().size() * sizeof(u16),
+                    .name = "Index buffer " + name,
+                };
+                auto index_buffer_result = m_MemoryAllocator->allocate_buffer(index_desc);
                 if (!index_buffer_result) {
                     return stl::make_error("Failed to create index buffer: {}", index_buffer_result.error().data());
                 }
                 m_RTIndexBuffers.push_back(std::move(*index_buffer_result));
-                auto vertex_pos_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
-                    sf::render::BufferCreationDesc{
-                        .usage = sf::render::BufferUsage::Structured,
-                        .name = "Vertex Pos buffer " + name,
-                    },
-                    mesh_asset->data->positions);
+
+                // Create vertex position buffer with data
+                sf::render::BufferCreationDesc pos_desc{
+                    .usage = sf::render::BufferUsage::Structured,
+                    .size_in_bytes = mesh_asset->data->positions.size() * sizeof(sf::math::vec3),
+                    .name = "Vertex Pos buffer " + name,
+                };
+                auto vertex_pos_buffer_result = m_MemoryAllocator->allocate_buffer(pos_desc);
                 if (!vertex_pos_buffer_result) {
                     return stl::make_error("Failed to create vertex position buffer: {}", vertex_pos_buffer_result.error().data());
                 }
+                vertex_pos_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*vertex_pos_buffer_result);
                 m_VertexPosBuffers.push_back(std::move(*vertex_pos_buffer_result));
-                auto vertex_normal_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
-                    sf::render::BufferCreationDesc{
-                        .usage = sf::render::BufferUsage::Structured,
-                        .name = "Vertex Norm buffer " + name,
-                    },
-                    mesh_asset->data->normals);
+
+                // Create vertex normal buffer with data
+                sf::render::BufferCreationDesc norm_desc{
+                    .usage = sf::render::BufferUsage::Structured,
+                    .size_in_bytes = mesh_asset->data->normals.size() * sizeof(sf::math::vec3),
+                    .name = "Vertex Norm buffer " + name,
+                };
+                auto vertex_normal_buffer_result = m_MemoryAllocator->allocate_buffer(norm_desc);
                 if (!vertex_normal_buffer_result) {
                     return stl::make_error("Failed to create vertex normal buffer: {}", vertex_normal_buffer_result.error().data());
                 }
+                vertex_normal_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*vertex_normal_buffer_result);
                 m_VertexNormalBuffers.push_back(std::move(*vertex_normal_buffer_result));
+
                 if (mesh_asset->data->tangentus.size() > 0) {
-                    auto tangentus_buffer_result = m_GraphicsDevice->create_buffer<sf::math::vec3>(
-                        sf::render::BufferCreationDesc{
-                            .usage = sf::render::BufferUsage::Structured,
-                            .name = "Vertex Tang buffer " + name,
-                        },
-                        mesh_asset->data->tangentus);
+                    sf::render::BufferCreationDesc tang_desc{
+                        .usage = sf::render::BufferUsage::Structured,
+                        .size_in_bytes = mesh_asset->data->tangentus.size() * sizeof(sf::math::vec3),
+                        .name = "Vertex Tang buffer " + name,
+                    };
+                    auto tangentus_buffer_result = m_MemoryAllocator->allocate_buffer(tang_desc);
                     if (!tangentus_buffer_result) {
                         return stl::make_error("Failed to create vertex tangent buffer: {}", tangentus_buffer_result.error().data());
                     }
+                    tangentus_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*tangentus_buffer_result);
                     m_VertexTangentBuffers.push_back(std::move(*tangentus_buffer_result));
                     should_add_tangent = true;
                 }
-                auto uv_result = m_GraphicsDevice->create_buffer<sf::math::vec2>(
-                    sf::render::BufferCreationDesc{
-                        .usage = sf::render::BufferUsage::Structured,
-                        .name = "Vertex UV buffer " + name,
-                    },
-                    mesh_asset->data->texcs);
+
+                sf::render::BufferCreationDesc uv_desc{
+                    .usage = sf::render::BufferUsage::Structured,
+                    .size_in_bytes = mesh_asset->data->texcs.size() * sizeof(sf::math::vec2),
+                    .name = "Vertex UV buffer " + name,
+                };
+                auto uv_result = m_MemoryAllocator->allocate_buffer(uv_desc);
                 if (!uv_result) {
                     return stl::make_error("Failed to create vertex UV buffer: {}", uv_result.error().data());
                 }
+                uv_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*uv_result);
                 m_VertexUVBuffers.push_back(std::move(*uv_result));
             }
             auto cpu_data = components::CPUData{

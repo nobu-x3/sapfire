@@ -38,7 +38,6 @@ namespace sf::render::vk {
         command_pool_ci.flags = pool_ci_flags;
         command_pool_ci.queueFamilyIndex = family_index;
         VK_RETURN_ON_ERROR(vkCreateCommandPool(m_Device, &command_pool_ci, nullptr, &m_CommandPool), "Failed to create command pool.");
-        ;
         VkCommandBufferAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         alloc_info.pNext = nullptr;
@@ -54,6 +53,11 @@ namespace sf::render::vk {
         m_BufferBarriers.clear();
         if (m_CommandBuffer != VK_NULL_HANDLE) {
             VK_RETURN_ON_ERROR(vkResetCommandBuffer(m_CommandBuffer, 0), "Failed to reset command buffer in VkContext.");
+            VkCommandBufferBeginInfo begin_info{};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            begin_info.pInheritanceInfo = nullptr;
+            VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkContext.");
         }
         return stl::success;
     }
@@ -141,12 +145,7 @@ namespace sf::render::vk {
             m_CurrentRenderPass = VK_NULL_HANDLE;
             m_CurrentFramebuffer = VK_NULL_HANDLE;
         }
-        VkContext::reset();
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkGraphicsContext.");
-        return stl::success;
+        return VkContext::reset();
     }
 
     stl::result<> VkGraphicsContext::close() {
@@ -218,13 +217,27 @@ namespace sf::render::vk {
         vkCmdPushConstants(m_CommandBuffer, layout, VK_SHADER_STAGE_ALL, byte_offset, byte_size, data);
     }
 
-    void VkGraphicsContext::set_descriptor_heaps() {
-        // In Vulkan, this would bind descriptor sets to the pipeline
-        // For now, this is a stub as the descriptor heap needs to create and manage descriptor sets
-        // When fully implemented, this would call:
-        // vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, count, descriptor_sets, 0, nullptr);
-        CORE_WARN("VkGraphicsContext::set_descriptor_heaps - descriptor set binding not yet implemented. "
-                  "Requires descriptor set allocation and management.");
+    void VkGraphicsContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
+        // Bind descriptor sets from the provided heaps to their correct set indices
+        if (heaps.empty()) {
+            CORE_WARN("VkGraphicsContext::set_descriptor_heaps - no heaps provided");
+            return;
+        }
+
+        VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
+
+        // Bind each descriptor set to its designated set index
+        for (auto* heap : heaps) {
+            if (!heap)
+                continue;
+            auto* vk_heap = static_cast<VkDescriptorHeap*>(heap);
+            VkDescriptorSet set = vk_heap->get_vk_set();
+            u32 set_index = vk_heap->get_set_index();
+
+            // Bind this single descriptor set to its specific index
+            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
+                                    set_index, 1, &set, 0, nullptr);
+        }
     }
 
     void VkGraphicsContext::set_viewport(const Viewport& viewport) {
@@ -315,12 +328,7 @@ namespace sf::render::vk {
         VkContext(device, device->get_compute_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {}
 
     stl::result<> VkComputeContext::reset() {
-        VkContext::reset();
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkComputeContext.");
-        return stl::success;
+        return VkContext::reset();
     }
 
     void VkComputeContext::set_pipeline_state(IPipelineState* pipeline) {
@@ -347,13 +355,27 @@ namespace sf::render::vk {
         vkCmdPushConstants(m_CommandBuffer, layout, VK_SHADER_STAGE_ALL, byte_offset, byte_size, data);
     }
 
-    void VkComputeContext::set_descriptor_heaps() {
-        // In Vulkan, this would bind descriptor sets to the pipeline
-        // For now, this is a stub as the descriptor heap needs to create and manage descriptor sets
-        // When fully implemented, this would call:
-        // vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, 0, count, descriptor_sets, 0, nullptr);
-        CORE_WARN("VkComputeContext::set_descriptor_heaps - descriptor set binding not yet implemented. "
-                  "Requires descriptor set allocation and management.");
+    void VkComputeContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
+        // Bind descriptor sets from the provided heaps to their correct set indices
+        if (heaps.empty()) {
+            CORE_WARN("VkComputeContext::set_descriptor_heaps - no heaps provided");
+            return;
+        }
+
+        VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
+
+        // Bind each descriptor set to its designated set index
+        for (auto* heap : heaps) {
+            if (!heap)
+                continue;
+            auto* vk_heap = static_cast<VkDescriptorHeap*>(heap);
+            VkDescriptorSet set = vk_heap->get_vk_set();
+            u32 set_index = vk_heap->get_set_index();
+
+            // Bind this single descriptor set to its specific index
+            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout,
+                                    set_index, 1, &set, 0, nullptr);
+        }
     }
 
     void VkComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) {
@@ -366,12 +388,7 @@ namespace sf::render::vk {
     }
 
     stl::result<> VkCopyContext::reset() {
-        VkContext::reset();
-        VkCommandBufferBeginInfo begin_info{};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        VK_RETURN_ON_ERROR(vkBeginCommandBuffer(m_CommandBuffer, &begin_info), "Failed to begin command buffer in VkCopyContext.");
-        return stl::success;
+        return VkContext::reset();
     }
 
     void VkCopyContext::copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset, u64 src_offset) {

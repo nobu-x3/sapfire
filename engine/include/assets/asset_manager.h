@@ -14,6 +14,8 @@ namespace sf::assets {
 
     struct SFAPI AssetManagerCreationDesc {
         sf::render::IGraphicsDevice* device{nullptr};
+        sf::render::IMemoryAllocator* memory_allocator{nullptr};
+        sf::render::IDescriptorHeap* cbv_srv_uav_heap{nullptr};
         stl::string mesh_registry_path = stl::string(mem::MemTag::Mesh, "mesh_registry.db");
         stl::string texture_registry_path = stl::string(mem::MemTag::Texture, "texture_registry.db");
         stl::string material_registry_path = stl::string(mem::MemTag::Material, "material_registry.db");
@@ -114,5 +116,7 @@ namespace sf::assets {
         MaterialRegistry m_MaterialRegistry;
         MaterialManager m_MaterialManager;
         sf::render::IGraphicsDevice* m_Device;
+        sf::render::IMemoryAllocator* m_MemoryAllocator;
+        sf::render::IDescriptorHeap* m_CbvSrvUavHeap;
     };
 } // namespace sf::assets

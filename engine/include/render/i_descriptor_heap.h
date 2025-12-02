@@ -26,6 +26,10 @@ namespace sf::render {
 
         virtual u32 allocate_sampler(const SamplerDesc& desc) = 0;
 
+        // Descriptor set allocation (Vulkan-specific, no-op on DX12)
+        // Must be called before using the descriptor heap for rendering
+        virtual stl::result<> allocate_descriptor_set() = 0;
+
         // Query descriptor heap properties
         virtual u32 get_descriptor_count() const = 0;
         virtual u32 get_allocated_count() const = 0;

@@ -49,13 +49,15 @@ namespace sf::render::dx12 {
         dx12_check(d3d_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator)));
         dx12_check(d3d_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator.Get(), nullptr,
                                                  IID_PPV_ARGS(&m_CommandList)));
-        set_descriptor_heaps();
+        stl::array<IDescriptorHeap*, 2> heaps{m_Device->get_dx12_cbv_srv_uav_heap(), m_Device->get_dx12_sampler_heap()};
+        set_descriptor_heaps(heaps);
         dx12_check(m_CommandList->Close());
     }
 
     void DX12GraphicsContext::reset() {
         DX12Context::reset();
-        set_descriptor_heaps();
+        stl::array<IDescriptorHeap*, 2> heaps{m_Device->get_dx12_cbv_srv_uav_heap(), m_Device->get_dx12_sampler_heap()};
+        set_descriptor_heaps(heaps);
     }
 
     void DX12GraphicsContext::clear_render_target_view(Texture& texture, stl::span<f32, 4> clear_color) {
@@ -82,10 +84,18 @@ namespace sf::render::dx12 {
         m_CommandList->SetGraphicsRoot32BitConstants(0, num_32bit_values, data, offset);
     }
 
-    void DX12GraphicsContext::set_descriptor_heaps() {
-        stl::array<ID3D12DescriptorHeap*, 2> heaps = {m_Device->get_dx12_cbv_srv_uav_heap()->get_d3d12_heap(),
-                                                      m_Device->get_dx12_sampler_heap()->get_d3d12_heap()};
-        m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+    void DX12GraphicsContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
+        // Convert generic IDescriptorHeap pointers to D3D12 heap pointers
+        stl::vector<ID3D12DescriptorHeap*> dx12_heaps{mem::MemTag::Render};
+        for (auto* heap : heaps) {
+            if (!heap) continue;
+            auto* dx12_heap = static_cast<DX12DescriptorHeap*>(heap);
+            dx12_heaps.push_back(dx12_heap->get_d3d12_heap());
+        }
+        
+        if (!dx12_heaps.empty()) {
+            m_CommandList->SetDescriptorHeaps(static_cast<UINT>(dx12_heaps.size()), dx12_heaps.data());
+        }
     }
 
     void DX12GraphicsContext::set_viewport(const Viewport& viewport) {
@@ -156,13 +166,15 @@ namespace sf::render::dx12 {
         dx12_check(d3d_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&m_CommandAllocator)));
         dx12_check(d3d_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_CommandAllocator.Get(), nullptr,
                                                  IID_PPV_ARGS(&m_CommandList)));
-        set_descriptor_heaps();
+        stl::array<IDescriptorHeap*, 2> heaps{m_Device->get_dx12_cbv_srv_uav_heap(), m_Device->get_dx12_sampler_heap()};
+        set_descriptor_heaps(heaps);
         dx12_check(m_CommandList->Close());
     }
 
     void DX12ComputeContext::reset() {
         DX12Context::reset();
-        set_descriptor_heaps();
+        stl::array<IDescriptorHeap*, 2> heaps{m_Device->get_dx12_cbv_srv_uav_heap(), m_Device->get_dx12_sampler_heap()};
+        set_descriptor_heaps(heaps);
     }
 
     void DX12ComputeContext::set_pipeline_state(IPipelineState* pipeline) {
@@ -179,10 +191,18 @@ namespace sf::render::dx12 {
         m_CommandList->SetComputeRoot32BitConstants(0, num_32bit_values, data, offset);
     }
 
-    void DX12ComputeContext::set_descriptor_heaps() {
-        stl::array<ID3D12DescriptorHeap*, 2> heaps = {m_Device->get_dx12_cbv_srv_uav_heap()->get_d3d12_heap(),
-                                                      m_Device->get_dx12_sampler_heap()->get_d3d12_heap()};
-        m_CommandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
+    void DX12ComputeContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
+        // Convert generic IDescriptorHeap pointers to D3D12 heap pointers
+        stl::vector<ID3D12DescriptorHeap*> dx12_heaps{mem::MemTag::Render};
+        for (auto* heap : heaps) {
+            if (!heap) continue;
+            auto* dx12_heap = static_cast<DX12DescriptorHeap*>(heap);
+            dx12_heaps.push_back(dx12_heap->get_d3d12_heap());
+        }
+        
+        if (!dx12_heaps.empty()) {
+            m_CommandList->SetDescriptorHeaps(static_cast<UINT>(dx12_heaps.size()), dx12_heaps.data());
+        }
     }
 
     void DX12ComputeContext::dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) {

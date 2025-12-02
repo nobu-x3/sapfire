@@ -24,6 +24,8 @@ namespace sf::render::vk {
 
         u32 allocate_sampler(const SamplerDesc& desc) override;
 
+        stl::result<> allocate_descriptor_set() override;
+
         u32 get_descriptor_count() const override { return m_DescriptorCount; }
         u32 get_allocated_count() const override { return m_CurrentIndex; }
 
@@ -33,6 +35,12 @@ namespace sf::render::vk {
 
         VkDescriptorPool get_vk_pool() const { return m_DescriptorPool; }
         VkDescriptorSet get_vk_set() const { return m_DescriptorSet; }
+        u32 get_set_index() const { return m_SetIndex; }
+
+        void set_descriptor_set_layout(VkDescriptorSetLayout layout, u32 set_index) {
+            m_DescriptorSetLayout = layout;
+            m_SetIndex = set_index;
+        }
 
     private:
         VkDevice m_Device{VK_NULL_HANDLE};
@@ -41,6 +49,8 @@ namespace sf::render::vk {
         VkDescriptorSetLayout m_DescriptorSetLayout{VK_NULL_HANDLE};
         u32 m_DescriptorCount{0};
         u32 m_CurrentIndex{0};
+        u32 m_SetIndex{0};
+        stl::vector<VkSampler> m_Samplers{mem::MemTag::Render};
     };
 
 } // namespace sf::render::vk

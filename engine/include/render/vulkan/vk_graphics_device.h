@@ -46,38 +46,36 @@ namespace sf::render::vk {
         // Texture readback (screenshots, editor viewport, etc.)
         stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) override;
 
-        // Context Access
+        // Context Creation Factories
 
-        IGraphicsContext& get_current_graphics_context() override;
-        IGraphicsContext& get_graphics_context(u32 frame_index) override;
-        IComputeContext& get_compute_context() override;
-        ICopyContext& get_copy_context() override;
+        stl::result<stl::unique_ptr<IGraphicsContext>> create_graphics_context() override;
+        stl::result<stl::unique_ptr<IComputeContext>> create_compute_context() override;
+        stl::result<stl::unique_ptr<ICopyContext>> create_copy_context() override;
 
-        // Command Queue Access
+        // Command Queue Creation Factories
 
-        inline ICommandQueue* get_direct_queue() override { return m_GraphicsQueue.get(); }
-        inline ICommandQueue* get_compute_queue() override { return m_ComputeQueue.get(); }
-        inline ICommandQueue* get_copy_queue() override { return m_TransferQueue.get(); }
+        stl::result<stl::unique_ptr<ICommandQueue>> create_direct_queue(const char* name = "Direct Queue") override;
+        stl::result<stl::unique_ptr<ICommandQueue>> create_compute_queue(const char* name = "Compute Queue") override;
+        stl::result<stl::unique_ptr<ICommandQueue>> create_copy_queue(const char* name = "Copy Queue") override;
 
         inline u32 get_graphics_queue_family_index() const { return m_GraphicsQueueFamily; }
         inline u32 get_compute_queue_family_index() const { return m_ComputeQueueFamily; }
         inline u32 get_transfer_queue_family_index() const { return m_TransferQueueFamily; }
 
-        // Descriptor Heap Access
+        // Descriptor Heap Creation Factories
 
-        inline IDescriptorHeap* get_cbv_srv_uav_heap() override { return m_DescriptorHeap.get(); }
-        inline IDescriptorHeap* get_rtv_heap() override { return m_DescriptorHeap.get(); }
-        inline IDescriptorHeap* get_dsv_heap() override { return m_DescriptorHeap.get(); }
-        inline IDescriptorHeap* get_sampler_heap() override { return m_SamplerHeap.get(); }
+        stl::result<stl::unique_ptr<IDescriptorHeap>> create_cbv_srv_uav_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<stl::unique_ptr<IDescriptorHeap>> create_rtv_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<stl::unique_ptr<IDescriptorHeap>> create_dsv_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<stl::unique_ptr<IDescriptorHeap>> create_sampler_heap(const DescriptorHeapDesc& desc) override;
 
-        // Memory Allocator Access
+        // Memory Allocator Creation Factory
 
-        inline IMemoryAllocator* get_memory_allocator() override { return m_MemoryAllocator.get(); }
+        stl::result<stl::unique_ptr<IMemoryAllocator>> create_memory_allocator() override;
 
         // Frame Timing
 
         inline u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
-        inline u32 get_frames_in_flight() const override { return m_FramesInFlight; }
 
         // Backend Information
 
@@ -94,10 +92,13 @@ namespace sf::render::vk {
         inline VkSurfaceKHR get_vk_surface() const { return m_Surface; }
         inline VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
         inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
-
-        inline const VkDescriptorHeap* get_vk_descriptor_heap() const { return m_DescriptorHeap.get(); }
-        inline const VkDescriptorHeap* get_vk_sampler_heap() const { return m_SamplerHeap.get(); }
         inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
+
+        // Get descriptor set layouts for explicit initialization by user
+        inline VkDescriptorSetLayout get_per_frame_descriptor_set_layout() const { return m_PerFrameDescriptorSetLayout; }
+        inline VkDescriptorSetLayout get_resource_descriptor_set_layout() const { return m_ResourceDescriptorSetLayout; }
+        inline VkDescriptorSetLayout get_material_descriptor_set_layout() const { return m_MaterialDescriptorSetLayout; }
+        inline VkDescriptorSetLayout get_sampler_descriptor_set_layout() const { return m_DummyDescriptorSetLayout; }
 
     private:
         stl::result<> init_instance();
@@ -106,10 +107,6 @@ namespace sf::render::vk {
         stl::result<> init_logical_device();
         stl::result<> init_swapchain(const SwapchainCreationDesc& desc);
         stl::result<> init_sync_objects();
-        stl::result<> init_command_queues();
-        stl::result<> init_descriptor_heaps();
-        stl::result<> init_memory_allocator();
-        stl::result<> init_contexts();
         stl::result<> init_bindless_pipeline_layout();
         stl::result<> init_render_pass();
         stl::result<> create_swapchain_framebuffers();
@@ -124,19 +121,7 @@ namespace sf::render::vk {
         VkDevice m_Device = VK_NULL_HANDLE;
         u32 m_CurrentFrameIndex = 0;
         u32 m_CurrentBackBufferIndex = 0;
-        u32 m_FramesInFlight = MAX_FRAMES_IN_FLIGHT;
         u32 m_BackBufferCount = MAX_FRAMES_IN_FLIGHT;
-
-        // Frequently accessed objects (now heap-allocated to avoid placement new)
-        stl::unique_ptr<VkCommandQueue> m_GraphicsQueue;
-        stl::unique_ptr<VkCommandQueue> m_ComputeQueue;
-        stl::unique_ptr<VkCommandQueue> m_TransferQueue;
-        stl::array<stl::unique_ptr<VkGraphicsContext>, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
-        stl::unique_ptr<VkComputeContext> m_ComputeContext;
-        stl::unique_ptr<VkCopyContext> m_CopyContext;
-        stl::unique_ptr<VkDescriptorHeap> m_DescriptorHeap;
-        stl::unique_ptr<VkDescriptorHeap> m_SamplerHeap;
-        stl::unique_ptr<VkMemoryAllocator> m_MemoryAllocator;
 
         // Frame sync objects
         stl::array<VkFence, MAX_FRAMES_IN_FLIGHT> m_InFlightFences;
@@ -163,6 +148,7 @@ namespace sf::render::vk {
         VkInstance m_Instance = VK_NULL_HANDLE;
         VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
         VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
+        VmaAllocator m_InternalAllocator = VK_NULL_HANDLE; // For device-owned backbuffers only
 
 #ifdef _DEBUG
         VkDebugUtilsMessengerEXT m_DebugMessenger = VK_NULL_HANDLE;

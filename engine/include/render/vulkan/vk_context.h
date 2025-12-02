@@ -47,9 +47,11 @@ namespace sf::render::vk {
         void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
             VkContext::transition_barrier(buffer, before, after);
         }
+
         void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
             VkContext::transition_barrier(texture, before, after);
         }
+
         void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
 
         void* get_native_command_list() override { return VkContext::get_native_command_list(); }
@@ -61,7 +63,7 @@ namespace sf::render::vk {
         void set_root_signature() override;
         void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) override;
 
-        void set_descriptor_heaps() override;
+        void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) override;
 
         void set_viewport(const Viewport& viewport) override;
         void set_scissor_rect(const ScissorRect& scissor) override;
@@ -109,7 +111,7 @@ namespace sf::render::vk {
         void set_root_signature() override;
         void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) override;
 
-        void set_descriptor_heaps() override;
+        void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) override;
 
         void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) override;
 

@@ -143,4 +143,10 @@ namespace sf::render::dx12 {
         handle.ptr += index * m_DescriptorSize;
         return handle;
     }
+
+    stl::result<> DX12DescriptorHeap::allocate_descriptor_set() {
+        // DX12 descriptor heaps don't require explicit descriptor set allocation
+        // The heap is created and ready to use immediately
+        return stl::success;
+    }
 } // namespace sf::render::dx12

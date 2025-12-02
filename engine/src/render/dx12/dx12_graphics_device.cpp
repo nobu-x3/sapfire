@@ -254,4 +254,12 @@ namespace sf::render::dx12 {
             backbuffer_resource->SetName((L"Backbuffer " + std::to_wstring(i)).c_str());
         }
     }
+
+    stl::result<> DX12GraphicsDevice::initialize_descriptor_heaps() {
+        // DX12 descriptor heaps are already created and ready to use
+        // Unlike Vulkan, DX12 doesn't require explicit descriptor set allocation
+        // The heaps are already bound and accessible via the root signature
+        CORE_INFO("DX12 descriptor heaps are ready (no additional initialization needed)");
+        return stl::success;
+    }
 } // namespace sf::render::dx12

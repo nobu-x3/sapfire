@@ -6,6 +6,8 @@
 namespace sf {
     namespace render {
         class IGraphicsDevice;
+        class IMemoryAllocator;
+        class IDescriptorHeap;
     }
 } // namespace sf
 
@@ -36,9 +38,9 @@ namespace sf::assets {
         MaterialRegistry(MaterialRegistry&&) = delete;
         MaterialRegistry& operator=(const MaterialRegistry&) = delete;
         MaterialRegistry& operator=(MaterialRegistry&&) = delete;
-        stl::result<> import_material(sf::render::IGraphicsDevice* device, const stl::string& path);
-        stl::result<> import_material(sf::render::IGraphicsDevice* device, MaterialAsset&& asset, const stl::string& path);
-        stl::result<> import_material(sf::render::IGraphicsDevice* device, const stl::string& path, UUID uuid);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path, UUID uuid);
         stl::result<> move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
         stl::result<> release_material(const stl::string& path);
         void serialize();

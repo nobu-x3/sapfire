@@ -2,6 +2,7 @@
 
 #include <span>
 #include "core/core.h"
+#include "render/i_descriptor_heap.h"
 #include "render_api.h"
 #include "resource_types.h"
 
@@ -45,7 +46,7 @@ namespace sf::render {
         virtual void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) = 0;
 
         // Descriptor heaps
-        virtual void set_descriptor_heaps() = 0;
+        virtual void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) = 0;
 
         // Viewport and scissor
         virtual void set_viewport(const Viewport& viewport) = 0;
@@ -81,7 +82,7 @@ namespace sf::render {
         virtual void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) = 0;
 
         // Descriptor heaps
-        virtual void set_descriptor_heaps() = 0;
+        virtual void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) = 0;
 
         // Dispatch
         virtual void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) = 0;

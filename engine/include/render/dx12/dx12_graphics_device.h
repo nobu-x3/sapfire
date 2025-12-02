@@ -21,14 +21,14 @@ namespace sf::render::dx12 {
 
         // Frame Management
 
-        void begin_frame() override;
-        void end_frame() override;
-        void present() override;
-        void wait_for_idle() override;
+        stl::result<> begin_frame() override;
+        stl::result<> end_frame() override;
+        stl::result<> present() override;
+        stl::result<> wait_for_idle() override;
 
         // Window / Swapchain Management
 
-        void resize_window(u32 width, u32 height) override;
+        stl::result<> resize_window(u32 width, u32 height) override;
         u32 get_window_width() const override { return m_WindowWidth; }
         u32 get_window_height() const override { return m_WindowHeight; }
         Texture& get_current_back_buffer() override;
@@ -38,43 +38,44 @@ namespace sf::render::dx12 {
 
         // Resource Creation
 
-        Buffer create_buffer(const BufferCreationDesc& desc) override;
-        Buffer create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
+        stl::result<Buffer> create_buffer(const BufferCreationDesc& desc) override;
+        stl::result<Buffer> create_buffer_with_data(const BufferCreationDesc& desc, const void* data, size_t data_size) override;
 
-        Texture create_texture(const TextureCreationDesc& desc) override;
-        Texture create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) override;
+        stl::result<Texture> create_texture(const TextureCreationDesc& desc) override;
+        stl::result<Texture> create_texture_with_data(const TextureCreationDesc& desc, const void* data, size_t data_size) override;
 
-        IPipelineState* create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
-        IPipelineState* create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
+        stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
+        stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
 
-        // Context Access
+        // Texture readback (screenshots, editor viewport, etc.)
+        stl::result<> read_texture_pixels(Texture& texture, void* out_data, size_t data_size) override;
 
-        IGraphicsContext& get_current_graphics_context() override;
-        IGraphicsContext& get_graphics_context(u32 frame_index) override;
-        IComputeContext& get_compute_context() override;
-        ICopyContext& get_copy_context() override;
+        // Context Creation Factories
 
-        // Command Queue Access
+        stl::result<IGraphicsContext*> create_graphics_context() override;
+        stl::result<IComputeContext*> create_compute_context() override;
+        stl::result<ICopyContext*> create_copy_context() override;
 
-        ICommandQueue* get_direct_queue() override { return m_DirectQueue.get(); }
-        ICommandQueue* get_compute_queue() override { return m_ComputeQueue.get(); }
-        ICommandQueue* get_copy_queue() override { return m_CopyQueue.get(); }
+        // Command Queue Creation Factories
 
-        // Descriptor Heap Access
+        stl::result<ICommandQueue*> create_direct_queue(const char* name = "Direct Queue") override;
+        stl::result<ICommandQueue*> create_compute_queue(const char* name = "Compute Queue") override;
+        stl::result<ICommandQueue*> create_copy_queue(const char* name = "Copy Queue") override;
 
-        IDescriptorHeap* get_cbv_srv_uav_heap() override { return m_CbvSrvUavHeap.get(); }
-        IDescriptorHeap* get_rtv_heap() override { return m_RtvHeap.get(); }
-        IDescriptorHeap* get_dsv_heap() override { return m_DsvHeap.get(); }
-        IDescriptorHeap* get_sampler_heap() override { return m_SamplerHeap.get(); }
+        // Descriptor Heap Creation Factories
 
-        // Memory Allocator Access
+        stl::result<IDescriptorHeap*> create_cbv_srv_uav_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<IDescriptorHeap*> create_rtv_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<IDescriptorHeap*> create_dsv_heap(const DescriptorHeapDesc& desc) override;
+        stl::result<IDescriptorHeap*> create_sampler_heap(const DescriptorHeapDesc& desc) override;
 
-        IMemoryAllocator* get_memory_allocator() override { return m_MemoryAllocator.get(); }
+        // Memory Allocator Creation Factory
+
+        stl::result<IMemoryAllocator*> create_memory_allocator() override;
 
         // Frame Timing
 
         u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
-        u32 get_frames_in_flight() const override { return m_FramesInFlight; }
 
         // Backend Information
 
@@ -88,20 +89,11 @@ namespace sf::render::dx12 {
         IDXGISwapChain3* get_d3d12_swapchain() const { return m_Swapchain.Get(); }
         ID3D12RootSignature* get_bindless_root_signature() const { return m_BindlessRootSignature.Get(); }
 
-        DX12DescriptorHeap* get_dx12_cbv_srv_uav_heap() const { return m_CbvSrvUavHeap.get(); }
-        DX12DescriptorHeap* get_dx12_rtv_heap() const { return m_RtvHeap.get(); }
-        DX12DescriptorHeap* get_dx12_dsv_heap() const { return m_DsvHeap.get(); }
-        DX12DescriptorHeap* get_dx12_sampler_heap() const { return m_SamplerHeap.get(); }
-
     private:
         // Initialization methods
         void init_device_resources();
         void init_swapchain_resources(const SwapchainCreationDesc& desc);
         void init_directx();
-        void init_command_queues();
-        void init_descriptor_heaps();
-        void init_memory_allocator();
-        void init_contexts();
         void init_bindless_root_signature();
         void create_backbuffer_rtvs();
 
@@ -119,24 +111,6 @@ namespace sf::render::dx12 {
         Microsoft::WRL::ComPtr<ID3D12DebugDevice> m_DebugDevice;
 #endif
 
-        // Command queues
-        stl::tunique_ptr<DX12CommandQueue> m_DirectQueue;
-        stl::tunique_ptr<DX12CommandQueue> m_ComputeQueue;
-        stl::tunique_ptr<DX12CommandQueue> m_CopyQueue;
-
-        // Contexts (triple buffered for graphics)
-        stl::array<stl::tunique_ptr<DX12GraphicsContext>, MAX_FRAMES_IN_FLIGHT> m_GraphicsContexts;
-        stl::tunique_ptr<DX12ComputeContext> m_ComputeContext;
-        stl::tunique_ptr<DX12CopyContext> m_CopyContext;
-
-        // Descriptor heaps
-        stl::tunique_ptr<DX12DescriptorHeap> m_CbvSrvUavHeap;
-        stl::tunique_ptr<DX12DescriptorHeap> m_RtvHeap;
-        stl::tunique_ptr<DX12DescriptorHeap> m_DsvHeap;
-        stl::tunique_ptr<DX12DescriptorHeap> m_SamplerHeap;
-
-        // Memory allocator
-        stl::tunique_ptr<DX12MemoryAllocator> m_MemoryAllocator;
 
         // Pipeline states (owned by device)
         stl::tvector<stl::tunique_ptr<DX12PipelineState>> m_PipelineStates;
@@ -154,7 +128,6 @@ namespace sf::render::dx12 {
 
         // Frame tracking
         u32 m_CurrentFrameIndex = 0;
-        u32 m_FramesInFlight = MAX_FRAMES_IN_FLIGHT;
         stl::array<u64, MAX_FRAMES_IN_FLIGHT> m_FenceValues = {};
 
         // Thread safety
