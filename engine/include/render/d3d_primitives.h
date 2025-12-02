@@ -17,11 +17,11 @@ namespace sf::render::primitives {
     };
 
     struct SFAPI MeshData {
-        stl::vector<sf::math::vec3> positions;
-        stl::vector<sf::math::vec3> normals;
-        stl::vector<sf::math::vec3> tangentus;
-        stl::vector<sf::math::vec2> texcs;
-        stl::vector<u32> indices32;
+        stl::vector<sf::math::vec3> positions{mem::MemTag::Render};
+        stl::vector<sf::math::vec3> normals{mem::MemTag::Render};
+        stl::vector<sf::math::vec3> tangentus{mem::MemTag::Render};
+        stl::vector<sf::math::vec2> texcs{mem::MemTag::Render};
+        stl::vector<u32> indices32{mem::MemTag::Render};
         sf::math::aabb aabb;
 
         stl::vector<u16>& indices16() {
@@ -34,7 +34,7 @@ namespace sf::render::primitives {
         }
 
     private:
-        stl::vector<u16> m_Indices16;
+        stl::vector<u16> m_Indices16{mem::MemTag::Render};
     };
 
     MeshData create_box(float width, float height, float depth, u32 num_subdivisions);
