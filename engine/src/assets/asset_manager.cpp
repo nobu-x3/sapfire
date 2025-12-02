@@ -6,7 +6,8 @@
 
 namespace sf::assets {
     AssetManager::AssetManager(const AssetManagerCreationDesc& desc) :
-        m_Device(desc.device), m_MemoryAllocator(desc.memory_allocator), m_CbvSrvUavHeap(desc.cbv_srv_uav_heap), m_MeshRegistry(desc.mesh_registry_path), m_TextureRegistry(desc.texture_registry_path) {}
+        m_Device(desc.device), m_MemoryAllocator(desc.memory_allocator), m_CbvSrvUavHeap(desc.cbv_srv_uav_heap),
+        m_MeshRegistry(desc.mesh_registry_path), m_TextureRegistry(desc.texture_registry_path) {}
 
     stl::result<> AssetManager::load_runtime_texture(const stl::string& texture_path) {
         auto relative_path = fs::relative_path(texture_path);
@@ -22,7 +23,7 @@ namespace sf::assets {
                 .name = relative_path,
                 .path = fs::full_path(texture_path).c_str(),
             });
-            if(!texture_result) {
+            if (!texture_result) {
                 return stl::make_error("Failed to load runtime texture: {}", texture_result.error().data());
             }
             texture_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*texture_result);
@@ -51,7 +52,7 @@ namespace sf::assets {
                 .name = relative_path,
                 .path = fs::full_path(path).c_str(),
             });
-            if(!texture_result) {
+            if (!texture_result) {
                 return stl::make_error("Failed to import texture: ", texture_result.error().data());
             }
             texture_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*texture_result);

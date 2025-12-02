@@ -598,8 +598,8 @@ namespace sf::render::vk {
         binding_flags[1] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Normal buffers
         binding_flags[2] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // UV buffers
         binding_flags[3] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Textures
-        binding_flags[4] = VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT |
-                           VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Samplers (last binding)
+        binding_flags[4] =
+            VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Samplers (last binding)
         set2_flags_info.bindingCount = static_cast<u32>(binding_flags.size());
         set2_flags_info.pBindingFlags = binding_flags.data();
         VkDescriptorSetLayoutCreateInfo set2_info{};
@@ -712,8 +712,8 @@ namespace sf::render::vk {
             image_info.format = to_vk_format(m_BackBufferFormat);
             image_info.tiling = VK_IMAGE_TILING_OPTIMAL;
             image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-            image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
-                               VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            image_info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             image_info.samples = VK_SAMPLE_COUNT_1_BIT;
             image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
             VmaAllocationCreateInfo alloc_info{};
@@ -789,7 +789,8 @@ namespace sf::render::vk {
             barrier.subresourceRange.layerCount = 1;
             barrier.srcAccessMask = 0;
             barrier.dstAccessMask = 0;
-            vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+            vkCmdPipelineBarrier(cmd_buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0,
+                                 nullptr, 1, &barrier);
         }
         VK_RETURN_ON_ERROR(vkEndCommandBuffer(cmd_buffer), "Failed to end transition command buffer");
         VkQueue graphics_queue;
@@ -864,8 +865,7 @@ namespace sf::render::vk {
         u32 fence_index = m_Headless ? 0 : m_CurrentFrameIndex;
         VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[fence_index], VK_TRUE, UINT64_MAX),
                            "Failed to wait for fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[fence_index]),
-                           "Failed to reset fences when beginning frame.");
+        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[fence_index]), "Failed to reset fences when beginning frame.");
         if (m_Headless) {
             // In headless mode, we cycle through our custom render targets manually
             m_CurrentBackBufferIndex = m_CurrentFrameIndex;

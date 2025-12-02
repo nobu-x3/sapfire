@@ -173,7 +173,7 @@ namespace sf::stl {
     public:
         explicit TaggedDeleter(mem::MemTag tag = mem::MemTag::Logic) : m_Tag(tag) {}
 
-        template<typename U>
+        template <typename U>
         TaggedDeleter(const TaggedDeleter<U>& other) noexcept : m_Tag(other.m_Tag) {}
 
         void operator()(T* ptr) const {

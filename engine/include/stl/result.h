@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cassert>
+#include <format>
 #include <type_traits>
 #include <utility>
-#include <format>
 #include "memory/memory.h"
 #include "stl/string.h"
 
@@ -28,7 +28,11 @@ namespace sf::stl {
         using error_type = Et;
 
         // Default constructor - constructs with default value (if T is default constructible)
-        result() requires std::is_default_constructible_v<T> : m_HasValue(true) { new (&m_Value) T(); }
+        result()
+            requires std::is_default_constructible_v<T>
+            : m_HasValue(true) {
+            new (&m_Value) T();
+        }
 
         // Success constructor
         template <typename... Args>
@@ -43,7 +47,9 @@ namespace sf::stl {
         }
 
         // Copy constructor
-        result(const result& other) requires(std::is_copy_constructible_v<T> && std::is_copy_constructible_v<Et>) : m_HasValue(other.m_HasValue) {
+        result(const result& other)
+            requires(std::is_copy_constructible_v<T> && std::is_copy_constructible_v<Et>)
+            : m_HasValue(other.m_HasValue) {
             if (m_HasValue) {
                 new (&m_Value) T(other.m_Value);
             } else {
@@ -63,9 +69,17 @@ namespace sf::stl {
         }
 
         // Implicit conversion from value
-        result(const T& value) requires std::is_copy_constructible_v<T> : m_HasValue(true) { new (&m_Value) T(value); }
+        result(const T& value)
+            requires std::is_copy_constructible_v<T>
+            : m_HasValue(true) {
+            new (&m_Value) T(value);
+        }
 
-        result(T&& value) requires std::is_move_constructible_v<T> : m_HasValue(true) { new (&m_Value) T(std::move(value)); }
+        result(T&& value)
+            requires std::is_move_constructible_v<T>
+            : m_HasValue(true) {
+            new (&m_Value) T(std::move(value));
+        }
 
         // Destructor
         ~result() {
@@ -77,8 +91,10 @@ namespace sf::stl {
         }
 
         // Copy assignment
-        result& operator=(const result& other) requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> &&
-                                                         std::is_copy_constructible_v<Et> && std::is_copy_assignable_v<Et>) {
+        result& operator=(const result& other)
+            requires(std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T> && std::is_copy_constructible_v<Et> &&
+                     std::is_copy_assignable_v<Et>)
+        {
             if (this == &other)
                 return *this;
 
@@ -105,9 +121,10 @@ namespace sf::stl {
 
         // Move assignment
         result& operator=(result&& other) noexcept(std::is_nothrow_move_constructible_v<T> && std::is_nothrow_move_assignable_v<T> &&
-                                                    std::is_nothrow_move_constructible_v<Et> && std::is_nothrow_move_assignable_v<Et>)
+                                                   std::is_nothrow_move_constructible_v<Et> && std::is_nothrow_move_assignable_v<Et>)
             requires(std::is_move_constructible_v<T> && std::is_move_assignable_v<T> && std::is_move_constructible_v<Et> &&
-                     std::is_move_assignable_v<Et>) {
+                     std::is_move_assignable_v<Et>)
+        {
             if (this == &other)
                 return *this;
 

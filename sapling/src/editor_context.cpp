@@ -1,11 +1,11 @@
 #include "editor_context.h"
-#include "project_manager.h"
 #include <core/logger.h>
 #include <render/render_backend.h>
+#include "project_manager.h"
 
-#include <QStyleHints>
-#include <QPalette>
 #include <QApplication>
+#include <QPalette>
+#include <QStyleHints>
 
 void EditorContext::set_theme(QApplication& app) {
     app.setStyle("Fusion");
@@ -136,6 +136,4 @@ void EditorContext::shutdown() {
     CLIENT_INFO("EditorContext shutdown complete.");
 }
 
-ProjectManager* EditorContext::project_manager() {
-    return &ProjectManager::instance();
-}
+ProjectManager* EditorContext::project_manager() { return &ProjectManager::instance(); }

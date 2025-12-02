@@ -8,7 +8,7 @@ namespace sf {
         class IGraphicsDevice;
         class IMemoryAllocator;
         class IDescriptorHeap;
-    }
+    } // namespace render
 } // namespace sf
 
 namespace sf::assets {
@@ -39,8 +39,10 @@ namespace sf::assets {
         MaterialRegistry& operator=(const MaterialRegistry&) = delete;
         MaterialRegistry& operator=(MaterialRegistry&&) = delete;
         stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path);
-        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path, UUID uuid);
-        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path,
+                                      UUID uuid);
+        stl::result<> import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset,
+                                      const stl::string& path);
         stl::result<> move_material(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
         stl::result<> release_material(const stl::string& path);
         void serialize();
@@ -52,7 +54,8 @@ namespace sf::assets {
         stl::unordered_map<stl::string, MaterialAsset>& path_asset_map() { return m_PathToMaterialAssetMap; }
         stl::string to_string();
 
-        static MaterialAsset* default_material(sf::render::IMemoryAllocator* allocator = nullptr, sf::render::IDescriptorHeap* heap = nullptr);
+        static MaterialAsset* default_material(sf::render::IMemoryAllocator* allocator = nullptr,
+                                               sf::render::IDescriptorHeap* heap = nullptr);
 
         static void create_default(const stl::string& registry_file_path);
 

@@ -185,7 +185,7 @@ void SceneViewWidget::render() {
             .min_depth = 0.0f,
             .max_depth = 1.0f,
         });
-        sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps {editor_ctx.cbv_srv_uav_heap(), editor_ctx.sampler_heap()};
+        sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps{editor_ctx.cbv_srv_uav_heap(), editor_ctx.sampler_heap()};
         ctx.set_descriptor_heaps(heaps);
         sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
         sf::math::mat4 view = m_MainCamera.view();

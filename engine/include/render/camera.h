@@ -4,7 +4,6 @@
 #include "core/input.h"
 #include "math/math.h"
 
-
 namespace sf {
 
     constexpr f32 CAMERA_FOV = sf::math::to_radians(45.0f);

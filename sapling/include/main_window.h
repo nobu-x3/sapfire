@@ -1,8 +1,8 @@
 #pragma once
 
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include <QTimer>
-#include <QElapsedTimer>
 
 #include "Sapfire.h"
 

@@ -9,7 +9,7 @@ namespace sf {
         class IGraphicsDevice;
         class IMemoryAllocator;
         class IDescriptorHeap;
-    }
+    } // namespace render
 } // namespace sf
 
 namespace sf::assets {
@@ -41,8 +41,8 @@ namespace sf::assets {
         TextureRegistry& operator=(const TextureRegistry&) = delete;
         TextureRegistry& operator=(TextureRegistry&&) = delete;
         stl::result<> import_texture(sf::render::IGraphicsDevice* device, const stl::string& path);
-        stl::result<> import_texture(sf::render::IGraphicsDevice* device, const stl::string& path, const sf::render::TextureCreationDesc& desc,
-                            UUID uuid = {});
+        stl::result<> import_texture(sf::render::IGraphicsDevice* device, const stl::string& path,
+                                     const sf::render::TextureCreationDesc& desc, UUID uuid = {});
         stl::result<> move_texture(sf::render::IGraphicsDevice* device, const stl::string& old_path, const stl::string& new_path);
         stl::result<> release_texture(const stl::string& path);
         void serialize();
@@ -54,7 +54,8 @@ namespace sf::assets {
         stl::string to_string();
 
         static void create_default(const stl::string& registry_file_path);
-        static TextureAsset* default_texture(sf::render::IMemoryAllocator* allocator = nullptr, sf::render::IDescriptorHeap* heap = nullptr);
+        static TextureAsset* default_texture(sf::render::IMemoryAllocator* allocator = nullptr,
+                                             sf::render::IDescriptorHeap* heap = nullptr);
 
     private:
         stl::string m_RegistryFilePath;

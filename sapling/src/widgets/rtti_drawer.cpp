@@ -1,10 +1,10 @@
 #include "widgets/rtti_drawer.h"
 #include <QCheckBox>
 #include <QDoubleSpinBox>
+#include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
-#include <QHBoxLayout>
 #include <QTimer>
 #include <array>
 
@@ -120,48 +120,50 @@ void RttiDrawer::draw_field(sf::rtti::rtti_object& rtti_obj, sf::rtti::rtti_fiel
             m_Layout->addRow(field_name, label);
             break;
         }
-    case sf::rtti::rtti_type::VEC3: {
-        auto create_spin = [this]() {
-            auto* s = new QDoubleSpinBox(this);
-            s->setRange(-1000000.0, 1000000.0);
-            s->setDecimals(3);
-            return s;
-        };
+    case sf::rtti::rtti_type::VEC3:
+        {
+            auto create_spin = [this]() {
+                auto* s = new QDoubleSpinBox(this);
+                s->setRange(-1000000.0, 1000000.0);
+                s->setDecimals(3);
+                return s;
+            };
 
-        auto* x = create_spin();
-        auto* y = create_spin();
-        auto* z = create_spin();
+            auto* x = create_spin();
+            auto* y = create_spin();
+            auto* z = create_spin();
 
-        auto* vec = reinterpret_cast<sf::math::vec3*>(field_ptr);
-        x->setValue(vec->x);
-        y->setValue(vec->y);
-        z->setValue(vec->z);
+            auto* vec = reinterpret_cast<sf::math::vec3*>(field_ptr);
+            x->setValue(vec->x);
+            y->setValue(vec->y);
+            z->setValue(vec->z);
 
-        auto* h_layout = new QHBoxLayout();
-        h_layout->addWidget(new QLabel("X:"));
-        h_layout->addWidget(x);
-        h_layout->addWidget(new QLabel("Y:"));
-        h_layout->addWidget(y);
-        h_layout->addWidget(new QLabel("Z:"));
-        h_layout->addWidget(z);
+            auto* h_layout = new QHBoxLayout();
+            h_layout->addWidget(new QLabel("X:"));
+            h_layout->addWidget(x);
+            h_layout->addWidget(new QLabel("Y:"));
+            h_layout->addWidget(y);
+            h_layout->addWidget(new QLabel("Z:"));
+            h_layout->addWidget(z);
 
-        auto commit = [obj_ptr, local_field, x, y, z, this]() mutable {
-            std::array<sf::f32, 3> arr{static_cast<sf::f32>(x->value()), static_cast<sf::f32>(y->value()), static_cast<sf::f32>(z->value())};
-            sf::rtti::set_rtti_field_value(obj_ptr, const_cast<sf::rtti::rtti_field*>(&local_field), &arr);
-            // Refresh UI to pick up any dependent changes made by setter
-            if (local_field.setter)
-                QTimer::singleShot(0, this, [this, obj = obj_ptr]() { this->draw_rtti(*obj); });
-            emit rtti_changed();
-        };
+            auto commit = [obj_ptr, local_field, x, y, z, this]() mutable {
+                std::array<sf::f32, 3> arr{static_cast<sf::f32>(x->value()), static_cast<sf::f32>(y->value()),
+                                           static_cast<sf::f32>(z->value())};
+                sf::rtti::set_rtti_field_value(obj_ptr, const_cast<sf::rtti::rtti_field*>(&local_field), &arr);
+                // Refresh UI to pick up any dependent changes made by setter
+                if (local_field.setter)
+                    QTimer::singleShot(0, this, [this, obj = obj_ptr]() { this->draw_rtti(*obj); });
+                emit rtti_changed();
+            };
 
-        connect(x, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
-        connect(y, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
-        connect(z, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
+            connect(x, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
+            connect(y, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
+            connect(z, QOverload<double>::of(&QDoubleSpinBox::valueChanged), commit);
 
-        QWidget* container = new QWidget(this);
-        container->setLayout(h_layout);
-        m_Layout->addRow(field_name, container);
-        break;
-    }
+            QWidget* container = new QWidget(this);
+            container->setLayout(h_layout);
+            m_Layout->addRow(field_name, container);
+            break;
+        }
     }
 }

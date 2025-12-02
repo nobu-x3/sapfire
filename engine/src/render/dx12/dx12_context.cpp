@@ -88,11 +88,12 @@ namespace sf::render::dx12 {
         // Convert generic IDescriptorHeap pointers to D3D12 heap pointers
         stl::vector<ID3D12DescriptorHeap*> dx12_heaps{mem::MemTag::Render};
         for (auto* heap : heaps) {
-            if (!heap) continue;
+            if (!heap)
+                continue;
             auto* dx12_heap = static_cast<DX12DescriptorHeap*>(heap);
             dx12_heaps.push_back(dx12_heap->get_d3d12_heap());
         }
-        
+
         if (!dx12_heaps.empty()) {
             m_CommandList->SetDescriptorHeaps(static_cast<UINT>(dx12_heaps.size()), dx12_heaps.data());
         }
@@ -195,11 +196,12 @@ namespace sf::render::dx12 {
         // Convert generic IDescriptorHeap pointers to D3D12 heap pointers
         stl::vector<ID3D12DescriptorHeap*> dx12_heaps{mem::MemTag::Render};
         for (auto* heap : heaps) {
-            if (!heap) continue;
+            if (!heap)
+                continue;
             auto* dx12_heap = static_cast<DX12DescriptorHeap*>(heap);
             dx12_heaps.push_back(dx12_heap->get_d3d12_heap());
         }
-        
+
         if (!dx12_heaps.empty()) {
             m_CommandList->SetDescriptorHeaps(static_cast<UINT>(dx12_heaps.size()), dx12_heaps.data());
         }

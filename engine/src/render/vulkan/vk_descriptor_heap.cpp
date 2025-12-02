@@ -29,7 +29,7 @@ namespace sf::render::vk {
     }
 
     void VkDescriptorHeap::destroy_resources() {
-        if(m_Device == VK_NULL_HANDLE)
+        if (m_Device == VK_NULL_HANDLE)
             return;
         for (VkSampler sampler : m_Samplers) {
             if (sampler != VK_NULL_HANDLE) {
@@ -148,12 +148,14 @@ namespace sf::render::vk {
     }
 
     u32 VkDescriptorHeap::allocate_rtv(Texture& texture, const RenderTargetViewDesc* desc) {
-        CORE_ERROR("VkDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
+        CORE_ERROR(
+            "VkDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
         return UINT32_MAX;
     }
 
     u32 VkDescriptorHeap::allocate_dsv(Texture& texture, const DepthStencilViewDesc* desc) {
-        CORE_ERROR("VkDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
+        CORE_ERROR(
+            "VkDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
         return UINT32_MAX;
     }
 

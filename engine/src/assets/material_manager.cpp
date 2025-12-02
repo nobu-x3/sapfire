@@ -33,7 +33,8 @@ namespace sf::assets {
         file.close();
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+                                                    const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
         std::ifstream file{path.c_str()};
@@ -84,7 +85,8 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& path, UUID uuid) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+                                                    const stl::string& path, UUID uuid) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
         std::ifstream file{path.c_str()};
@@ -132,7 +134,8 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, MaterialAsset&& asset, const stl::string& path) {
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+                                                    MaterialAsset&& asset, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path)) {
             return stl::success;
         }
@@ -229,7 +232,8 @@ namespace sf::assets {
         }
     }
 
-    void MaterialRegistry::deserialize(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap, const stl::string& data) {
+    void MaterialRegistry::deserialize(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+                                       const stl::string& data) {
         nlohmann::json j = nlohmann::json::parse(data)["assets"];
         for (auto&& asset : j["material_registry"]) {
             if (!asset.contains("path")) {

@@ -21,10 +21,10 @@ int main(int argc, char* argv[]) {
     try {
         sf::Log::Init();
         CORE_INFO("MemoryManager initialized with total budget: {} MB", sf::mem::Budgets{}.total() / (1024 * 1024));
-        
+
         // Process all component registrations that were queued during static initialization
         sf::components::ComponentRegistry::process_queued_registrations();
-        
+
         PROFILE_BEGIN_SESSION("Startup", "SapfireProfile_Startup.json");
         sf::Application* application = sf::create_application();
         PROFILE_END_SESSION();

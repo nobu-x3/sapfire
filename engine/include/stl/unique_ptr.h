@@ -2,8 +2,8 @@
 
 #include <cassert>
 #include <memory>
-#include "memory/memory.h"
 #include "core/core.h"
+#include "memory/memory.h"
 
 namespace sf::stl {
 

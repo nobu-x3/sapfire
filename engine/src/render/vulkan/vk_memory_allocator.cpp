@@ -119,7 +119,7 @@ namespace sf::render::vk {
     }
 
     void VkMemoryAllocator::free_buffer(Buffer& buffer) {
-        if(buffer.mapped_data) {
+        if (buffer.mapped_data) {
             vmaUnmapMemory(m_Allocator, static_cast<VmaAllocation>(buffer.allocation));
             buffer.mapped_data = nullptr;
         }

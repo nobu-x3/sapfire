@@ -7,7 +7,7 @@ namespace sf::render::vk {
 
     class VkGraphicsDevice;
 
-    class VkCommandQueue final: public ICommandQueue {
+    class VkCommandQueue final : public ICommandQueue {
     public:
         explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
         explicit VkCommandQueue(VkGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type, const char* name);

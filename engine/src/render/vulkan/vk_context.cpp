@@ -134,7 +134,6 @@ namespace sf::render::vk {
         }
     }
 
-    // VkGraphicsContext
     VkGraphicsContext::VkGraphicsContext(VkGraphicsDevice* device) :
         VkContext(device, device->get_graphics_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {
     }
@@ -254,25 +253,18 @@ namespace sf::render::vk {
     }
 
     void VkGraphicsContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
-        // Bind descriptor sets from the provided heaps to their correct set indices
         if (heaps.empty()) {
             CORE_WARN("VkGraphicsContext::set_descriptor_heaps - no heaps provided");
             return;
         }
-
         VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
-
-        // Bind each descriptor set to its designated set index
         for (auto* heap : heaps) {
             if (!heap)
                 continue;
             auto* vk_heap = static_cast<VkDescriptorHeap*>(heap);
             VkDescriptorSet set = vk_heap->get_vk_set();
             u32 set_index = vk_heap->get_set_index();
-
-            // Bind this single descriptor set to its specific index
-            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
-                                    set_index, 1, &set, 0, nullptr);
+            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, set_index, 1, &set, 0, nullptr);
         }
     }
 
@@ -327,9 +319,7 @@ namespace sf::render::vk {
     VkComputeContext::VkComputeContext(VkGraphicsDevice* device) :
         VkContext(device, device->get_compute_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {}
 
-    stl::result<> VkComputeContext::reset() {
-        return VkContext::reset();
-    }
+    stl::result<> VkComputeContext::reset() { return VkContext::reset(); }
 
     void VkComputeContext::set_pipeline_state(IPipelineState* pipeline) {
         if (pipeline) {
@@ -356,25 +346,18 @@ namespace sf::render::vk {
     }
 
     void VkComputeContext::set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) {
-        // Bind descriptor sets from the provided heaps to their correct set indices
         if (heaps.empty()) {
             CORE_WARN("VkComputeContext::set_descriptor_heaps - no heaps provided");
             return;
         }
-
         VkPipelineLayout layout = m_DevicePtr->get_bindless_pipeline_layout();
-
-        // Bind each descriptor set to its designated set index
         for (auto* heap : heaps) {
             if (!heap)
                 continue;
             auto* vk_heap = static_cast<VkDescriptorHeap*>(heap);
             VkDescriptorSet set = vk_heap->get_vk_set();
             u32 set_index = vk_heap->get_set_index();
-
-            // Bind this single descriptor set to its specific index
-            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout,
-                                    set_index, 1, &set, 0, nullptr);
+            vkCmdBindDescriptorSets(m_CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, layout, set_index, 1, &set, 0, nullptr);
         }
     }
 
@@ -382,14 +365,11 @@ namespace sf::render::vk {
         vkCmdDispatch(m_CommandBuffer, thread_group_count_x, thread_group_count_y, thread_group_count_z);
     }
 
-    // VkCopyContext
     VkCopyContext::VkCopyContext(VkGraphicsDevice* device) :
         VkContext(device, device->get_transfer_queue_family_index(), VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT), m_DevicePtr(device) {
     }
 
-    stl::result<> VkCopyContext::reset() {
-        return VkContext::reset();
-    }
+    stl::result<> VkCopyContext::reset() { return VkContext::reset(); }
 
     void VkCopyContext::copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset, u64 src_offset) {
         VkBufferCopy copy_region{};

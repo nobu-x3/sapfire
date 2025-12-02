@@ -116,11 +116,11 @@ namespace sf {
             m_EntityRegistry->signature(entity, signature);
         }
 
-        void reset_component(Entity entity, const stl::string& type_name) {
-            m_ComponentRegistry->reset_component(entity, type_name);
-        }
+        void reset_component(Entity entity, const stl::string& type_name) { m_ComponentRegistry->reset_component(entity, type_name); }
 
-        ::sf::rtti::rtti_object* rtti_for(Entity entity, const stl::string& type_name) { return m_ComponentRegistry->rtti_for(entity, type_name); }
+        ::sf::rtti::rtti_object* rtti_for(Entity entity, const stl::string& type_name) {
+            return m_ComponentRegistry->rtti_for(entity, type_name);
+        }
 
     private:
         stl::unique_ptr<components::ComponentRegistry> m_ComponentRegistry;

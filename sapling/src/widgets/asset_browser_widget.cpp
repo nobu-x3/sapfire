@@ -210,9 +210,7 @@ void AssetBrowserWidget::on_search_changed(const QString& text) {
 
 void AssetBrowserWidget::on_filter_button_toggled() { update_filter(); }
 
-void AssetBrowserWidget::on_import_new_action_pressed(bool) {
-    import_new_asset();
-}
+void AssetBrowserWidget::on_import_new_action_pressed(bool) { import_new_asset(); }
 
 void AssetBrowserWidget::update_filter() {
     if (!m_FilterProxy)

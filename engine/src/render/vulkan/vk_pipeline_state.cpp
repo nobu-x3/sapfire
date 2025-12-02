@@ -1,9 +1,9 @@
 #include "render/vulkan/vk_pipeline_state.h"
 #include "core/logger.h"
 #include "engpch.h"
+#include "render/vulkan/vk_compat.h"
 #include "render/vulkan/vk_shader_compiler.h"
 #include "render/vulkan/vk_type_conversions.h"
-#include "render/vulkan/vk_compat.h"
 
 namespace sf::render::vk {
     VkPipelineState::~VkPipelineState() {
@@ -13,7 +13,7 @@ namespace sf::render::vk {
     }
 
     stl::result<> VkPipelineState::create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout,
-                                          VkRenderPass render_pass) {
+                                                   VkRenderPass render_pass) {
         m_Device = device;
         m_IsCompute = false;
         // Load and compile shaders

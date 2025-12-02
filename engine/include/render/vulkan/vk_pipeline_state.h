@@ -5,12 +5,13 @@
 
 namespace sf::render::vk {
 
-    class VkPipelineState final: public IPipelineState {
+    class VkPipelineState final : public IPipelineState {
     public:
         VkPipelineState() = default;
         ~VkPipelineState() override;
 
-        stl::result<> create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout, VkRenderPass render_pass);
+        stl::result<> create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout,
+                                      VkRenderPass render_pass);
         stl::result<> create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout);
 
         bool is_compute() const override { return m_IsCompute; }

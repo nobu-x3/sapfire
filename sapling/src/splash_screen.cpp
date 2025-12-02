@@ -87,6 +87,4 @@ void SplashScreen::set_progress(int value) {
 
 void SplashScreen::finish() { close(); }
 
-void SplashScreen::paintEvent(QPaintEvent* event) {
-    QWidget::paintEvent(event);
-}
+void SplashScreen::paintEvent(QPaintEvent* event) { QWidget::paintEvent(event); }

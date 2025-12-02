@@ -15,8 +15,8 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan command queue: {}", name);
     }
 
-    VkCommandQueue::VkCommandQueue(VkGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type, const char* name) :
-        m_GraphicsDevice(graphics_device), m_Device(device), m_Queue(queue), m_Type(type) {
+    VkCommandQueue::VkCommandQueue(VkGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type,
+                                   const char* name) : m_GraphicsDevice(graphics_device), m_Device(device), m_Queue(queue), m_Type(type) {
         VkFenceCreateInfo fence_info{};
         fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;

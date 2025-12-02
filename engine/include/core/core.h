@@ -46,12 +46,12 @@ namespace sf {
 } // namespace sf
 
 // Include STL types after core types are defined
-#include "stl/result.h"
-#include "stl/string.h"
-#include "stl/vector.h"
-#include "stl/map.h"
-#include "stl/unordered_map.h"
-#include "stl/unique_ptr.h"
-#include "stl/shared_ptr.h"
-#include "stl/types.h"
 #include "stl/generational.h"
+#include "stl/map.h"
+#include "stl/result.h"
+#include "stl/shared_ptr.h"
+#include "stl/string.h"
+#include "stl/types.h"
+#include "stl/unique_ptr.h"
+#include "stl/unordered_map.h"
+#include "stl/vector.h"

@@ -5,7 +5,7 @@
 
 namespace sf::render::vk {
 
-    class VkMemoryAllocator final: public IMemoryAllocator {
+    class VkMemoryAllocator final : public IMemoryAllocator {
     public:
         explicit VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
 
@@ -23,8 +23,8 @@ namespace sf::render::vk {
         VmaAllocator get_vma_allocator() const { return m_Allocator; }
 
     private:
-        VkDevice m_Device {VK_NULL_HANDLE};
-        VmaAllocator m_Allocator {VK_NULL_HANDLE};
+        VkDevice m_Device{VK_NULL_HANDLE};
+        VmaAllocator m_Allocator{VK_NULL_HANDLE};
     };
 
 } // namespace sf::render::vk

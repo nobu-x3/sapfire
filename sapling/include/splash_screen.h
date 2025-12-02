@@ -1,10 +1,10 @@
 #pragma once
 
-#include <QWidget>
 #include <QLabel>
+#include <QPixmap>
 #include <QProgressBar>
 #include <QString>
-#include <QPixmap>
+#include <QWidget>
 
 class SplashScreen : public QWidget {
     Q_OBJECT

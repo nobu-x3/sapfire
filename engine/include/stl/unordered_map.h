@@ -3,9 +3,9 @@
 #include <cassert>
 #include <functional>
 #include <unordered_map>
+#include "core/core.h"
 #include "memory/memory.h"
 #include "stl/string.h"
-#include "core/core.h"
 
 namespace sf::stl {
 

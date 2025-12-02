@@ -1,13 +1,13 @@
 #pragma once
 
-#include <QWidget>
-#include <QFormLayout>
-#include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QFormLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
-#include "widgets/rtti_drawer.h"
+#include <QWidget>
 #include "Sapfire.h"
+#include "widgets/rtti_drawer.h"
 
 // EntityInspectorWidget: Displays and edits properties of the selected entity
 class EntityInspectorWidget : public QWidget {

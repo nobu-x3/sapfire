@@ -1,12 +1,12 @@
 #pragma once
 
 #include <QDialog>
-#include <QString>
-#include <QVector>
+#include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
-#include <QLineEdit>
-#include <QLabel>
+#include <QString>
+#include <QVector>
 
 struct ProjectInfo {
     QString name;

@@ -111,7 +111,6 @@ namespace sf::render::dx12 {
         Microsoft::WRL::ComPtr<ID3D12DebugDevice> m_DebugDevice;
 #endif
 
-
         // Pipeline states (owned by device)
         stl::tvector<stl::tunique_ptr<DX12PipelineState>> m_PipelineStates;
 
