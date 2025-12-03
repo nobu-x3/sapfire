@@ -39,7 +39,7 @@ namespace sf::components {
     template <typename T>
     class EngineComponentList : public IComponentList {
     public:
-        stl::string to_string() override { return T::to_tstring(); }
+        stl::string to_string() override { return T::to_string(); }
 
         void insert(Entity entity, T component) {
             if (m_EntityToIndexMap.contains(entity)) {
@@ -333,7 +333,8 @@ private:                                                                        
 
 #define ENGINE_COMPONENT(type)                                                                                                             \
 public:                                                                                                                                    \
-    static ::sf::stl::string to_tstring() { return #type; }                                                                                \
+    static ::sf::stl::string to_string() { return ::sf::stl::make_string(::sf::mem::MemTag::Strings, #type); }                             \
+    static ::sf::stl::string to_tmp_string() { return ::sf::stl::make_string(::sf::mem::MemTag::Temp, #type); }                            \
                                                                                                                                            \
 private:
 } // namespace sf::components

@@ -61,7 +61,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         return;
     }
     auto cbv_heap_result = m_GraphicsDevice->create_cbv_srv_uav_heap({
-        .descriptor_count = 3000000,
+        .descriptor_count = 8000,
         .name = "Editor CBV/SRV/UAV Heap",
     });
     if (!cbv_heap_result) {
@@ -70,7 +70,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
     }
     m_CbvSrvUavHeap = std::move(*cbv_heap_result);
     auto sampler_heap_result = m_GraphicsDevice->create_sampler_heap({
-        .descriptor_count = 1000000,
+        .descriptor_count = 8000,
         .name = "Editor Sampler Heap",
     });
     if (!sampler_heap_result) {

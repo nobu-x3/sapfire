@@ -23,7 +23,8 @@ private:
     void populate_inspector();
     void create_component_sections();
 signals:
-    void entity_component_changed(::sf::Entity entity);
+    void entity_component_changed(sf::Entity entity);
+    void render_component_added(sf::Entity entity);
 
 private slots:
     void on_add_component_clicked();

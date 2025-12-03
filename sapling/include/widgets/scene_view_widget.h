@@ -44,6 +44,9 @@ public:
     ~SceneViewWidget() override;
     void update_frame(sf::f32 delta_time);
 
+public slots:
+    void on_render_component_added(sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;

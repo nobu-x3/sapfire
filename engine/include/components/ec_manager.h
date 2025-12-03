@@ -106,6 +106,7 @@ namespace sf {
 
         // Runtime operations by component type name
         bool has_component(Entity entity, const stl::string& type_name) { return m_ComponentRegistry->has_component(entity, type_name); }
+        
         void add_component(Entity entity, const stl::string& type_name) {
             m_ComponentRegistry->add_component(entity, type_name);
             auto signature = m_EntityRegistry->signature(entity);

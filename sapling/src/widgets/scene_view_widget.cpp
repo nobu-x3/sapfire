@@ -99,6 +99,203 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     return sf::stl::success;
 }
 
+struct ObjectConstants {
+    sf::math::mat4 World{sf::math::mat4::identity()};
+};
+
+void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
+    auto& editor = EditorContext::instance();
+    auto* ec_mgr = editor.ec_manager();
+    auto* asset_mgr = editor.asset_manager();
+    auto* gfx_device = editor.graphics_device();
+    auto* allocator = editor.memory_allocator();
+    auto* cbv_heap = editor.cbv_srv_uav_heap();
+    auto* sampler_heap = editor.sampler_heap();
+    bool already_has_component = ec_mgr->has_engine_component<sf::components::RenderComponent>(entity);
+    auto* mesh_asset =
+        resource_paths.mesh_path.empty() ? sf::assets::MeshRegistry::default_mesh() : asset_mgr->get_mesh(resource_paths.mesh_path);
+    auto* texture_asset = resource_paths.texture_path.empty() ? sf::assets::TextureRegistry::default_texture(allocator, cbv_heap)
+                                                              : asset_mgr->get_texture(resource_paths.texture_path);
+    auto* material_asset = resource_paths.material_path.empty() ? sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)
+                                                                : asset_mgr->get_material(resource_paths.material_path);
+    if (!mesh_asset) {
+        asset_mgr->import_mesh(resource_paths.mesh_path);
+        mesh_asset = asset_mgr->get_mesh(resource_paths.mesh_path);
+    }
+    if (!texture_asset || !asset_mgr->is_texture_loaded_for_runtime(texture_asset->uuid)) {
+        asset_mgr->import_texture(resource_paths.texture_path);
+        texture_asset = asset_mgr->get_texture(resource_paths.texture_path);
+    }
+    if (!material_asset || !asset_mgr->material_resource_exists(material_asset->uuid)) {
+        asset_mgr->import_material(resource_paths.material_path);
+        material_asset = asset_mgr->get_material(resource_paths.material_path);
+    }
+    if (mesh_asset && mesh_asset->data.has_value()) {
+        assert(mesh_asset->data->indices32.size() > 0);
+        assert(mesh_asset->data->positions.size() > 0);
+        assert(mesh_asset->data->normals.size() > 0);
+        assert(mesh_asset->data->texcs.size() > 0);
+        if (!already_has_component) {
+            auto cbv_result = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                .usage = sf::render::BufferUsage::Constant,
+                .size_in_bytes = sizeof(ObjectConstants),
+                .name = "Object Constants",
+            });
+            if (!cbv_result) {
+                CLIENT_ERROR("Failed to allocated object CBV: {}.", cbv_result.error().c_str());
+                return;
+            }
+            m_TransformBuffers.push_back(std::move(*cbv_result));
+        }
+        bool should_add_tangent = false;
+        const bool should_allocate_mesh = !asset_mgr->mesh_resource_exists(resource_paths.mesh_path);
+        if (should_allocate_mesh) {
+            const sf::stl::string name = {sf::mem::MemTag::Strings,
+                                          mesh_asset->uuid == sf::assets::MeshRegistry::default_mesh()->uuid ? "Default Mesh"
+                                                                                                             : resource_paths.mesh_path};
+            const size_t index_buffer_size = sizeof(sf::u16) * mesh_asset->data->indices16().size();
+            const size_t vertex_pos_buf_size = sizeof(sf::math::vec3) * mesh_asset->data->positions.size();
+            const size_t vertex_norm_buf_size = sizeof(sf::math::vec3) * mesh_asset->data->normals.size();
+            const size_t vertex_uv_buf_size = sizeof(sf::math::vec2) * mesh_asset->data->texcs.size();
+            auto ib_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                .usage = sf::render::BufferUsage::Index,
+                .size_in_bytes = index_buffer_size,
+                .name = "Index Buffer",
+            });
+            if (!ib_res) {
+                CLIENT_ERROR("Failed to allocated index buffer: {}.", ib_res.error().c_str());
+                return;
+            }
+            cbv_heap->allocate_srv(*ib_res);
+            ib_res->update(mesh_asset->data->indices16().data(), index_buffer_size);
+            m_RTIndexBuffers.push_back(std::move(*ib_res));
+            auto vbp_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                .usage = sf::render::BufferUsage::Structured,
+                .size_in_bytes = vertex_pos_buf_size,
+                .name = "Vertex Position Buffer",
+            });
+            cbv_heap->allocate_srv(*vbp_res);
+            vbp_res->update(mesh_asset->data->positions.data(), vertex_pos_buf_size);
+            m_VertexPosBuffers.push_back(std::move(*vbp_res));
+            auto vbn_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                .usage = sf::render::BufferUsage::Structured,
+                .size_in_bytes = vertex_norm_buf_size,
+                .name = "Vertex Normals Buffer",
+            });
+            cbv_heap->allocate_srv(*vbn_res);
+            vbn_res->update(mesh_asset->data->normals.data(), vertex_norm_buf_size);
+            m_VertexNormalBuffers.push_back(std::move(*vbn_res));
+            if (mesh_asset->data->tangentus.size() > 0) {
+                const size_t vertex_tan_buf_size = sizeof(sf::math::vec3) * mesh_asset->data->tangentus.size();
+                auto vbt_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                    .usage = sf::render::BufferUsage::Structured,
+                    .size_in_bytes = vertex_tan_buf_size,
+                    .name = "Vertex Tan Buffer",
+                });
+                cbv_heap->allocate_srv(*vbt_res);
+                vbt_res->update(mesh_asset->data->tangentus.data(), vertex_tan_buf_size);
+                m_VertexTangentBuffers.push_back(std::move(*vbt_res));
+                should_add_tangent = true;
+            }
+            auto vbuv_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
+                .usage = sf::render::BufferUsage::Structured,
+                .size_in_bytes = vertex_uv_buf_size,
+                .name = "Vertex UV Buffer",
+            });
+            cbv_heap->allocate_srv(*vbuv_res);
+            vbuv_res->update(mesh_asset->data->texcs.data(), vertex_uv_buf_size);
+            m_VertexUVBuffers.push_back(std::move(*vbuv_res));
+        }
+        auto cpu_data = sf::components::CPUData{
+            .indices_size = static_cast<sf::u32>(mesh_asset->data->indices32.size()),
+            .index_id = static_cast<sf::u32>(m_RTIndexBuffers.size() - 1),
+            .position_idx = static_cast<sf::u32>(m_VertexPosBuffers.size() - 1),
+            .normal_idx = static_cast<sf::u32>(m_VertexNormalBuffers.size() - 1),
+            .tangent_idx = static_cast<sf::u32>(should_add_tangent ? m_VertexTangentBuffers.size() - 1 : 0),
+            .uv_idx = static_cast<sf::u32>(m_VertexUVBuffers.size() - 1),
+            .transform_buffer_idx = already_has_component
+                ? ec_mgr->engine_component<sf::components::RenderComponent>(entity).cpu_data().transform_buffer_idx
+                : static_cast<sf::u32>(m_TransformBuffers.size() - 1),
+
+        };
+        sf::u32 material_cbuffer_idx = 0;
+        if (material_asset->uuid == sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)->uuid) {
+            material_cbuffer_idx = material_asset->material.material_cb_index;
+        } else {
+            material_cbuffer_idx = asset_mgr->material_resource_exists(resource_paths.material_path)
+                ? asset_mgr->get_material_resource(resource_paths.material_path).gpu_idx
+                : sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)->material.material_cb_index;
+        }
+        sf::u32 texture_cbuffer_idx = 0;
+        if (texture_asset->uuid == sf::assets::TextureRegistry::default_texture(allocator, cbv_heap)->uuid) {
+            texture_cbuffer_idx = texture_asset->data.srv_index;
+        } else {
+            texture_cbuffer_idx = asset_mgr->texture_resource_exists(resource_paths.texture_path)
+                ? asset_mgr->get_texture_resource(resource_paths.texture_path).gpu_idx
+                : texture_asset->data.srv_index;
+        }
+        auto gpu_data = sf::components::PerDrawConstants{
+            .position_buffer_idx = m_VertexPosBuffers.back().srv_index,
+            .normal_buffer_idx = m_VertexNormalBuffers.back().srv_index,
+            .tangent_buffer_idx = should_add_tangent ? m_VertexTangentBuffers.back().srv_index : 0,
+            .uv_buffer_idx = m_VertexUVBuffers.back().srv_index,
+            .scene_cbuffer_idx = already_has_component
+                ? ec_mgr->engine_component<sf::components::RenderComponent>(entity).per_draw_constants()->scene_cbuffer_idx
+                : m_TransformBuffers.back().cbv_index,
+            .pass_cbuffer_idx = m_MainPassCB.cbv_index,
+            .material_cbuffer_idx = material_cbuffer_idx,
+            .texture_cbuffer_idx = texture_cbuffer_idx,
+        };
+        if (!should_allocate_mesh) {
+            cpu_data = asset_mgr->get_mesh_resource(mesh_asset->uuid).cpu_data;
+            gpu_data = asset_mgr->get_mesh_resource(mesh_asset->uuid).gpu_data;
+            gpu_data.scene_cbuffer_idx = already_has_component
+                ? ec_mgr->engine_component<sf::components::RenderComponent>(entity).per_draw_constants()->scene_cbuffer_idx
+                : m_TransformBuffers.back().cbv_index;
+            gpu_data.material_cbuffer_idx = material_cbuffer_idx;
+            gpu_data.texture_cbuffer_idx = texture_cbuffer_idx;
+            cpu_data.transform_buffer_idx = already_has_component
+                ? ec_mgr->engine_component<sf::components::RenderComponent>(entity).cpu_data().transform_buffer_idx
+                : static_cast<sf::u32>(m_TransformBuffers.size() - 1);
+        }
+        asset_mgr->load_mesh_resource(resource_paths.mesh_path, {cpu_data, gpu_data});
+        sf::components::RenderComponent render_component{mesh_asset->uuid,
+                                                         texture_asset->uuid,
+                                                         material_asset->uuid,
+                                                         cpu_data,
+                                                         gpu_data,
+                                                         [this, entity, asset_mgr](sf::components::RenderComponent* component) {
+                                                             if (component) {
+                                                                 const auto old_cpu_data = component->cpu_data();
+                                                                 const auto old_gpu_data = component->per_draw_constants();
+                                                                 // This happens after the mesh uuid is set to the new one, so we're getting
+                                                                 // the just assigned uuid
+                                                                 const auto mesh_uuid = component->mesh_uuid();
+                                                                 // The mesh we just assigned may not be allocated yet
+                                                                 const auto texture_uuid = component->texture_uuid();
+                                                                 const auto texture_path = asset_mgr->get_texture_path(texture_uuid);
+                                                                 const auto mesh_path = asset_mgr->get_mesh_path(mesh_uuid);
+                                                                 const auto material_uuid = component->material_uuid();
+                                                                 const auto material_path = asset_mgr->get_material_path(material_uuid);
+                                                                 if (!asset_mgr->mesh_resource_exists(mesh_path) ||
+                                                                     !asset_mgr->material_resource_exists(material_path) ||
+                                                                     !asset_mgr->texture_resource_exists(texture_path)) {
+                                                                     sf::RenderComponentResourcePaths paths{.mesh_path = mesh_path,
+                                                                                                            .texture_path = texture_path,
+                                                                                                            .material_path = material_path};
+                                                                     on_render_component_added(entity, paths);
+                                                                     return;
+                                                                 }
+                                                                 auto data = asset_mgr->get_mesh_resource(mesh_path);
+                                                                 data.gpu_data.scene_cbuffer_idx = old_gpu_data->scene_cbuffer_idx;
+                                                                 component->cpu_data(data.cpu_data);
+                                                                 component->per_draw_constants(data.gpu_data);
+                                                             }
+                                                         }};
+        ec_mgr->add_engine_component<sf::components::RenderComponent>(entity, render_component);
+    }
+}
+
 void SceneViewWidget::shutdown_rendering() {
     if (!m_Initialized) {
         return;
@@ -204,7 +401,11 @@ void SceneViewWidget::render() {
             // Transform camera frustum from view space to object's local space
             sf::math::frustum local_space_frustum = camera_frustum.transform(view_to_local);
             if (local_space_frustum.contains(aabb) != sf::math::ContainmentType::Disjoint) {
+                // TODO: make this actually thread safe. We currently might run into situation where m_RTIIndexBuffers.size() <
+                // cpu_data.index.id because on_render_component_added() is called AFTER we added a render component.
                 sf::components::CPUData cpu_data = comp.cpu_data();
+                if (cpu_data.index_id >= m_RTIndexBuffers.size())
+                    continue;
                 ctx.set_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
                 auto* per_draw = comp.per_draw_constants();
                 ctx.set_32_bit_constants(per_draw, sizeof(sf::components::PerDrawConstants) / sizeof(sf::u32));

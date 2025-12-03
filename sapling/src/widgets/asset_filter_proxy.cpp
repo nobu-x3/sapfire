@@ -9,15 +9,13 @@ SQAssetFilterProxyModel::SQAssetFilterProxyModel(SQFileSystemModel* model, QObje
 SQAssetFilterProxyModel::~SQAssetFilterProxyModel() {}
 
 void SQAssetFilterProxyModel::set_asset_filter_type(EAssetFilterType::TYPE type) {
-    beginFilterChange();
     m_CurrentAssetTypeFilter = type;
-    endFilterChange();
+    invalidateFilter();
 }
 
 void SQAssetFilterProxyModel::set_search_filter(const QString& filter) {
-    beginFilterChange();
     m_SearchFilter = filter;
-    endFilterChange();
+    invalidateFilter();
 }
 
 bool SQAssetFilterProxyModel::filterAcceptsRow(int source_row, const QModelIndex& source_parent) const {

@@ -12,6 +12,10 @@ struct SDL_Window;
 class QApplication;
 class ProjectManager;
 
+namespace sf {
+    struct RenderComponentResourcePaths;
+}
+
 // Singleton that manages shared editor state and engine systems
 class EditorContext {
 public:

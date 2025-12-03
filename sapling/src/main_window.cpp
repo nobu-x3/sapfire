@@ -86,6 +86,27 @@ void SaplingMainWindow::create_docks() {
         if (m_SceneHierarchy)
             m_SceneHierarchy->refresh();
     });
+    connect(m_EntityInspector, &EntityInspectorWidget::render_component_added, this, [this](sf::Entity entity) {
+        auto* ec_mgr = EditorContext::instance().ec_manager();
+        if (!ec_mgr) {
+            CLIENT_ERROR("EC Manager not initialized, cannot handle render component addition.");
+            return;
+        }
+        auto* asset_mgr = EditorContext::instance().asset_manager();
+        sf::components::RenderComponent& component = ec_mgr->engine_component<sf::components::RenderComponent>(entity);
+        const auto mesh_uuid = component.mesh_uuid();
+        const auto texture_uuid = component.texture_uuid();
+        const auto texture_path = asset_mgr->get_texture_path(texture_uuid);
+        const auto mesh_path = asset_mgr->get_mesh_path(mesh_uuid);
+        const auto material_uuid = component.material_uuid();
+        const auto material_path = asset_mgr->get_material_path(material_uuid);
+        sf::RenderComponentResourcePaths paths{
+            .mesh_path = mesh_path,
+            .texture_path = texture_path,
+            .material_path = material_path,
+        };
+        m_SceneView->on_render_component_added(entity, paths);
+    });
     addDockWidget(Qt::RightDockWidgetArea, inspector_dock);
     menuBar()->actions()[2]->menu()->addAction(inspector_dock->toggleViewAction());
     auto* asset_dock = new QDockWidget(tr("Asset Browser"), this);
