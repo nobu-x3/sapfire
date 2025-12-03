@@ -156,7 +156,7 @@ namespace sf::components {
         // Helper: Create a registration lambda that properly captures type info at definition time
         template <typename T>
         static std::function<void()> make_engine_registration_lambda() {
-            const char* type_name = typeid(T).name();
+            std::string type_name = typeid(T).name();
             return [type_name]() {
                 s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
                 s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
@@ -174,7 +174,7 @@ namespace sf::components {
             queue_registration([factory]() {
                 auto component = factory();
                 auto type_str = component->to_string();
-                const char* type_name = type_str.c_str();
+                std::string type_name = type_str.c_str();
                 s_ComponentTypes[type_name] = s_NextComponentTypeNumber;
                 s_ComponentTypeNameMap[s_NextComponentTypeNumber] = type_name;
                 s_CustomComponentLists[type_name] = std::make_shared<CustomComponentList>(component);
@@ -335,6 +335,7 @@ private:                                                                        
 public:                                                                                                                                    \
     static ::sf::stl::string to_string() { return ::sf::stl::make_string(::sf::mem::MemTag::Strings, #type); }                             \
     static ::sf::stl::string to_tmp_string() { return ::sf::stl::make_string(::sf::mem::MemTag::Temp, #type); }                            \
+    static ::sf::stl::string to_mangled_tmp_string() { return ::sf::stl::make_string(::sf::mem::MemTag::Temp, typeid(type).name()); }      \
                                                                                                                                            \
 private:
 } // namespace sf::components
