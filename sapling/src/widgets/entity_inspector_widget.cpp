@@ -160,8 +160,6 @@ void EntityInspectorWidget::on_add_component_clicked() {
 void EntityInspectorWidget::on_pick_component(const QString& qtype_name) {
     if (!m_CurrentEntity.has_value())
         return;
-    CLIENT_TRACE(qtype_name.toLatin1().data());
-    CLIENT_TRACE(sf::components::RenderComponent::to_tmp_string());
     auto type_name = sf::stl::string(sf::mem::MemTag::Temp, qtype_name.toLatin1().data());
     auto* ec_manager = EditorContext::instance().ec_manager();
     if (!ec_manager)
@@ -171,7 +169,7 @@ void EntityInspectorWidget::on_pick_component(const QString& qtype_name) {
     } else {
         ec_manager->add_component(m_CurrentEntity.value(), type_name);
     }
-    if (type_name == sf::components::RenderComponent::to_tmp_string()) {
+    if (type_name == sf::components::RenderComponent::to_mangled_tmp_string()) {
         emit render_component_added(m_CurrentEntity.value());
     }
     populate_inspector();

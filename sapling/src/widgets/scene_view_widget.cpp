@@ -53,12 +53,10 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     auto* device = EditorContext::instance().graphics_device();
     if (!device)
         return sf::stl::make_error("cannot load contents when graphics device is not initialized");
-
     auto& ctx = EditorContext::instance();
     auto* allocator = ctx.memory_allocator();
     if (!allocator)
         return sf::stl::make_error("memory allocator not initialized");
-
     auto pipeline_result = device->create_graphics_pipeline({
         .shader_module =
             {
@@ -72,7 +70,6 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     if (!pipeline_result)
         return sf::stl::make_error("failed to create bindless pipeline");
     m_PipelineState = std::move(*pipeline_result);
-
     auto cbv_result = allocator->allocate_buffer(sf::render::BufferCreationDesc{
         .usage = sf::render::BufferUsage::Constant,
         .size_in_bytes = sizeof(PassConstants),
@@ -81,7 +78,6 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     if (!cbv_result)
         return sf::stl::make_error("failed to create main pass constant buffer: {}", cbv_result.error().c_str());
     m_MainPassCB = std::move(*cbv_result);
-
     auto depth_result = allocator->allocate_texture({
         .usage = sf::render::TextureUsage::DepthStencil,
         .format = sf::render::Format::D32_FLOAT,
@@ -166,7 +162,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 CLIENT_ERROR("Failed to allocated index buffer: {}.", ib_res.error().c_str());
                 return;
             }
-            cbv_heap->allocate_srv(*ib_res);
+            cbv_heap->allocate_cbv(*ib_res);
             ib_res->update(mesh_asset->data->indices16().data(), index_buffer_size);
             m_RTIndexBuffers.push_back(std::move(*ib_res));
             auto vbp_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -174,7 +170,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_pos_buf_size,
                 .name = "Vertex Position Buffer",
             });
-            cbv_heap->allocate_srv(*vbp_res);
+            cbv_heap->allocate_cbv(*vbp_res);
             vbp_res->update(mesh_asset->data->positions.data(), vertex_pos_buf_size);
             m_VertexPosBuffers.push_back(std::move(*vbp_res));
             auto vbn_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -182,7 +178,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_norm_buf_size,
                 .name = "Vertex Normals Buffer",
             });
-            cbv_heap->allocate_srv(*vbn_res);
+            cbv_heap->allocate_cbv(*vbn_res);
             vbn_res->update(mesh_asset->data->normals.data(), vertex_norm_buf_size);
             m_VertexNormalBuffers.push_back(std::move(*vbn_res));
             if (mesh_asset->data->tangentus.size() > 0) {
@@ -192,7 +188,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                     .size_in_bytes = vertex_tan_buf_size,
                     .name = "Vertex Tan Buffer",
                 });
-                cbv_heap->allocate_srv(*vbt_res);
+                cbv_heap->allocate_cbv(*vbt_res);
                 vbt_res->update(mesh_asset->data->tangentus.data(), vertex_tan_buf_size);
                 m_VertexTangentBuffers.push_back(std::move(*vbt_res));
                 should_add_tangent = true;
@@ -202,7 +198,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_uv_buf_size,
                 .name = "Vertex UV Buffer",
             });
-            cbv_heap->allocate_srv(*vbuv_res);
+            cbv_heap->allocate_cbv(*vbuv_res);
             vbuv_res->update(mesh_asset->data->texcs.data(), vertex_uv_buf_size);
             m_VertexUVBuffers.push_back(std::move(*vbuv_res));
         }
