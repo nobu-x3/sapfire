@@ -5,6 +5,11 @@
 
 namespace sf::render {
 
+    struct DescriptorHeapDesc {
+        u32 descriptor_count = 0;
+        stl::string_view name = {};
+    };
+
     // Descriptor Heap Interface
 
     class IDescriptorHeap {

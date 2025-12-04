@@ -5,9 +5,9 @@
 
 namespace sf::render::vk {
 
-    class VkMemoryAllocator final : public IMemoryAllocator {
+    class VulkanMemoryAllocator final : public IMemoryAllocator {
     public:
-        explicit VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
+        explicit VulkanMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device);
 
         void destroy_resources();
 

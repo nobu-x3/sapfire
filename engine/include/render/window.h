@@ -15,7 +15,7 @@ namespace sf {
     struct SFAPI WindowParams {
         u64 width = 0;
         u64 height = 0;
-        stl::string name;
+        stl::string name{mem::MemTag::Temp};
         EventCallbackFn callback{nullptr};
     };
 

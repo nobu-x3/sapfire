@@ -6,7 +6,7 @@
 #include "render/vulkan/vk_type_conversions.h"
 
 namespace sf::render::vk {
-    VkDescriptorHeap::VkDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name) :
+    VulkanDescriptorHeap::VulkanDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name) :
         m_Device(device), m_DescriptorCount(descriptor_count) {
         // Multiply by 3 to account for the 3 bindings in the resource descriptor set layout (SRV, UAV, CBV)
         u32 pool_descriptor_count = descriptor_count * 3;
@@ -28,7 +28,7 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan descriptor heap: {}", name);
     }
 
-    void VkDescriptorHeap::destroy_resources() {
+    void VulkanDescriptorHeap::destroy_resources() {
         if (m_Device == VK_NULL_HANDLE)
             return;
         for (VkSampler sampler : m_Samplers) {
@@ -52,7 +52,7 @@ namespace sf::render::vk {
         m_Device = VK_NULL_HANDLE;
     }
 
-    u32 VkDescriptorHeap::allocate_srv(Buffer& buffer) {
+    u32 VulkanDescriptorHeap::allocate_srv(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         VkDescriptorBufferInfo buffer_info{};
         buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
@@ -70,7 +70,7 @@ namespace sf::render::vk {
         return index;
     }
 
-    u32 VkDescriptorHeap::allocate_srv(Texture& texture, const ShaderResourceViewDesc* desc) {
+    u32 VulkanDescriptorHeap::allocate_srv(Texture& texture, const ShaderResourceViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         VkDescriptorImageInfo image_info{};
         image_info.imageView = reinterpret_cast<VkImageView>(texture.resource);
@@ -88,7 +88,7 @@ namespace sf::render::vk {
         return index;
     }
 
-    u32 VkDescriptorHeap::allocate_uav(Buffer& buffer) {
+    u32 VulkanDescriptorHeap::allocate_uav(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         VkDescriptorBufferInfo buffer_info{};
         buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
@@ -106,7 +106,7 @@ namespace sf::render::vk {
         return index;
     }
 
-    u32 VkDescriptorHeap::allocate_uav(Texture& texture, const UnorderedAccessViewDesc* desc) {
+    u32 VulkanDescriptorHeap::allocate_uav(Texture& texture, const UnorderedAccessViewDesc* desc) {
         u32 index = m_CurrentIndex++;
         VkDescriptorImageInfo image_info{};
         image_info.imageView = reinterpret_cast<VkImageView>(texture.resource);
@@ -124,7 +124,7 @@ namespace sf::render::vk {
         return index;
     }
 
-    u32 VkDescriptorHeap::allocate_cbv(Buffer& buffer) {
+    u32 VulkanDescriptorHeap::allocate_cbv(Buffer& buffer) {
         u32 index = m_CurrentIndex++;
         VkDescriptorBufferInfo buffer_info{};
         buffer_info.buffer = reinterpret_cast<VkBuffer>(buffer.resource);
@@ -142,24 +142,25 @@ namespace sf::render::vk {
         return index;
     }
 
-    u32 VkDescriptorHeap::allocate_cbv(const ConstantBufferViewDesc& desc) {
-        CORE_ERROR("VkDescriptorHeap::allocate_cbv(ConstantBufferViewDesc) - not supported in Vulkan, use allocate_cbv(Buffer&) instead");
-        return UINT32_MAX;
-    }
-
-    u32 VkDescriptorHeap::allocate_rtv(Texture& texture, const RenderTargetViewDesc* desc) {
+    u32 VulkanDescriptorHeap::allocate_cbv(const ConstantBufferViewDesc& desc) {
         CORE_ERROR(
-            "VkDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
+            "VulkanDescriptorHeap::allocate_cbv(ConstantBufferViewDesc) - not supported in Vulkan, use allocate_cbv(Buffer&) instead");
         return UINT32_MAX;
     }
 
-    u32 VkDescriptorHeap::allocate_dsv(Texture& texture, const DepthStencilViewDesc* desc) {
+    u32 VulkanDescriptorHeap::allocate_rtv(Texture& texture, const RenderTargetViewDesc* desc) {
         CORE_ERROR(
-            "VkDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
+            "VulkanDescriptorHeap::allocate_rtv - RTVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
         return UINT32_MAX;
     }
 
-    u32 VkDescriptorHeap::allocate_sampler(const SamplerDesc& desc) {
+    u32 VulkanDescriptorHeap::allocate_dsv(Texture& texture, const DepthStencilViewDesc* desc) {
+        CORE_ERROR(
+            "VulkanDescriptorHeap::allocate_dsv - DSVs are framebuffer attachments in Vulkan, not descriptors. This should not be called.");
+        return UINT32_MAX;
+    }
+
+    u32 VulkanDescriptorHeap::allocate_sampler(const SamplerDesc& desc) {
         u32 index = m_CurrentIndex++;
         VkSamplerCreateInfo sampler_info{};
         sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -205,22 +206,22 @@ namespace sf::render::vk {
         return index;
     }
 
-    void* VkDescriptorHeap::get_cpu_handle(u32 index) {
+    void* VulkanDescriptorHeap::get_cpu_handle(u32 index) {
         // In Vulkan, there's no concept of CPU/GPU descriptor handles like in D3D12
         // Descriptors are accessed through descriptor sets
         // For compatibility, return the descriptor set (index is implicit in the binding)
         return reinterpret_cast<void*>(m_DescriptorSet);
     }
 
-    void* VkDescriptorHeap::get_gpu_handle(u32 index) {
+    void* VulkanDescriptorHeap::get_gpu_handle(u32 index) {
         // In Vulkan, GPU access to descriptors is through descriptor sets bound to the pipeline
         // The index would be used as the array element when accessing the descriptor in shaders
         return reinterpret_cast<void*>(m_DescriptorSet);
     }
 
-    stl::result<> VkDescriptorHeap::allocate_descriptor_set() {
+    stl::result<> VulkanDescriptorHeap::allocate_descriptor_set() {
         if (m_DescriptorSet != VK_NULL_HANDLE) {
-            CORE_WARN("VkDescriptorHeap::allocate_descriptor_set - descriptor set already allocated");
+            CORE_WARN("VulkanDescriptorHeap::allocate_descriptor_set - descriptor set already allocated");
             return stl::success;
         }
         if (m_DescriptorSetLayout == VK_NULL_HANDLE) {

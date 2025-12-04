@@ -6,8 +6,15 @@
 #include "render/vulkan/vk_compat.h"
 #include "render/vulkan/vk_context.h"
 #include "render/vulkan/vk_descriptor_heap.h"
+#include "render/vulkan/vk_descriptor_pool.h"
+#include "render/vulkan/vk_descriptor_set.h"
+#include "render/vulkan/vk_fence.h"
+#include "render/vulkan/vk_framebuffer.h"
 #include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_memory_allocator.h"
+#include "render/vulkan/vk_pipeline_layout.h"
+#include "render/vulkan/vk_render_pass.h"
+#include "render/vulkan/vk_sampler.h"
 #include "render/vulkan/vk_type_conversions.h"
 
 #include <SDL3/SDL.h>
@@ -51,7 +58,7 @@ namespace sf::render::vk {
     }
 #endif
 
-    VkGraphicsDevice::VkGraphicsDevice(const SwapchainCreationDesc& desc) {
+    VulkanGraphicsDevice::VulkanGraphicsDevice(const SwapchainCreationDesc& desc) {
         m_WindowHandle = desc.window_handle;
         m_WindowWidth = desc.width;
         m_WindowHeight = desc.height;
@@ -95,11 +102,6 @@ namespace sf::render::vk {
                 return;
             }
         }
-        auto sync_objs_result = init_sync_objects();
-        if (!sync_objs_result) {
-            CORE_CRITICAL(sync_objs_result.error().c_str());
-            return;
-        }
         auto render_pass_result = init_render_pass();
         if (!render_pass_result) {
             CORE_CRITICAL(render_pass_result.error().c_str());
@@ -131,10 +133,9 @@ namespace sf::render::vk {
         }
     }
 
-    VkGraphicsDevice::~VkGraphicsDevice() {
+    VulkanGraphicsDevice::~VulkanGraphicsDevice() {
         wait_for_idle();
         cleanup_swapchain();
-        m_PipelineStates.clear();
         if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
             vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
             m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
@@ -162,24 +163,6 @@ namespace sf::render::vk {
         if (m_MainRenderPass != VK_NULL_HANDLE) {
             vkDestroyRenderPass(m_Device, m_MainRenderPass, nullptr);
             m_MainRenderPass = VK_NULL_HANDLE;
-        }
-        for (auto& fence : m_InFlightFences) {
-            if (fence != VK_NULL_HANDLE) {
-                vkDestroyFence(m_Device, fence, nullptr);
-                fence = VK_NULL_HANDLE;
-            }
-        }
-        for (auto& semaphore : m_ImageAvailableSemaphores) {
-            if (semaphore != VK_NULL_HANDLE) {
-                vkDestroySemaphore(m_Device, semaphore, nullptr);
-                semaphore = VK_NULL_HANDLE;
-            }
-        }
-        for (auto& semaphore : m_RenderFinishedSemaphores) {
-            if (semaphore != VK_NULL_HANDLE) {
-                vkDestroySemaphore(m_Device, semaphore, nullptr);
-                semaphore = VK_NULL_HANDLE;
-            }
         }
         // Destroy internal VMA allocator (before device)
         if (m_InternalAllocator != VK_NULL_HANDLE) {
@@ -210,7 +193,7 @@ namespace sf::render::vk {
         CORE_INFO("Vulkan graphics device destroyed");
     }
 
-    stl::result<> VkGraphicsDevice::init_instance() {
+    stl::result<> VulkanGraphicsDevice::init_instance() {
         VkApplicationInfo app_info{};
         app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
         app_info.pApplicationName = "Sapfire Application";
@@ -276,7 +259,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_surface(const SwapchainCreationDesc& desc) {
+    stl::result<> VulkanGraphicsDevice::init_surface(const SwapchainCreationDesc& desc) {
         SDL_Window* sdl_window = static_cast<SDL_Window*>(desc.window_handle);
         if (!SDL_Vulkan_CreateSurface(sdl_window, m_Instance, nullptr, &m_Surface)) {
             return stl::make_error<>("Failed to create Vulkan surface: {}", SDL_GetError());
@@ -285,7 +268,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_physical_device() {
+    stl::result<> VulkanGraphicsDevice::init_physical_device() {
         u32 device_count = 0;
         VK_RETURN_ON_ERROR(vkEnumeratePhysicalDevices(m_Instance, &device_count, nullptr), "Failed to enumerate physical devices");
         if (device_count == 0) {
@@ -300,7 +283,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_logical_device() {
+    stl::result<> VulkanGraphicsDevice::init_logical_device() {
         m_GraphicsQueueFamily = find_queue_family(VK_QUEUE_GRAPHICS_BIT);
         m_ComputeQueueFamily = find_queue_family(VK_QUEUE_COMPUTE_BIT);
         m_TransferQueueFamily = find_queue_family(VK_QUEUE_TRANSFER_BIT);
@@ -373,7 +356,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_swapchain(const SwapchainCreationDesc& desc) {
+    stl::result<> VulkanGraphicsDevice::init_swapchain(const SwapchainCreationDesc& desc) {
         VkSurfaceCapabilitiesKHR capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_PhysicalDevice, m_Surface, &capabilities);
         u32 format_count;
@@ -450,100 +433,61 @@ namespace sf::render::vk {
             view_info.subresourceRange.layerCount = 1;
             VK_RETURN_ON_ERROR(vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]),
                                "Failed to create swapchain image view {}", i);
+            // Store image view in Texture structure as well
+            m_BackBuffers[i].image_view = reinterpret_cast<void*>(m_SwapchainImageViews[i]);
         }
         CORE_INFO("Vulkan swapchain created");
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_sync_objects() {
-        for (auto& fence : m_InFlightFences) {
-            VkFenceCreateInfo fence_info{};
-            fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT; // Start signaled so first frame doesn't wait
-            VK_RETURN_ON_ERROR(vkCreateFence(m_Device, &fence_info, nullptr, &fence), "Failed to create fence");
-        }
-        for (auto& semaphore : m_ImageAvailableSemaphores) {
-            VkSemaphoreCreateInfo semaphore_info{};
-            semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            VK_RETURN_ON_ERROR(vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore),
-                               "Failed to create image available semaphore");
-        }
-        for (auto& semaphore : m_RenderFinishedSemaphores) {
-            VkSemaphoreCreateInfo semaphore_info{};
-            semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            VK_RETURN_ON_ERROR(vkCreateSemaphore(m_Device, &semaphore_info, nullptr, &semaphore),
-                               "Failed to create render finished semaphore");
-        }
-        CORE_INFO("Vulkan synchronization objects created");
-        return stl::success;
-    }
-
-    stl::result<stl::unique_ptr<IGraphicsContext>> VkGraphicsDevice::create_graphics_context() {
-        auto context = stl::make_unique<VkGraphicsContext>(mem::MemTag::Render, this);
+    stl::result<stl::unique_ptr<IGraphicsContext>> VulkanGraphicsDevice::create_graphics_context() {
+        auto context = stl::make_unique<VulkanGraphicsContext>(mem::MemTag::Render, this);
         return stl::unique_ptr<IGraphicsContext>(context.release());
     }
 
-    stl::result<stl::unique_ptr<IComputeContext>> VkGraphicsDevice::create_compute_context() {
-        auto context = stl::make_unique<VkComputeContext>(mem::MemTag::Render, this);
+    stl::result<stl::unique_ptr<IComputeContext>> VulkanGraphicsDevice::create_compute_context() {
+        auto context = stl::make_unique<VulkanComputeContext>(mem::MemTag::Render, this);
         return stl::unique_ptr<IComputeContext>(context.release());
     }
 
-    stl::result<stl::unique_ptr<ICopyContext>> VkGraphicsDevice::create_copy_context() {
-        auto context = stl::make_unique<VkCopyContext>(mem::MemTag::Render, this);
+    stl::result<stl::unique_ptr<ICopyContext>> VulkanGraphicsDevice::create_copy_context() {
+        auto context = stl::make_unique<VulkanCopyContext>(mem::MemTag::Render, this);
         return stl::unique_ptr<ICopyContext>(context.release());
     }
 
-    stl::result<stl::unique_ptr<ICommandQueue>> VkGraphicsDevice::create_direct_queue(const char* name) {
+    stl::result<stl::unique_ptr<ICommandQueue>> VulkanGraphicsDevice::create_direct_queue(const char* name) {
         VkQueue vk_queue;
         vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &vk_queue);
-        auto queue = stl::make_unique<VkCommandQueue>(mem::MemTag::Render, this, m_Device, vk_queue, CommandQueueType::Direct, name);
+        auto queue = stl::make_unique<VulkanCommandQueue>(mem::MemTag::Render, this, m_Device, vk_queue, CommandQueueType::Direct, name);
         return stl::unique_ptr<ICommandQueue>(queue.release());
     }
 
-    stl::result<stl::unique_ptr<ICommandQueue>> VkGraphicsDevice::create_compute_queue(const char* name) {
+    stl::result<stl::unique_ptr<ICommandQueue>> VulkanGraphicsDevice::create_compute_queue(const char* name) {
         VkQueue vk_queue;
         vkGetDeviceQueue(m_Device, m_ComputeQueueFamily, 0, &vk_queue);
-        auto queue = stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, vk_queue, CommandQueueType::Compute, name);
+        auto queue = stl::make_unique<VulkanCommandQueue>(mem::MemTag::Render, m_Device, vk_queue, CommandQueueType::Compute, name);
         return stl::unique_ptr<ICommandQueue>(queue.release());
     }
 
-    stl::result<stl::unique_ptr<ICommandQueue>> VkGraphicsDevice::create_copy_queue(const char* name) {
+    stl::result<stl::unique_ptr<ICommandQueue>> VulkanGraphicsDevice::create_copy_queue(const char* name) {
         VkQueue vk_queue;
         vkGetDeviceQueue(m_Device, m_TransferQueueFamily, 0, &vk_queue);
-        auto queue = stl::make_unique<VkCommandQueue>(mem::MemTag::Render, m_Device, vk_queue, CommandQueueType::Copy, name);
+        auto queue = stl::make_unique<VulkanCommandQueue>(mem::MemTag::Render, m_Device, vk_queue, CommandQueueType::Copy, name);
         return stl::unique_ptr<ICommandQueue>(queue.release());
     }
 
-    stl::result<stl::unique_ptr<IDescriptorHeap>> VkGraphicsDevice::create_cbv_srv_uav_heap(const DescriptorHeapDesc& desc) {
-        auto heap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, desc.descriptor_count, desc.name);
-        heap->set_descriptor_set_layout(m_ResourceDescriptorSetLayout, 2);
-        return stl::unique_ptr<IDescriptorHeap>(heap.release());
+    stl::result<stl::unique_ptr<IDescriptorPool>> VulkanGraphicsDevice::create_descriptor_pool(const DescriptorPoolDesc& desc) {
+        auto pool = stl::make_unique<VulkanDescriptorPool>(mem::MemTag::Render, this, desc);
+        return stl::unique_ptr<IDescriptorPool>(pool.release());
     }
 
-    stl::result<stl::unique_ptr<IDescriptorHeap>> VkGraphicsDevice::create_rtv_heap(const DescriptorHeapDesc& desc) {
-        // In Vulkan, RTVs are framebuffer attachments, not descriptors - return dummy heap for API compatibility
-        auto heap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, desc.descriptor_count, desc.name);
-        return stl::unique_ptr<IDescriptorHeap>(heap.release());
-    }
 
-    stl::result<stl::unique_ptr<IDescriptorHeap>> VkGraphicsDevice::create_dsv_heap(const DescriptorHeapDesc& desc) {
-        // In Vulkan, DSVs are framebuffer attachments, not descriptors - return dummy heap for API compatibility
-        auto heap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, desc.descriptor_count, desc.name);
-        return stl::unique_ptr<IDescriptorHeap>(heap.release());
-    }
-
-    stl::result<stl::unique_ptr<IDescriptorHeap>> VkGraphicsDevice::create_sampler_heap(const DescriptorHeapDesc& desc) {
-        auto heap = stl::make_unique<VkDescriptorHeap>(mem::MemTag::Render, m_Device, desc.descriptor_count, desc.name);
-        heap->set_descriptor_set_layout(m_DummyDescriptorSetLayout, 1);
-        return stl::unique_ptr<IDescriptorHeap>(heap.release());
-    }
-
-    stl::result<stl::unique_ptr<IMemoryAllocator>> VkGraphicsDevice::create_memory_allocator() {
-        auto allocator = stl::make_unique<VkMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
+    stl::result<stl::unique_ptr<IMemoryAllocator>> VulkanGraphicsDevice::create_memory_allocator() {
+        auto allocator = stl::make_unique<VulkanMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
         return stl::unique_ptr<IMemoryAllocator>(allocator.release());
     }
 
-    stl::result<> VkGraphicsDevice::init_bindless_pipeline_layout() {
+    stl::result<> VulkanGraphicsDevice::init_bindless_pipeline_layout() {
         // Create descriptor set layouts for bindless rendering
         // Set 0: Per-frame data (Scene + Pass data)
         stl::vector<VkDescriptorSetLayoutBinding> set0_bindings{mem::MemTag::Render, 2};
@@ -652,7 +596,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::init_render_pass() {
+    stl::result<> VulkanGraphicsDevice::init_render_pass() {
         VkAttachmentDescription color_attachment{};
         color_attachment.format = to_vk_format(m_BackBufferFormat);
         color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -679,7 +623,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::create_swapchain_framebuffers() {
+    stl::result<> VulkanGraphicsDevice::create_swapchain_framebuffers() {
         for (u32 i = 0; i < m_BackBufferCount && i < MAX_FRAMES_IN_FLIGHT; ++i) {
             VkImageView attachments[] = {m_SwapchainImageViews[i]};
             VkFramebufferCreateInfo framebuffer_info{};
@@ -696,7 +640,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::create_offscreen_render_targets(const SwapchainCreationDesc& desc) {
+    stl::result<> VulkanGraphicsDevice::create_offscreen_render_targets(const SwapchainCreationDesc& desc) {
         // Create custom render target textures for headless rendering (editor viewports)
         CORE_INFO("Creating {} offscreen render targets ({}x{})", MAX_FRAMES_IN_FLIGHT, m_WindowWidth, m_WindowHeight);
         for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i) {
@@ -743,6 +687,8 @@ namespace sf::render::vk {
             view_info.subresourceRange.layerCount = 1;
             VK_RETURN_ON_ERROR(vkCreateImageView(m_Device, &view_info, nullptr, &m_SwapchainImageViews[i]),
                                "Failed to create offscreen render target image view {}", i);
+            // Store image view in Texture structure as well
+            m_BackBuffers[i].image_view = reinterpret_cast<void*>(m_SwapchainImageViews[i]);
             VkImageView attachments[] = {m_SwapchainImageViews[i]};
             VkFramebufferCreateInfo framebuffer_info{};
             framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -807,7 +753,7 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    void VkGraphicsDevice::cleanup_swapchain() {
+    void VulkanGraphicsDevice::cleanup_swapchain() {
         wait_for_idle();
         for (auto& framebuffer : m_SwapchainFramebuffers) {
             if (framebuffer != VK_NULL_HANDLE) {
@@ -837,7 +783,7 @@ namespace sf::render::vk {
         }
     }
 
-    u32 VkGraphicsDevice::find_queue_family(VkQueueFlags flags) {
+    u32 VulkanGraphicsDevice::find_queue_family(VkQueueFlags flags) {
         u32 queue_family_count = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queue_family_count, nullptr);
         stl::vector<VkQueueFamilyProperties> queue_families(mem::MemTag::Temp, queue_family_count);
@@ -850,7 +796,7 @@ namespace sf::render::vk {
         return 0;
     }
 
-    u32 VkGraphicsDevice::find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties) {
+    u32 VulkanGraphicsDevice::find_memory_type(u32 type_filter, VkMemoryPropertyFlags properties) {
         VkPhysicalDeviceMemoryProperties mem_properties;
         vkGetPhysicalDeviceMemoryProperties(m_PhysicalDevice, &mem_properties);
         for (u32 i = 0; i < mem_properties.memoryTypeCount; ++i) {
@@ -861,88 +807,51 @@ namespace sf::render::vk {
         return 0;
     }
 
-    stl::result<> VkGraphicsDevice::begin_frame() {
-        u32 fence_index = m_Headless ? 0 : m_CurrentFrameIndex;
-        VK_RETURN_ON_ERROR(vkWaitForFences(m_Device, 1, &m_InFlightFences[fence_index], VK_TRUE, UINT64_MAX),
-                           "Failed to wait for fences when beginning frame.");
-        VK_RETURN_ON_ERROR(vkResetFences(m_Device, 1, &m_InFlightFences[fence_index]), "Failed to reset fences when beginning frame.");
-        if (m_Headless) {
-            // In headless mode, we cycle through our custom render targets manually
-            m_CurrentBackBufferIndex = m_CurrentFrameIndex;
-        } else {
-            // In swapchain mode, acquire the next image from the swapchain
-            VK_RETURN_ON_ERROR(vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, m_ImageAvailableSemaphores[m_CurrentFrameIndex],
-                                                     VK_NULL_HANDLE, &m_CurrentBackBufferIndex),
-                               "Failed to acquire next swapchain image when beginning frame");
-        }
-        // User is responsible for resetting and managing contexts
-        return stl::success;
-    }
-
-    stl::result<> VkGraphicsDevice::end_frame(IGraphicsContext* context) {
-        if (!context) {
-            return stl::make_error<>("VkGraphicsDevice::end_frame - context is null");
-        }
-        auto close_result = context->close();
-        if (!close_result) {
-            return close_result;
-        }
-        VkSubmitInfo submit_info{};
-        submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        VkCommandBuffer cmd_buffer = reinterpret_cast<VkCommandBuffer>(context->get_native_command_list());
-        submit_info.commandBufferCount = 1;
-        submit_info.pCommandBuffers = &cmd_buffer;
-        u32 fence_index = m_Headless ? 0 : m_CurrentFrameIndex;
-        if (m_Headless) {
-            // In headless mode, no semaphore synchronization with swapchain needed
-            // Just signal the fence for CPU-GPU sync
-        } else {
-            // In swapchain mode, wait for image available and signal render finished
-            VkSemaphore wait_semaphores[] = {m_ImageAvailableSemaphores[m_CurrentFrameIndex]};
-            VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-            submit_info.waitSemaphoreCount = 1;
-            submit_info.pWaitSemaphores = wait_semaphores;
-            submit_info.pWaitDstStageMask = wait_stages;
-            VkSemaphore signal_semaphores[] = {m_RenderFinishedSemaphores[m_CurrentFrameIndex]};
-            submit_info.signalSemaphoreCount = 1;
-            submit_info.pSignalSemaphores = signal_semaphores;
-        }
-        VkQueue graphics_queue;
-        vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
-        VK_RETURN_ON_ERROR(vkQueueSubmit(graphics_queue, 1, &submit_info, m_InFlightFences[fence_index]),
-                           "Failed to submit command buffer in end_frame");
-        return stl::success;
-    }
-
-    stl::result<> VkGraphicsDevice::present() {
-        if (m_Headless) {
-            // In headless mode, no presentation needed - just advance frame index
-            m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
-            return stl::success;
-        }
-        // Swapchain mode: present to the window
-        VkPresentInfoKHR present_info{};
-        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        present_info.waitSemaphoreCount = 1;
-        present_info.pWaitSemaphores = &m_RenderFinishedSemaphores[m_CurrentFrameIndex];
-        present_info.swapchainCount = 1;
-        present_info.pSwapchains = &m_Swapchain;
-        present_info.pImageIndices = &m_CurrentBackBufferIndex;
-        VkQueue present_queue;
-        vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &present_queue);
-        VK_RETURN_ON_ERROR(vkQueuePresentKHR(present_queue, &present_info), "Failed to present queue.");
-        m_CurrentFrameIndex = (m_CurrentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
-        return stl::success;
-    }
-
-    stl::result<> VkGraphicsDevice::wait_for_idle() {
+    stl::result<> VulkanGraphicsDevice::wait_for_idle() {
         if (m_Device != VK_NULL_HANDLE) {
             VK_RETURN_ON_ERROR(vkDeviceWaitIdle(m_Device), "Failed to wait for device idle.");
         }
         return stl::success;
     }
 
-    stl::result<> VkGraphicsDevice::resize_window(u32 width, u32 height) {
+    Texture& VulkanGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
+
+    stl::result<stl::unique_ptr<IPipelineState>> VulkanGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineDesc& desc) {
+        auto pipeline = stl::make_unique<VulkanPipelineState>(mem::MemTag::Render);
+        VkPipelineLayout vk_layout = VK_NULL_HANDLE;
+        VkRenderPass vk_render_pass = VK_NULL_HANDLE;
+        if (desc.layout) {
+            vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
+        }
+        if (desc.render_pass) {
+            vk_render_pass = reinterpret_cast<VkRenderPass>(desc.render_pass->get_native_render_pass());
+        } else {
+            vk_render_pass = m_MainRenderPass;
+        }
+        auto create_result =
+            pipeline->create_graphics(m_Device, desc, vk_layout != VK_NULL_HANDLE ? vk_layout : m_BindlessPipelineLayout,
+                                      vk_render_pass != VK_NULL_HANDLE ? vk_render_pass : m_MainRenderPass);
+        if (!create_result) {
+            return stl::make_error<stl::unique_ptr<IPipelineState>>(create_result.error().c_str());
+        }
+        return stl::unique_ptr<IPipelineState>(pipeline.release());
+    }
+
+    stl::result<stl::unique_ptr<IPipelineState>> VulkanGraphicsDevice::create_compute_pipeline(const ComputePipelineDesc& desc) {
+        auto pipeline = stl::make_unique<VulkanPipelineState>(mem::MemTag::Render);
+        VkPipelineLayout vk_layout = VK_NULL_HANDLE;
+        if (desc.layout) {
+            vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
+        }
+        auto create_result =
+            pipeline->create_compute(m_Device, desc, vk_layout != VK_NULL_HANDLE ? vk_layout : m_BindlessPipelineLayout);
+        if (!create_result) {
+            return stl::make_error<stl::unique_ptr<IPipelineState>>(create_result.error().c_str());
+        }
+        return stl::unique_ptr<IPipelineState>(pipeline.release());
+    }
+
+    stl::result<> VulkanGraphicsDevice::resize_swapchain(u32 width, u32 height) {
         if ((m_WindowWidth == width && m_WindowHeight == height) || width == 0 || height == 0) {
             return stl::success;
         }
@@ -960,13 +869,11 @@ namespace sf::render::vk {
         swapchain_desc.buffer_count = m_BackBufferCount;
         swapchain_desc.headless = m_Headless;
         if (m_Headless) {
-            // Recreate offscreen render targets with new size
             auto offscreen_result = create_offscreen_render_targets(swapchain_desc);
             if (!offscreen_result) {
                 return offscreen_result;
             }
         } else {
-            // Recreate swapchain for windowed mode
             auto swapchain_result = init_swapchain(swapchain_desc);
             if (!swapchain_result) {
                 return swapchain_result;
@@ -980,30 +887,75 @@ namespace sf::render::vk {
         return stl::success;
     }
 
-    Texture& VkGraphicsDevice::get_current_back_buffer() { return m_BackBuffers[m_CurrentBackBufferIndex]; }
-
-    Texture& VkGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
-
-    stl::result<IPipelineState*> VkGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) {
-        auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
-        auto create_result = pipeline->create_graphics(m_Device, desc, m_BindlessPipelineLayout, m_MainRenderPass);
-        if (!create_result) {
-            return stl::make_error<IPipelineState*>(create_result.error().c_str());
-        }
-        auto* ptr = pipeline.get();
-        m_PipelineStates.push_back(std::move(pipeline));
+    stl::result<stl::unique_ptr<IRenderPass>> VulkanGraphicsDevice::create_render_pass(const RenderPassDesc& desc) {
+        stl::unique_ptr<IRenderPass> ptr = stl::make_unique<VulkanRenderPass>(mem::MemTag::Render, this, desc);
         return ptr;
     }
 
-    stl::result<IPipelineState*> VkGraphicsDevice::create_compute_pipeline(const ComputePipelineStateDesc& desc) {
-        auto pipeline = stl::make_unique<VkPipelineState>(mem::MemTag::Render);
-        auto create_result = pipeline->create_compute(m_Device, desc, m_BindlessPipelineLayout);
-        if (!create_result) {
-            return stl::make_error<IPipelineState*>(create_result.error().c_str());
-        }
-        auto* ptr = pipeline.get();
-        m_PipelineStates.push_back(std::move(pipeline));
+    stl::result<stl::unique_ptr<IFramebuffer>> VulkanGraphicsDevice::create_framebuffer(const FramebufferDesc& desc) {
+        stl::unique_ptr<IFramebuffer> ptr = stl::make_unique<VulkanFramebuffer>(mem::MemTag::Render, this, desc);
         return ptr;
+    }
+
+    stl::result<stl::unique_ptr<IPipelineLayout>> VulkanGraphicsDevice::create_pipeline_layout(const PipelineLayoutDesc& desc) {
+        stl::unique_ptr<IPipelineLayout> ptr = stl::make_unique<VulkanPipelineLayout>(mem::MemTag::Render, this, desc);
+        return ptr;
+    }
+
+    stl::result<stl::unique_ptr<IFence>> VulkanGraphicsDevice::create_fence(bool signaled, const char* name) {
+        stl::unique_ptr<IFence> ptr = stl::make_unique<VulkanFence>(mem::MemTag::Render, this, signaled, name);
+        return ptr;
+    }
+
+    stl::result<stl::unique_ptr<ISemaphore>> VulkanGraphicsDevice::create_semaphore(const char* name) {
+        stl::unique_ptr<ISemaphore> ptr = stl::make_unique<VulkanSemaphore>(mem::MemTag::Render, this, name);
+        return ptr;
+    }
+
+    stl::result<stl::unique_ptr<ISampler>> VulkanGraphicsDevice::create_sampler(const SamplerDesc& desc) {
+        stl::unique_ptr<ISampler> ptr = stl::make_unique<VulkanSampler>(mem::MemTag::Render, this, desc);
+        return ptr;
+    }
+
+    u32 VulkanGraphicsDevice::acquire_next_image(ISemaphore* signal_semaphore) {
+        if (m_Headless) {
+            m_CurrentBackBufferIndex = (m_CurrentBackBufferIndex + 1) % m_BackBuffers.size();
+            return m_CurrentBackBufferIndex;
+        }
+        auto* vk_semaphore = static_cast<VulkanSemaphore*>(signal_semaphore);
+        VkSemaphore semaphore = vk_semaphore->get_vk_semaphore();
+        u32 image_index;
+        vkAcquireNextImageKHR(m_Device, m_Swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &image_index);
+        m_CurrentBackBufferIndex = image_index;
+        return image_index;
+    }
+
+    stl::result<> VulkanGraphicsDevice::present(stl::span<ISemaphore*> wait_semaphores) {
+        if (m_Headless) {
+            return stl::success;
+        }
+        stl::vector<VkSemaphore> vk_semaphores(mem::MemTag::Render);
+        vk_semaphores.reserve(wait_semaphores.size());
+        for (ISemaphore* sem : wait_semaphores) {
+            auto* vk_sem = static_cast<VulkanSemaphore*>(sem);
+            vk_semaphores.push_back(vk_sem->get_vk_semaphore());
+        }
+        VkPresentInfoKHR present_info{};
+        present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        present_info.waitSemaphoreCount = static_cast<u32>(vk_semaphores.size());
+        present_info.pWaitSemaphores = vk_semaphores.data();
+        present_info.swapchainCount = 1;
+        present_info.pSwapchains = &m_Swapchain;
+        present_info.pImageIndices = &m_CurrentBackBufferIndex;
+        VkQueue graphics_queue;
+        vkGetDeviceQueue(m_Device, m_GraphicsQueueFamily, 0, &graphics_queue);
+        VkResult result = vkQueuePresentKHR(graphics_queue, &present_info);
+        if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+            return stl::make_error("Swapchain out of date");
+        } else if (result != VK_SUCCESS) {
+            return stl::make_error("Failed to present swapchain image");
+        }
+        return stl::success;
     }
 
 } // namespace sf::render::vk

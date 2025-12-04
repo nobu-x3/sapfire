@@ -23,39 +23,25 @@ namespace sf {
                                                                                        .format = sf::render::Format::RGBA16_FLOAT,
                                                                                        .refresh_rate = 120});
 
-        // Create rendering resources using factory methods
-        auto cbv_heap_result = m_GraphicsDevice->create_cbv_srv_uav_heap({
-            .descriptor_count = 3000000,
-            .name = "Game CBV/SRV/UAV Heap",
+        // Create descriptor pool for bindless resources
+        auto pool_result = m_GraphicsDevice->create_descriptor_pool({
+            .max_sets = 10,
+            .max_uniform_buffers = 10000,
+            .max_storage_buffers = 100000,
+            .max_sampled_images = 100000,
+            .max_storage_images = 1000,
+            .max_samplers = 1000,
+            .name = "Game Descriptor Pool",
         });
-        if (!cbv_heap_result) {
-            CORE_ERROR("Failed to create CBV/SRV/UAV heap: {}", cbv_heap_result.error().c_str());
+        if (!pool_result) {
+            CORE_ERROR("Failed to create descriptor pool: {}", pool_result.error().c_str());
             return;
         }
-        m_CbvSrvUavHeap = std::move(*cbv_heap_result);
+        m_DescriptorPool = std::move(*pool_result);
 
-        auto sampler_heap_result = m_GraphicsDevice->create_sampler_heap({
-            .descriptor_count = 1000000,
-            .name = "Game Sampler Heap",
-        });
-        if (!sampler_heap_result) {
-            CORE_ERROR("Failed to create sampler heap: {}", sampler_heap_result.error().c_str());
-            return;
-        }
-        m_SamplerHeap = std::move(*sampler_heap_result);
-
-        // Allocate descriptor sets (Vulkan-specific, no-op on DX12)
-        auto cbv_alloc_result = m_CbvSrvUavHeap->allocate_descriptor_set();
-        if (!cbv_alloc_result) {
-            CORE_ERROR("Failed to allocate CBV/SRV/UAV descriptor set: {}", cbv_alloc_result.error().c_str());
-            return;
-        }
-
-        auto sampler_alloc_result = m_SamplerHeap->allocate_descriptor_set();
-        if (!sampler_alloc_result) {
-            CORE_ERROR("Failed to allocate sampler descriptor set: {}", sampler_alloc_result.error().c_str());
-            return;
-        }
+        // Create bindless resource registry
+        m_BindlessRegistry =
+            stl::make_unique<render::BindlessResourceRegistry>(mem::MemTag::Render, m_DescriptorPool.get(), 100000, 100000);
 
         auto queue_result = m_GraphicsDevice->create_direct_queue("Game Direct Queue");
         if (!queue_result) {
@@ -81,6 +67,8 @@ namespace sf {
         m_AssetManager = stl::make_unique<assets::AssetManager>(mem::MemTag::Logic,
                                                                 assets::AssetManagerCreationDesc{
                                                                     .device = m_GraphicsDevice.get(),
+                                                                    .memory_allocator = m_MemoryAllocator.get(),
+                                                                    .bindless_registry = m_BindlessRegistry.get(),
                                                                     .mesh_registry_path = desc.mesh_registry_path,
                                                                     .texture_registry_path = desc.texture_registry_path,
                                                                     .material_registry_path = desc.material_registry_path,
@@ -95,10 +83,10 @@ namespace sf {
         auto* mesh_asset =
             resource_paths.mesh_path.empty() ? assets::MeshRegistry::default_mesh() : m_AssetManager->get_mesh(resource_paths.mesh_path);
         auto* texture_asset = resource_paths.texture_path.empty()
-            ? assets::TextureRegistry::default_texture(m_MemoryAllocator.get(), m_CbvSrvUavHeap.get())
+            ? assets::TextureRegistry::default_texture(m_MemoryAllocator.get(), m_BindlessRegistry.get())
             : m_AssetManager->get_texture(resource_paths.texture_path);
         auto* material_asset = resource_paths.material_path.empty()
-            ? assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_CbvSrvUavHeap.get())
+            ? assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_BindlessRegistry.get())
             : m_AssetManager->get_material(resource_paths.material_path);
         if (!mesh_asset) {
             m_AssetManager->import_mesh(resource_paths.mesh_path);
@@ -126,7 +114,7 @@ namespace sf {
                 if (!transform_result) {
                     return stl::make_error("Failed to create transform buffer: {}", transform_result.error().data());
                 }
-                transform_result->cbv_index = m_CbvSrvUavHeap->allocate_cbv(*transform_result);
+                transform_result->cbv_index = m_BindlessRegistry->register_constant_buffer(*transform_result);
                 m_TransformBuffers.emplace_back(std::move(*transform_result));
             }
             bool should_add_tangent = false;
@@ -158,7 +146,7 @@ namespace sf {
                 if (!vertex_pos_buffer_result) {
                     return stl::make_error("Failed to create vertex position buffer: {}", vertex_pos_buffer_result.error().data());
                 }
-                vertex_pos_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*vertex_pos_buffer_result);
+                vertex_pos_buffer_result->srv_index = m_BindlessRegistry->register_buffer(*vertex_pos_buffer_result);
                 m_VertexPosBuffers.push_back(std::move(*vertex_pos_buffer_result));
 
                 // Create vertex normal buffer with data
@@ -171,7 +159,7 @@ namespace sf {
                 if (!vertex_normal_buffer_result) {
                     return stl::make_error("Failed to create vertex normal buffer: {}", vertex_normal_buffer_result.error().data());
                 }
-                vertex_normal_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*vertex_normal_buffer_result);
+                vertex_normal_buffer_result->srv_index = m_BindlessRegistry->register_buffer(*vertex_normal_buffer_result);
                 m_VertexNormalBuffers.push_back(std::move(*vertex_normal_buffer_result));
 
                 if (mesh_asset->data->tangentus.size() > 0) {
@@ -184,7 +172,7 @@ namespace sf {
                     if (!tangentus_buffer_result) {
                         return stl::make_error("Failed to create vertex tangent buffer: {}", tangentus_buffer_result.error().data());
                     }
-                    tangentus_buffer_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*tangentus_buffer_result);
+                    tangentus_buffer_result->srv_index = m_BindlessRegistry->register_buffer(*tangentus_buffer_result);
                     m_VertexTangentBuffers.push_back(std::move(*tangentus_buffer_result));
                     should_add_tangent = true;
                 }
@@ -198,7 +186,7 @@ namespace sf {
                 if (!uv_result) {
                     return stl::make_error("Failed to create vertex UV buffer: {}", uv_result.error().data());
                 }
-                uv_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*uv_result);
+                uv_result->srv_index = m_BindlessRegistry->register_buffer(*uv_result);
                 m_VertexUVBuffers.push_back(std::move(*uv_result));
             }
             auto cpu_data = components::CPUData{
@@ -213,16 +201,17 @@ namespace sf {
                     : static_cast<u32>(m_TransformBuffers.size() - 1),
             };
             u32 material_cbuffer_idx = 0;
-            if (material_asset->uuid == assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_CbvSrvUavHeap.get())->uuid) {
+            if (material_asset->uuid ==
+                assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_BindlessRegistry.get())->uuid) {
                 material_cbuffer_idx = material_asset->material.material_cb_index;
             } else {
                 material_cbuffer_idx = m_AssetManager->material_resource_exists(resource_paths.material_path)
                     ? m_AssetManager->get_material_resource(resource_paths.material_path).gpu_idx
-                    : assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_CbvSrvUavHeap.get())
+                    : assets::MaterialRegistry::default_material(m_MemoryAllocator.get(), m_BindlessRegistry.get())
                           ->material.material_cb_index;
             }
             u32 texture_cbuffer_idx = 0;
-            if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_MemoryAllocator.get(), m_CbvSrvUavHeap.get())->uuid) {
+            if (texture_asset->uuid == assets::TextureRegistry::default_texture(m_MemoryAllocator.get(), m_BindlessRegistry.get())->uuid) {
                 texture_cbuffer_idx = texture_asset->data.srv_index;
             } else {
                 texture_cbuffer_idx = m_AssetManager->texture_resource_exists(resource_paths.texture_path)
@@ -292,7 +281,7 @@ namespace sf {
     void GameContext::on_window_resize() {
         if (m_GraphicsDevice) {
             auto resize_result =
-                m_GraphicsDevice->resize_window(static_cast<u32>(m_ClientExtent->width), static_cast<u32>(m_ClientExtent->height));
+                m_GraphicsDevice->resize_swapchain(static_cast<u32>(m_ClientExtent->width), static_cast<u32>(m_ClientExtent->height));
             if (!resize_result) {
                 CORE_ERROR("Failed to resize window: {}", resize_result.error().c_str());
             }

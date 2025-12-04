@@ -60,35 +60,25 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         CLIENT_ERROR("Failed to create graphics device!");
         return;
     }
-    auto cbv_heap_result = m_GraphicsDevice->create_cbv_srv_uav_heap({
-        .descriptor_count = 1000000,
-        .name = "Editor CBV/SRV/UAV Heap",
+    // Create descriptor pool for bindless resources
+    auto pool_result = m_GraphicsDevice->create_descriptor_pool({
+        .max_sets = 10,
+        .max_uniform_buffers = 10000,
+        .max_storage_buffers = 100000,
+        .max_sampled_images = 100000,
+        .max_storage_images = 1000,
+        .max_samplers = 1000,
+        .name = "Editor Descriptor Pool",
     });
-    if (!cbv_heap_result) {
-        CLIENT_ERROR("Failed to create CBV/SRV/UAV heap: {}", cbv_heap_result.error().c_str());
+    if (!pool_result) {
+        CLIENT_ERROR("Failed to create descriptor pool: {}", pool_result.error().c_str());
         return;
     }
-    m_CbvSrvUavHeap = std::move(*cbv_heap_result);
-    auto sampler_heap_result = m_GraphicsDevice->create_sampler_heap({
-        .descriptor_count = 1000000,
-        .name = "Editor Sampler Heap",
-    });
-    if (!sampler_heap_result) {
-        CLIENT_ERROR("Failed to create sampler heap: {}", sampler_heap_result.error().c_str());
-        return;
-    }
-    m_SamplerHeap = std::move(*sampler_heap_result);
-    // Allocate descriptor sets (Vulkan-specific, no-op on DX12)
-    auto cbv_alloc_result = m_CbvSrvUavHeap->allocate_descriptor_set();
-    if (!cbv_alloc_result) {
-        CLIENT_ERROR("Failed to allocate CBV/SRV/UAV descriptor set: {}", cbv_alloc_result.error().c_str());
-        return;
-    }
-    auto sampler_alloc_result = m_SamplerHeap->allocate_descriptor_set();
-    if (!sampler_alloc_result) {
-        CLIENT_ERROR("Failed to allocate sampler descriptor set: {}", sampler_alloc_result.error().c_str());
-        return;
-    }
+    m_DescriptorPool = std::move(*pool_result);
+
+    // Create bindless resource registry
+    m_BindlessRegistry =
+        sf::stl::make_unique<sf::render::BindlessResourceRegistry>(sf::mem::MemTag::Render, m_DescriptorPool.get(), 100000, 100000);
     auto queue_result = m_GraphicsDevice->create_direct_queue("Editor Direct Queue");
     if (!queue_result) {
         CLIENT_ERROR("Failed to create direct queue: {}", queue_result.error().c_str());
@@ -111,6 +101,8 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         sf::mem::MemTag::Application,
         sf::assets::AssetManagerCreationDesc{
             .device = m_GraphicsDevice.get(),
+            .memory_allocator = m_MemoryAllocator.get(),
+            .bindless_registry = m_BindlessRegistry.get(),
             .mesh_registry_path = sf::stl::string(sf::mem::MemTag::Mesh, "mesh_registry.db"),
             .texture_registry_path = sf::stl::string(sf::mem::MemTag::Texture, "texture_registry.db"),
         });
@@ -127,8 +119,8 @@ void EditorContext::shutdown() {
     m_MemoryAllocator.reset();
     m_GraphicsContext.reset();
     m_DirectQueue.reset();
-    m_SamplerHeap.reset();
-    m_CbvSrvUavHeap.reset();
+    m_BindlessRegistry.reset();
+    m_DescriptorPool.reset();
     m_GraphicsDevice.reset();
     m_ECManager.reset();
     m_AssetManager.reset();

@@ -2,13 +2,15 @@
 
 #include <span>
 #include "core/core.h"
-#include "render/i_descriptor_heap.h"
 #include "render_api.h"
 #include "resource_types.h"
 
 namespace sf::render {
 
     class IPipelineState;
+    class IRenderPass;
+    class IFramebuffer;
+    class IDescriptorSet;
 
     // Base Context Interface (Command List Wrapper)
 
@@ -20,12 +22,6 @@ namespace sf::render {
         virtual stl::result<> reset() = 0;
         virtual stl::result<> close() = 0;
 
-        // Resource barriers
-        virtual void add_resource_barrier(const ResourceBarrier& barrier) = 0;
-        virtual void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) = 0;
-        virtual void transition_barrier(Texture& texture, ResourceState before, ResourceState after) = 0;
-        virtual void execute_resource_barriers() = 0;
-
         // Backend-specific handle (for advanced usage)
         virtual void* get_native_command_list() = 0;
     };
@@ -36,38 +32,39 @@ namespace sf::render {
     public:
         virtual ~IGraphicsContext() = default;
 
-        // Clear operations
-        virtual void clear_render_target_view(Texture& texture, stl::span<f32, 4> clear_color) = 0;
-        virtual void clear_depth_stencil_view(Texture& texture, f32 depth = 1.0f, u8 stencil = 0) = 0;
+        // Render pass management
+        virtual void begin_render_pass(IRenderPass* render_pass, IFramebuffer* framebuffer) = 0;
+        virtual void end_render_pass() = 0;
+
+        // Clear operations (must be called within render pass)
+        virtual void clear_render_target(u32 attachment_index, stl::span<f32, 4> clear_color) = 0;
+        virtual void clear_depth_stencil(f32 depth = 1.0f, u8 stencil = 0) = 0;
 
         // Pipeline state
-        virtual void set_pipeline_state(IPipelineState* pipeline) = 0;
-        virtual void set_root_signature() = 0;
-        virtual void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) = 0;
-
-        // Descriptor heaps
-        virtual void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) = 0;
+        virtual void bind_pipeline(IPipelineState* pipeline) = 0;
+        virtual void bind_descriptor_set(u32 set_index, IDescriptorSet* descriptor_set) = 0;
+        virtual void push_constants(const void* data, u32 size, u32 offset = 0) = 0;
 
         // Viewport and scissor
         virtual void set_viewport(const Viewport& viewport) = 0;
-        virtual void set_scissor_rect(const ScissorRect& scissor) = 0;
+        virtual void set_scissor(const ScissorRect& scissor) = 0;
 
-        // Render pass management
-        virtual void begin_render_pass(Texture& render_target, Texture* depth_stencil = nullptr) = 0;
-        virtual void end_render_pass() = 0;
-
-        // Index buffer
-        virtual void set_index_buffer(Buffer& buffer, Format format = Format::R32_UINT) = 0;
+        // Vertex/index buffers
+        virtual void bind_vertex_buffer(u32 binding, Buffer& buffer, u64 offset = 0) = 0;
+        virtual void bind_index_buffer(Buffer& buffer, Format format = Format::R32_UINT, u64 offset = 0) = 0;
 
         // Primitive topology
         virtual void set_primitive_topology(PrimitiveTopology topology) = 0;
 
         // Draw commands
-        virtual void draw(u32 vertex_count, u32 instance_count = 1, u32 start_vertex = 0, u32 start_instance = 0) = 0;
-        virtual void draw_indexed(u32 index_count, u32 instance_count = 1, u32 start_index = 0, i32 base_vertex = 0,
-                                  u32 start_instance = 0) = 0;
-        virtual void draw_indexed_instanced(u32 index_count_per_instance, u32 instance_count, u32 start_index = 0, i32 base_vertex = 0,
-                                            u32 start_instance = 0) = 0;
+        virtual void draw(u32 vertex_count, u32 instance_count = 1, u32 first_vertex = 0, u32 first_instance = 0) = 0;
+        virtual void draw_indexed(u32 index_count, u32 instance_count = 1, u32 first_index = 0, i32 vertex_offset = 0,
+                                  u32 first_instance = 0) = 0;
+
+        // Resource barriers
+        virtual void pipeline_barrier(const PipelineBarrier& barrier) = 0;
+        virtual void transition_image_layout(Texture& texture, ResourceState old_state, ResourceState new_state) = 0;
+        virtual void transition_buffer_state(Buffer& buffer, ResourceState old_state, ResourceState new_state) = 0;
     };
 
     // Compute Context Interface
@@ -77,15 +74,15 @@ namespace sf::render {
         virtual ~IComputeContext() = default;
 
         // Pipeline state
-        virtual void set_pipeline_state(IPipelineState* pipeline) = 0;
-        virtual void set_root_signature() = 0;
-        virtual void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) = 0;
-
-        // Descriptor heaps
-        virtual void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) = 0;
+        virtual void bind_pipeline(IPipelineState* pipeline) = 0;
+        virtual void bind_descriptor_set(u32 set_index, IDescriptorSet* descriptor_set) = 0;
+        virtual void push_constants(const void* data, u32 size, u32 offset = 0) = 0;
 
         // Dispatch
-        virtual void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) = 0;
+        virtual void dispatch(u32 group_count_x, u32 group_count_y, u32 group_count_z) = 0;
+
+        // Resource barriers
+        virtual void pipeline_barrier(const PipelineBarrier& barrier) = 0;
     };
 
     // Copy Context Interface
@@ -97,8 +94,8 @@ namespace sf::render {
         // Copy operations
         virtual void copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset = 0, u64 src_offset = 0) = 0;
         virtual void copy_texture(Texture& dst, Texture& src) = 0;
-        virtual void copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource = 0) = 0;
-        virtual void copy_texture_to_buffer(Buffer& dst, Texture& src) = 0;
+        virtual void copy_buffer_to_texture(Texture& dst, Buffer& src, const BufferTextureCopy& region) = 0;
+        virtual void copy_texture_to_buffer(Buffer& dst, Texture& src, const BufferTextureCopy& region) = 0;
     };
 
 } // namespace sf::render

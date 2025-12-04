@@ -5,10 +5,11 @@
 #include "core/core.h"
 #include "math/math.h"
 #include "physics/physics_engine.h"
+#include "render/bindless_resource_registry.h"
 #include "render/camera.h"
 #include "render/i_command_queue.h"
 #include "render/i_context.h"
-#include "render/i_descriptor_heap.h"
+#include "render/i_descriptor_pool.h"
 #include "render/i_memory_allocator.h"
 #include "render/material.h"
 #include "render/render_backend.h"
@@ -62,8 +63,8 @@ namespace sf {
         stl::unique_ptr<physics::PhysicsEngine> m_PhysicsEngine;
 
         // Rendering resources (owned by GameContext, created via device factories)
-        stl::unique_ptr<render::IDescriptorHeap> m_CbvSrvUavHeap;
-        stl::unique_ptr<render::IDescriptorHeap> m_SamplerHeap;
+        stl::unique_ptr<render::IDescriptorPool> m_DescriptorPool;
+        stl::unique_ptr<render::BindlessResourceRegistry> m_BindlessRegistry;
         stl::unique_ptr<render::ICommandQueue> m_DirectQueue;
         stl::unique_ptr<render::IGraphicsContext> m_GraphicsContext;
         stl::unique_ptr<render::IMemoryAllocator> m_MemoryAllocator;

@@ -13,7 +13,7 @@ namespace sf::render {
     };
 
     struct SFAPI Material {
-        stl::string name;
+        stl::string name{mem::MemTag::Render};
         sf::math::vec4 diffuse_albedo{1.f, 1.f, 1.f, 1.f};
         sf::math::vec3 fresnel_r0{0.01f, 0.01f, 0.01f};
         f32 roughness = 0.25f;

@@ -4,9 +4,9 @@
 
 namespace sf::render::vk {
 
-    class VkDescriptorHeap final : public IDescriptorHeap {
+    class VulkanDescriptorHeap final : public IDescriptorHeap {
     public:
-        explicit VkDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name);
+        explicit VulkanDescriptorHeap(VkDevice device, u32 descriptor_count, const char* name);
 
         void destroy_resources();
 

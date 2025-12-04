@@ -2,26 +2,24 @@
 #include <vulkan/vulkan.h>
 #include "render/i_context.h"
 
+namespace sf::render {
+    class IDescriptorHeap;
+}
 namespace sf::render::vk {
 
-    class VkGraphicsDevice;
+    class VulkanGraphicsDevice;
 
     constexpr u32 NUMBER_32_BIT_CONSTANTS = 64;
 
-    class VkContext : public IContext {
+    class VulkanContext : public IContext {
     public:
-        VkContext(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
+        VulkanContext(VulkanGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
 
         void destroy_resources();
 
-        stl::result<> init(VkGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
+        stl::result<> init(VulkanGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
         stl::result<> reset() override;
         stl::result<> close() override;
-
-        void add_resource_barrier(const ResourceBarrier& barrier) override;
-        void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override;
-        void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override;
-        void execute_resource_barriers() override;
 
         void* get_native_command_list() override { return reinterpret_cast<void*>(m_CommandBuffer); }
 
@@ -36,117 +34,79 @@ namespace sf::render::vk {
         stl::vector<VkBufferMemoryBarrier> m_BufferBarriers{mem::MemTag::Render};
     };
 
-    class VkGraphicsContext final : public VkContext, public IGraphicsContext {
+    class VulkanGraphicsContext final : public VulkanContext, public IGraphicsContext {
     public:
-        explicit VkGraphicsContext(VkGraphicsDevice* device);
+        explicit VulkanGraphicsContext(VulkanGraphicsDevice* device);
 
         stl::result<> reset() override;
         stl::result<> close() override;
 
-        void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
-        void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(buffer, before, after);
-        }
+        void* get_native_command_list() override { return VulkanContext::get_native_command_list(); }
 
-        void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(texture, before, after);
-        }
-
-        void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
-
-        void* get_native_command_list() override { return VkContext::get_native_command_list(); }
-
-        void clear_render_target_view(Texture& texture, stl::span<f32, 4> clear_color) override;
-        void clear_depth_stencil_view(Texture& texture, f32 depth = 1.0f, u8 stencil = 0) override;
-
-        void begin_render_pass(Texture& render_target, Texture* depth_stencil = nullptr) override;
+        void begin_render_pass(sf::render::IRenderPass* render_pass, sf::render::IFramebuffer* framebuffer) override;
         void end_render_pass() override;
-
-        void set_pipeline_state(IPipelineState* pipeline) override;
-        void set_root_signature() override;
-        void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) override;
-
-        void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) override;
-
+        void clear_render_target(u32 attachment_index, stl::span<f32, 4> clear_color) override;
+        void clear_depth_stencil(f32 depth = 1.0f, u8 stencil = 0) override;
+        void bind_pipeline(IPipelineState* pipeline) override;
+        void bind_descriptor_set(u32 set_index, sf::render::IDescriptorSet* descriptor_set) override;
+        void push_constants(const void* data, u32 size, u32 offset = 0) override;
+        void set_scissor(const ScissorRect& scissor) override;
         void set_viewport(const Viewport& viewport) override;
-        void set_scissor_rect(const ScissorRect& scissor) override;
-
-        void set_index_buffer(Buffer& buffer, Format format = Format::R32_UINT) override;
-
+        void bind_vertex_buffer(u32 binding, Buffer& buffer, u64 offset = 0) override;
+        void bind_index_buffer(Buffer& buffer, Format format = Format::R32_UINT, u64 offset = 0) override;
         void set_primitive_topology(PrimitiveTopology topology) override;
 
-        void draw(u32 vertex_count, u32 instance_count = 1, u32 start_vertex = 0, u32 start_instance = 0) override;
-        void draw_indexed(u32 index_count, u32 instance_count = 1, u32 start_index = 0, i32 base_vertex = 0,
-                          u32 start_instance = 0) override;
-        void draw_indexed_instanced(u32 index_count_per_instance, u32 instance_count, u32 start_index = 0, i32 base_vertex = 0,
-                                    u32 start_instance = 0) override;
+        void draw(u32 vertex_count, u32 instance_count = 1, u32 first_vertex = 0, u32 first_instance = 0) override;
+        void draw_indexed(u32 index_count, u32 instance_count = 1, u32 first_index = 0, i32 vertex_offset = 0,
+                          u32 first_instance = 0) override;
+        void pipeline_barrier(const PipelineBarrier& barrier) override;
+        void transition_image_layout(Texture& texture, ResourceState old_state, ResourceState new_state) override;
+        void transition_buffer_state(Buffer& buffer, ResourceState old_state, ResourceState new_state) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr{nullptr};
+        VulkanGraphicsDevice* m_DevicePtr{nullptr};
         VkRenderPass m_CurrentRenderPass = VK_NULL_HANDLE;
         VkFramebuffer m_CurrentFramebuffer = VK_NULL_HANDLE;
+        VkPipelineLayout m_CurrentPipelineLayout = VK_NULL_HANDLE;
+        VkViewport m_Viewport{};
     };
 
-    class VkComputeContext final : public VkContext, public IComputeContext {
+    class VulkanComputeContext final : public VulkanContext, public IComputeContext {
     public:
-        explicit VkComputeContext(VkGraphicsDevice* device);
+        explicit VulkanComputeContext(VulkanGraphicsDevice* device);
 
         stl::result<> reset() override;
-        stl::result<> close() override { return VkContext::close(); }
+        stl::result<> close() override { return VulkanContext::close(); }
 
-        void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
-        void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(buffer, before, after);
-        }
+        void* get_native_command_list() override { return VulkanContext::get_native_command_list(); }
 
-        void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(texture, before, after);
-        }
-
-        void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
-
-        void* get_native_command_list() override { return VkContext::get_native_command_list(); }
-
-        void set_pipeline_state(IPipelineState* pipeline) override;
-        void set_root_signature() override;
-        void set_32_bit_constants(const void* data, u32 num_32bit_values, u32 offset = 0) override;
-
-        void set_descriptor_heaps(stl::span<IDescriptorHeap*> heaps) override;
-
+        void bind_pipeline(IPipelineState* pipeline) override;
+        void bind_descriptor_set(u32 set_index, sf::render::IDescriptorSet* descriptor_set) override;
+        void push_constants(const void* data, u32 size, u32 offset = 0) override;
         void dispatch(u32 thread_group_count_x, u32 thread_group_count_y, u32 thread_group_count_z) override;
+        void pipeline_barrier(const PipelineBarrier& barrier) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr{nullptr};
+        VulkanGraphicsDevice* m_DevicePtr{nullptr};
+        VkPipelineLayout m_CurrentPipelineLayout = VK_NULL_HANDLE;
     };
 
-    // Vulkan Copy Context
-
-    class VkCopyContext final : public VkContext, public ICopyContext {
+    class VulkanCopyContext final : public VulkanContext, public ICopyContext {
     public:
-        explicit VkCopyContext(VkGraphicsDevice* device);
+        explicit VulkanCopyContext(VulkanGraphicsDevice* device);
 
         stl::result<> reset() override;
-        stl::result<> close() override { return VkContext::close(); }
+        stl::result<> close() override { return VulkanContext::close(); }
 
-        void add_resource_barrier(const ResourceBarrier& barrier) override { VkContext::add_resource_barrier(barrier); }
-        void transition_barrier(Buffer& buffer, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(buffer, before, after);
-        }
-        void transition_barrier(Texture& texture, ResourceState before, ResourceState after) override {
-            VkContext::transition_barrier(texture, before, after);
-        }
-
-        void execute_resource_barriers() override { VkContext::execute_resource_barriers(); }
-
-        void* get_native_command_list() override { return VkContext::get_native_command_list(); }
+        void* get_native_command_list() override { return VulkanContext::get_native_command_list(); }
 
         void copy_buffer(Buffer& dst, Buffer& src, u64 size, u64 dst_offset = 0, u64 src_offset = 0) override;
         void copy_texture(Texture& dst, Texture& src) override;
-        void copy_buffer_to_texture(Texture& dst, Buffer& src, u32 subresource = 0) override;
-        void copy_texture_to_buffer(Buffer& dst, Texture& src) override;
+        void copy_buffer_to_texture(Texture& dst, Buffer& src, const BufferTextureCopy& region) override;
+        void copy_texture_to_buffer(Buffer& dst, Texture& src, const BufferTextureCopy& region) override;
 
     private:
-        VkGraphicsDevice* m_DevicePtr{nullptr};
+        VulkanGraphicsDevice* m_DevicePtr{nullptr};
     };
 
 } // namespace sf::render::vk

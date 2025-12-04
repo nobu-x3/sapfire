@@ -6,21 +6,21 @@
 #include "render/vulkan/vk_type_conversions.h"
 
 namespace sf::render::vk {
-    VkPipelineState::~VkPipelineState() {
+    VulkanPipelineState::~VulkanPipelineState() {
         if (m_Pipeline != VK_NULL_HANDLE && m_Device != VK_NULL_HANDLE) {
             vkDestroyPipeline(m_Device, m_Pipeline, nullptr);
         }
     }
 
-    stl::result<> VkPipelineState::create_graphics(VkDevice device, const GraphicsPipelineStateDesc& desc, VkPipelineLayout layout,
-                                                   VkRenderPass render_pass) {
+    stl::result<> VulkanPipelineState::create_graphics(VkDevice device, const GraphicsPipelineDesc& desc, VkPipelineLayout layout,
+                                                       VkRenderPass render_pass) {
         m_Device = device;
         m_IsCompute = false;
         // Load and compile shaders
         Shader vertex_shader =
-            compile(device, ShaderType::Vertex, desc.shader_module.vertex_shader_path, desc.shader_module.vertex_entry_point);
+            compile(device, ShaderType::Vertex, desc.vertex_shader.path, desc.vertex_shader.entry_point);
         Shader fragment_shader =
-            compile(device, ShaderType::Fragment, desc.shader_module.pixel_shader_path, desc.shader_module.pixel_entry_point);
+            compile(device, ShaderType::Fragment, desc.pixel_shader.path, desc.pixel_shader.entry_point);
         if (vertex_shader.module == VK_NULL_HANDLE || fragment_shader.module == VK_NULL_HANDLE) {
             destroy_shader_module(device, vertex_shader);
             destroy_shader_module(device, fragment_shader);
@@ -32,12 +32,12 @@ namespace sf::render::vk {
         vertex_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         vertex_stage.stage = VK_SHADER_STAGE_VERTEX_BIT;
         vertex_stage.module = vertex_shader.module;
-        vertex_stage.pName = desc.shader_module.vertex_entry_point.data(); // Entry point from descriptor
+        vertex_stage.pName = desc.vertex_shader.entry_point.data(); // Entry point from descriptor
         VkPipelineShaderStageCreateInfo fragment_stage{};
         fragment_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         fragment_stage.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         fragment_stage.module = fragment_shader.module;
-        fragment_stage.pName = desc.shader_module.pixel_entry_point.data(); // Entry point from descriptor
+        fragment_stage.pName = desc.pixel_shader.entry_point.data(); // Entry point from descriptor
         VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage, fragment_stage};
         // Vertex input state (for now, assume no vertex input - bindless rendering)
         VkPipelineVertexInputStateCreateInfo vertex_input{};
@@ -47,7 +47,7 @@ namespace sf::render::vk {
         // Input assembly state
         VkPipelineInputAssemblyStateCreateInfo input_assembly{};
         input_assembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        input_assembly.topology = to_vk_primitive_topology(desc.primitive_topology);
+        input_assembly.topology = to_vk_primitive_topology(desc.topology);
         input_assembly.primitiveRestartEnable = VK_FALSE;
         // Viewport state (will be set dynamically)
         VkPipelineViewportStateCreateInfo viewport_state{};
@@ -80,29 +80,25 @@ namespace sf::render::vk {
         depth_stencil.depthCompareOp = to_vk_compare_op(desc.depth_stencil.depth_func);
         depth_stencil.depthBoundsTestEnable = VK_FALSE;
         depth_stencil.stencilTestEnable = desc.depth_stencil.stencil_enable ? VK_TRUE : VK_FALSE;
-        // Color blend attachments
-        stl::vector<VkPipelineColorBlendAttachmentState> color_blend_attachments{mem::MemTag::Temp};
-        for (u32 i = 0; i < desc.rtv_count && i < desc.blend_states.size(); ++i) {
-            const auto& blend = desc.blend_states[i];
-            VkPipelineColorBlendAttachmentState attachment{};
-            attachment.blendEnable = blend.blend_enable ? VK_TRUE : VK_FALSE;
-            attachment.srcColorBlendFactor = to_vk_blend_factor(blend.src_blend);
-            attachment.dstColorBlendFactor = to_vk_blend_factor(blend.dst_blend);
-            attachment.colorBlendOp = to_vk_blend_op(blend.blend_op);
-            attachment.srcAlphaBlendFactor = to_vk_blend_factor(blend.src_blend_alpha);
-            attachment.dstAlphaBlendFactor = to_vk_blend_factor(blend.dst_blend_alpha);
-            attachment.alphaBlendOp = to_vk_blend_op(blend.blend_op_alpha);
-            attachment.colorWriteMask =
-                VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            color_blend_attachments.push_back(attachment);
-        }
+        // Color blend attachments (single blend state for all attachments)
+        const auto& blend = desc.blend_state;
+        VkPipelineColorBlendAttachmentState attachment{};
+        attachment.blendEnable = blend.blend_enable ? VK_TRUE : VK_FALSE;
+        attachment.srcColorBlendFactor = to_vk_blend_factor(blend.src_blend);
+        attachment.dstColorBlendFactor = to_vk_blend_factor(blend.dst_blend);
+        attachment.colorBlendOp = to_vk_blend_op(blend.blend_op);
+        attachment.srcAlphaBlendFactor = to_vk_blend_factor(blend.src_blend_alpha);
+        attachment.dstAlphaBlendFactor = to_vk_blend_factor(blend.dst_blend_alpha);
+        attachment.alphaBlendOp = to_vk_blend_op(blend.blend_op_alpha);
+        attachment.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         // Color blend state
         VkPipelineColorBlendStateCreateInfo color_blending{};
         color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
         color_blending.logicOpEnable = VK_FALSE;
         color_blending.logicOp = VK_LOGIC_OP_COPY;
-        color_blending.attachmentCount = static_cast<u32>(color_blend_attachments.size());
-        color_blending.pAttachments = color_blend_attachments.data();
+        color_blending.attachmentCount = 1;
+        color_blending.pAttachments = &attachment;
         // Dynamic state
         VkDynamicState dynamic_states[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
         VkPipelineDynamicStateCreateInfo dynamic_state{};
@@ -127,43 +123,32 @@ namespace sf::render::vk {
         pipeline_info.subpass = 0;
         VK_RETURN_ON_ERROR(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline),
                            "Failed to create graphics pipeline");
-
         CORE_INFO("Created graphics pipeline");
-
-        // Clean up shader modules
         destroy_shader_module(device, vertex_shader);
         destroy_shader_module(device, fragment_shader);
-
-        return stl::result_success();
+        return stl::success;
     }
 
-    stl::result<> VkPipelineState::create_compute(VkDevice device, const ComputePipelineStateDesc& desc, VkPipelineLayout layout) {
+    stl::result<> VulkanPipelineState::create_compute(VkDevice device, const ComputePipelineDesc& desc, VkPipelineLayout layout) {
         m_Device = device;
         m_IsCompute = true;
-        // Load and compile compute shader
-        Shader compute_shader = compile(device, ShaderType::Compute, desc.shader_path, desc.entry_point);
+        Shader compute_shader = compile(device, ShaderType::Compute, desc.compute_shader.path, desc.compute_shader.entry_point);
         if (compute_shader.module == VK_NULL_HANDLE) {
             return stl::make_error<>("Failed to load compute shader");
         }
-        // Shader stage
         VkPipelineShaderStageCreateInfo shader_stage{};
         shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         shader_stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
         shader_stage.module = compute_shader.module;
-        shader_stage.pName = desc.entry_point.data(); // Entry point from descriptor
-        // Create compute pipeline
+        shader_stage.pName = desc.compute_shader.entry_point.data();
         VkComputePipelineCreateInfo pipeline_info{};
         pipeline_info.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         pipeline_info.stage = shader_stage;
         pipeline_info.layout = layout;
         VK_RETURN_ON_ERROR(vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_Pipeline),
                            "Failed to create compute pipeline");
-
         CORE_INFO("Created compute pipeline");
-
-        // Clean up shader module
         destroy_shader_module(device, compute_shader);
-
-        return stl::result_success();
+        return stl::success;
     }
 } // namespace sf::render::vk

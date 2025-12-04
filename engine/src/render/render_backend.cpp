@@ -46,7 +46,7 @@ namespace sf::render {
 #endif
         case RenderAPI::Vulkan:
             // return mem_new(mem::MemTag::Render) vk::VkGraphicsDevice(desc);
-            return stl::make_unique<vk::VkGraphicsDevice>(mem::MemTag::Render, desc);
+            return stl::make_unique<sf::render::vk::VulkanGraphicsDevice>(mem::MemTag::Render, desc);
         default:
             CORE_ERROR("Unknown render API");
             return nullptr;

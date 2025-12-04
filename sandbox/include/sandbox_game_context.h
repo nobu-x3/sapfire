@@ -41,6 +41,15 @@ private:
 
 private:
     sf::render::Texture m_DepthTexture{};
-    sf::render::IPipelineState* m_PipelineState = nullptr;
+    sf::stl::unique_ptr<sf::render::IRenderPass> m_RenderPass;
+    sf::stl::array<sf::stl::unique_ptr<sf::render::IFramebuffer>, 3> m_Framebuffers;
+    sf::stl::unique_ptr<sf::render::IPipelineState> m_PipelineState;
     PassConstants m_PassConstants{};
+
+    // Synchronization objects for stateless API
+    static constexpr sf::u32 MAX_FRAMES_IN_FLIGHT = 2;
+    sf::stl::array<sf::stl::unique_ptr<sf::render::IFence>, MAX_FRAMES_IN_FLIGHT> m_InFlightFences;
+    sf::stl::array<sf::stl::unique_ptr<sf::render::ISemaphore>, MAX_FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
+    sf::stl::array<sf::stl::unique_ptr<sf::render::ISemaphore>, MAX_FRAMES_IN_FLIGHT> m_RenderFinishedSemaphores;
+    sf::u32 m_CurrentFrame = 0;
 };

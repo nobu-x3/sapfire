@@ -36,6 +36,7 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/render/resource_types.cpp
         engine/src/physics/physics_engine.cpp
         engine/src/render/window.cpp
+        engine/src/render/bindless_resource_registry.cpp
         engine/src/animation/skinned_data.cpp
         engine/src/animation/anim_manager.cpp
 )
@@ -57,11 +58,17 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
         engine/src/render/vulkan/vk_command_queue.cpp
         engine/src/render/vulkan/vk_context.cpp
         engine/src/render/vulkan/vk_descriptor_heap.cpp
+        engine/src/render/vulkan/vk_descriptor_pool.cpp
+        engine/src/render/vulkan/vk_descriptor_set.cpp
+        engine/src/render/vulkan/vk_fence.cpp
+        engine/src/render/vulkan/vk_framebuffer.cpp
         engine/src/render/vulkan/vk_graphics_device.cpp
         engine/src/render/vulkan/vk_memory_allocator.cpp
+        engine/src/render/vulkan/vk_pipeline_layout.cpp
         engine/src/render/vulkan/vk_pipeline_state.cpp
+        engine/src/render/vulkan/vk_render_pass.cpp
+        engine/src/render/vulkan/vk_sampler.cpp
         engine/src/render/vulkan/vk_shader_compiler.cpp
-        engine/src/render/vulkan/vk_type_conversions.cpp
 )
 
 foreach(TU ${RELATIVE_SAPFIRE_TRANSLATION_UNITS})

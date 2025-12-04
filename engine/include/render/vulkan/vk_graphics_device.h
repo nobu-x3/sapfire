@@ -3,38 +3,44 @@
 #include "render/vulkan/vk_command_queue.h"
 #include "render/vulkan/vk_context.h"
 #include "render/vulkan/vk_descriptor_heap.h"
+#include "render/vulkan/vk_descriptor_pool.h"
 #include "render/vulkan/vk_memory_allocator.h"
 #include "render/vulkan/vk_pipeline_state.h"
 
 #include <vulkan/vulkan.h>
 
+namespace sf::render {
+    // Forward declarations from sf::render namespace
+    class IFence;
+    class ISemaphore;
+    class IRenderPass;
+    class IFramebuffer;
+    class IPipelineLayout;
+    class IDescriptorSet;
+    class ISampler;
+
+    struct RenderPassDesc;
+    struct FramebufferDesc;
+    struct PipelineLayoutDesc;
+    struct DescriptorSetLayout;
+    struct SamplerDesc;
+} // namespace sf::render
+
 namespace sf::render::vk {
 
-    class VkGraphicsDevice final : public IGraphicsDevice {
+    class VulkanGraphicsDevice final : public IGraphicsDevice {
     public:
-        explicit VkGraphicsDevice(const SwapchainCreationDesc& desc);
-        ~VkGraphicsDevice() override;
+        explicit VulkanGraphicsDevice(const SwapchainCreationDesc& desc);
+        ~VulkanGraphicsDevice() override;
 
-        // Frame Management
-
-        stl::result<> begin_frame() override;
-        stl::result<> end_frame(IGraphicsContext* context) override;
-        stl::result<> present() override;
         stl::result<> wait_for_idle() override;
 
         // Window / Swapchain Management
 
-        stl::result<> resize_window(u32 width, u32 height) override;
         inline u32 get_window_width() const override { return m_WindowWidth; }
         inline u32 get_window_height() const override { return m_WindowHeight; }
-        Texture& get_current_back_buffer() override;
         Texture& get_back_buffer(u32 index) override;
-        inline u32 get_current_back_buffer_index() const override { return m_CurrentBackBufferIndex; }
         inline u32 get_back_buffer_count() const override { return m_BackBufferCount; }
-
-        // Resource Creation
-        stl::result<IPipelineState*> create_graphics_pipeline(const GraphicsPipelineStateDesc& desc) override;
-        stl::result<IPipelineState*> create_compute_pipeline(const ComputePipelineStateDesc& desc) override;
 
         // Context Creation Factories
 
@@ -52,20 +58,9 @@ namespace sf::render::vk {
         inline u32 get_compute_queue_family_index() const { return m_ComputeQueueFamily; }
         inline u32 get_transfer_queue_family_index() const { return m_TransferQueueFamily; }
 
-        // Descriptor Heap Creation Factories
-
-        stl::result<stl::unique_ptr<IDescriptorHeap>> create_cbv_srv_uav_heap(const DescriptorHeapDesc& desc) override;
-        stl::result<stl::unique_ptr<IDescriptorHeap>> create_rtv_heap(const DescriptorHeapDesc& desc) override;
-        stl::result<stl::unique_ptr<IDescriptorHeap>> create_dsv_heap(const DescriptorHeapDesc& desc) override;
-        stl::result<stl::unique_ptr<IDescriptorHeap>> create_sampler_heap(const DescriptorHeapDesc& desc) override;
-
         // Memory Allocator Creation Factory
 
         stl::result<stl::unique_ptr<IMemoryAllocator>> create_memory_allocator() override;
-
-        // Frame Timing
-
-        inline u32 get_current_frame_index() const override { return m_CurrentFrameIndex; }
 
         // Backend Information
 
@@ -84,10 +79,6 @@ namespace sf::render::vk {
         inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
         inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
-        // Swapchain synchronization primitives
-        inline VkSemaphore get_image_available_semaphore() const { return m_ImageAvailableSemaphores[m_CurrentFrameIndex]; }
-        inline VkSemaphore get_render_finished_semaphore() const { return m_RenderFinishedSemaphores[m_CurrentFrameIndex]; }
-        inline VkFence get_in_flight_fence() const { return m_InFlightFences[m_Headless ? 0 : m_CurrentFrameIndex]; }
         inline bool is_headless() const { return m_Headless; }
 
         // Get descriptor set layouts for explicit initialization by user
@@ -96,13 +87,35 @@ namespace sf::render::vk {
         inline VkDescriptorSetLayout get_material_descriptor_set_layout() const { return m_MaterialDescriptorSetLayout; }
         inline VkDescriptorSetLayout get_sampler_descriptor_set_layout() const { return m_DummyDescriptorSetLayout; }
 
+        // New API - Factory methods for render pass and framebuffer
+        stl::result<stl::unique_ptr<sf::render::IRenderPass>> create_render_pass(const sf::render::RenderPassDesc& desc) override;
+        stl::result<stl::unique_ptr<sf::render::IFramebuffer>> create_framebuffer(const sf::render::FramebufferDesc& desc) override;
+        stl::result<stl::unique_ptr<sf::render::IPipelineLayout>>
+        create_pipeline_layout(const sf::render::PipelineLayoutDesc& desc) override;
+        stl::result<stl::unique_ptr<sf::render::IFence>> create_fence(bool signaled, const char* name = "Fence") override;
+        stl::result<stl::unique_ptr<sf::render::ISemaphore>> create_semaphore(const char* name = "Semaphore") override;
+        stl::result<stl::unique_ptr<sf::render::ISampler>> create_sampler(const sf::render::SamplerDesc& desc) override;
+
+        // Pipeline creation
+        stl::result<stl::unique_ptr<sf::render::IPipelineState>>
+        create_graphics_pipeline(const sf::render::GraphicsPipelineDesc& desc) override;
+        stl::result<stl::unique_ptr<sf::render::IPipelineState>>
+        create_compute_pipeline(const sf::render::ComputePipelineDesc& desc) override;
+
+        // Swapchain operations with explicit sync
+        u32 acquire_next_image(sf::render::ISemaphore* signal_semaphore) override;
+        stl::result<> present(stl::span<sf::render::ISemaphore*> wait_semaphores) override;
+        stl::result<> resize_swapchain(u32 width, u32 height) override;
+
+        // Descriptor pool creation
+        stl::result<stl::unique_ptr<IDescriptorPool>> create_descriptor_pool(const DescriptorPoolDesc& desc) override;
+
     private:
         stl::result<> init_instance();
         stl::result<> init_surface(const SwapchainCreationDesc& desc);
         stl::result<> init_physical_device();
         stl::result<> init_logical_device();
         stl::result<> init_swapchain(const SwapchainCreationDesc& desc);
-        stl::result<> init_sync_objects();
         stl::result<> init_bindless_pipeline_layout();
         stl::result<> init_render_pass();
         stl::result<> create_swapchain_framebuffers();
@@ -115,14 +128,8 @@ namespace sf::render::vk {
     private:
         // Hot data - accessed every frame (grouped for cache locality)
         VkDevice m_Device = VK_NULL_HANDLE;
-        u32 m_CurrentFrameIndex = 0;
         u32 m_CurrentBackBufferIndex = 0;
         u32 m_BackBufferCount = MAX_FRAMES_IN_FLIGHT;
-
-        // Frame sync objects
-        stl::array<VkFence, MAX_FRAMES_IN_FLIGHT> m_InFlightFences;
-        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_ImageAvailableSemaphores;
-        stl::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> m_RenderFinishedSemaphores;
 
         // Back buffers
         stl::array<Texture, MAX_FRAMES_IN_FLIGHT> m_BackBuffers;
@@ -160,11 +167,6 @@ namespace sf::render::vk {
         u32 m_GraphicsQueueFamily = UINT32_MAX;
         u32 m_ComputeQueueFamily = UINT32_MAX;
         u32 m_TransferQueueFamily = UINT32_MAX;
-
-        // Dynamic collections
-        stl::vector<stl::unique_ptr<VkPipelineState>> m_PipelineStates{mem::MemTag::Render};
-
-        mutable stl::recursive_mutex m_ResourceMutex;
     };
 
 } // namespace sf::render::vk

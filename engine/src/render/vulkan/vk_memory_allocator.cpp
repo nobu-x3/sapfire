@@ -10,7 +10,8 @@
 #include <vk_mem_alloc.h>
 
 namespace sf::render::vk {
-    VkMemoryAllocator::VkMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device) : m_Device(device) {
+    VulkanMemoryAllocator::VulkanMemoryAllocator(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device) :
+        m_Device(device) {
         VmaAllocatorCreateInfo allocator_info{};
         allocator_info.vulkanApiVersion = VK_API_VERSION_1_2;
         allocator_info.instance = instance;
@@ -20,7 +21,7 @@ namespace sf::render::vk {
         CORE_INFO("Created Vulkan memory allocator (VMA)");
     }
 
-    void VkMemoryAllocator::destroy_resources() {
+    void VulkanMemoryAllocator::destroy_resources() {
         if (m_Device == VK_NULL_HANDLE)
             return;
         if (m_Allocator != VK_NULL_HANDLE) {
@@ -30,7 +31,7 @@ namespace sf::render::vk {
         m_Device = VK_NULL_HANDLE;
     }
 
-    stl::result<Buffer> VkMemoryAllocator::allocate_buffer(const BufferCreationDesc& desc) {
+    stl::result<Buffer> VulkanMemoryAllocator::allocate_buffer(const BufferCreationDesc& desc) {
         VkBufferCreateInfo buffer_info{};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = desc.size_in_bytes;
@@ -39,26 +40,33 @@ namespace sf::render::vk {
         alloc_info.usage = VMA_MEMORY_USAGE_AUTO;
         switch (desc.usage) {
         case BufferUsage::Upload:
+        case BufferUsage::Staging: // Alias for Upload
             buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
             alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            break;
-        case BufferUsage::Index:
-            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
-            break;
-        case BufferUsage::Structured:
-            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
-            break;
-        case BufferUsage::Constant:
-            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
             break;
         case BufferUsage::Download:
             buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
             alloc_info.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            break;
+        case BufferUsage::Vertex:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Index:
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Uniform:
+        case BufferUsage::Constant: // Alias for Uniform
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            break;
+        case BufferUsage::Storage:
+        case BufferUsage::Structured: // Alias for Storage
+            buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            alloc_info.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
             break;
         }
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -80,7 +88,7 @@ namespace sf::render::vk {
         return buffer;
     }
 
-    stl::result<Texture> VkMemoryAllocator::allocate_texture(const TextureCreationDesc& desc) {
+    stl::result<Texture> VulkanMemoryAllocator::allocate_texture(const TextureCreationDesc& desc) {
         VkImageCreateInfo image_info{};
         image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         image_info.imageType = VK_IMAGE_TYPE_2D;
@@ -115,10 +123,37 @@ namespace sf::render::vk {
         texture.height = desc.height;
         texture.depth_or_array_size = desc.depth_or_array_size;
         texture.format = desc.format;
+        texture.mip_levels = desc.mip_levels;
+        texture.type = desc.type;
+        VkImageViewCreateInfo view_info{};
+        view_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        view_info.image = vk_image;
+        view_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        view_info.format = to_vk_format(desc.format);
+        if (desc.usage == TextureUsage::DepthStencil) {
+            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+            // Add stencil aspect for depth-stencil formats
+            if (desc.format == Format::D24_UNORM_S8_UINT || desc.format == Format::D32_FLOAT_S8X24_UINT) {
+                view_info.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+        } else {
+            view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+        view_info.subresourceRange.baseMipLevel = 0;
+        view_info.subresourceRange.levelCount = desc.mip_levels;
+        view_info.subresourceRange.baseArrayLayer = 0;
+        view_info.subresourceRange.layerCount = desc.depth_or_array_size;
+        VkImageView image_view;
+        VkResult result = vkCreateImageView(m_Device, &view_info, nullptr, &image_view);
+        if (result != VK_SUCCESS) {
+            vmaDestroyImage(m_Allocator, vk_image, allocation);
+            return stl::make_error<Texture>("Failed to create image view");
+        }
+        texture.image_view = reinterpret_cast<void*>(image_view);
         return texture;
     }
 
-    void VkMemoryAllocator::free_buffer(Buffer& buffer) {
+    void VulkanMemoryAllocator::free_buffer(Buffer& buffer) {
         if (buffer.mapped_data) {
             vmaUnmapMemory(m_Allocator, static_cast<VmaAllocation>(buffer.allocation));
             buffer.mapped_data = nullptr;
@@ -130,7 +165,13 @@ namespace sf::render::vk {
         }
     }
 
-    void VkMemoryAllocator::free_texture(Texture& texture) {
+    void VulkanMemoryAllocator::free_texture(Texture& texture) {
+        // Destroy image view first
+        if (texture.image_view) {
+            vkDestroyImageView(m_Device, reinterpret_cast<VkImageView>(texture.image_view), nullptr);
+            texture.image_view = nullptr;
+        }
+        // Then destroy image
         if (texture.resource && texture.allocation) {
             vmaDestroyImage(m_Allocator, reinterpret_cast<VkImage>(texture.resource), static_cast<VmaAllocation>(texture.allocation));
             texture.resource = nullptr;
@@ -138,7 +179,7 @@ namespace sf::render::vk {
         }
     }
 
-    void VkMemoryAllocator::get_stats(void* stats_out) {
+    void VulkanMemoryAllocator::get_stats(void* stats_out) {
         if (stats_out) {
             vmaCalculateStatistics(m_Allocator, static_cast<VmaTotalStatistics*>(stats_out));
         }

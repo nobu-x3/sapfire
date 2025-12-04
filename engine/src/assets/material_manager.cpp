@@ -6,6 +6,7 @@
 #include "core/string_utils.h"
 #include "math/math.h"
 #include "nlohmann/json.hpp"
+#include "render/bindless_resource_registry.h"
 #include "render/i_graphics_device.h"
 
 namespace sf::assets {
@@ -33,7 +34,7 @@ namespace sf::assets {
         file.close();
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::BindlessResourceRegistry* registry,
                                                     const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
@@ -60,7 +61,7 @@ namespace sf::assets {
             return stl::make_error("Broken material at path {}. Does not contain roughness.", path.data());
         }
         const UUID uuid = UUID{j["UUID"]};
-        stl::string name_str = j["name"];
+        stl::string name_str(mem::MemTag::Temp, j["name"]);
         sf::render::Material material{.name = fs::file_name(name_str)};
         material.roughness = j["roughness"];
         material.diffuse_albedo =
@@ -74,7 +75,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create buffer for material at path {}: {}", path.data(), result.error().data());
         }
         material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-        result->cbv_index = heap->allocate_cbv(*result);
+        result->cbv_index = registry->register_constant_buffer(*result);
         material.material_buffer = std::move(*result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -85,7 +86,7 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::BindlessResourceRegistry* registry,
                                                     const stl::string& path, UUID uuid) {
         if (m_PathToMaterialAssetMap.contains(path))
             return stl::success;
@@ -108,7 +109,7 @@ namespace sf::assets {
         if (!j.contains("roughness")) {
             return stl::make_error("Broken material at path {}. Does not contain roughness.", path.data());
         }
-        stl::string name_str = j["name"];
+        stl::string name_str(mem::MemTag::Temp, j["name"]);
         sf::render::Material material{.name = fs::file_name(name_str)};
         material.roughness = j["roughness"];
         material.diffuse_albedo =
@@ -123,7 +124,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
-        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
+        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
         material.material_buffer = std::move(*buffer_result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -134,7 +135,7 @@ namespace sf::assets {
         return stl::success;
     }
 
-    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+    stl::result<> MaterialRegistry::import_material(sf::render::IMemoryAllocator* allocator, sf::render::BindlessResourceRegistry* registry,
                                                     MaterialAsset&& asset, const stl::string& path) {
         if (m_PathToMaterialAssetMap.contains(path)) {
             return stl::success;
@@ -148,7 +149,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
-        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
+        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
         asset.material.name = fs::file_name(path);
         asset.material.material_buffer = std::move(*buffer_result);
         asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
@@ -232,7 +233,7 @@ namespace sf::assets {
         }
     }
 
-    void MaterialRegistry::deserialize(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap,
+    void MaterialRegistry::deserialize(sf::render::IMemoryAllocator* allocator, sf::render::BindlessResourceRegistry* registry,
                                        const stl::string& data) {
         nlohmann::json j = nlohmann::json::parse(data)["assets"];
         for (auto&& asset : j["material_registry"]) {
@@ -240,7 +241,7 @@ namespace sf::assets {
                 CORE_CRITICAL("Broken material registry. At least one registry entry does not contain path to the raw asset.");
                 return;
             }
-            stl::string path = asset["path"];
+            stl::string path(mem::MemTag::Temp, asset["path"]);
             stl::string relative_path = fs::relative_path(path);
             if (relative_path.empty()) {
                 CORE_WARN("Could not locate material at path {}.", path);
@@ -250,7 +251,7 @@ namespace sf::assets {
                 CORE_ERROR("Material with path {} does not exist.", relative_path);
                 continue;
             }
-            import_material(allocator, heap, relative_path);
+            import_material(allocator, registry, relative_path);
         }
     }
 
@@ -294,7 +295,8 @@ namespace sf::assets {
         return m_UUIDToPathMap.at(uuid);
     }
 
-    MaterialAsset* MaterialRegistry::default_material(sf::render::IMemoryAllocator* allocator, sf::render::IDescriptorHeap* heap) {
+    MaterialAsset* MaterialRegistry::default_material(sf::render::IMemoryAllocator* allocator,
+                                                      sf::render::BindlessResourceRegistry* registry) {
         const static std::string name = DEFAULT_MATERIAL_NAME;
         static sf::render::MaterialConstants default_material_constants{
             .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
@@ -310,7 +312,7 @@ namespace sf::assets {
             CORE_CRITICAL("Failed to load default material buffer.");
             return nullptr;
         }
-        buffer_result->cbv_index = heap->allocate_cbv(*buffer_result);
+        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
         static MaterialAsset default_mat{
             .uuid = DEFAULT_MATERIAL_UUID,
             .material{

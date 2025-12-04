@@ -1,6 +1,4 @@
 #include "widgets/scene_view_widget.h"
-#include "editor_context.h"
-
 #include <QImage>
 #include <QPainter>
 #include <QResizeEvent>
@@ -9,6 +7,8 @@
 #include <SDL3/SDL.h>
 #include <core/logger.h>
 #include <stl/result.h>
+#include "editor_context.h"
+#include "render/render_api.h"
 
 SceneViewWidget::SceneViewWidget(QWidget* parent) : QWidget(parent) {
     setMinimumSize(320, 240);
@@ -40,6 +40,26 @@ void SceneViewWidget::initialize_rendering() {
     }
     auto& ctx = EditorContext::instance();
     ctx.initialize(m_SDLWindow, width(), height());
+    auto* device = ctx.graphics_device();
+    for (sf::u32 i = 0; i < sf::render::MAX_FRAMES_IN_FLIGHT; ++i) {
+        auto fence_result = device->create_fence(true, "Frame Fence");
+        if (!fence_result) {
+            CLIENT_CRITICAL("Failed to create fence {}: {}", i, fence_result.error().c_str());
+            continue;
+        }
+        m_FrameResources[i].m_InFlightFence = std::move(*fence_result);
+        auto context_result = device->create_graphics_context();
+        if (!context_result) {
+            CLIENT_CRITICAL("Failed to create graphics context: {}", context_result.error().c_str());
+            return;
+        }
+        m_FrameResources[i].m_GraphicsContext = std::move(*context_result);
+        // Note: In headless mode, neither image available nor render finished semaphores are needed
+        // - acquire_next_image doesn't signal image available semaphores
+        // - present() is a no-op and doesn't wait on render finished semaphores
+        // We only need fences for CPU/GPU synchronization
+    }
+    // Create graphics context for this widget
     m_Initialized = true;
     auto load_contents_res = load_contents();
     if (!load_contents_res) {
@@ -57,19 +77,47 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     auto* allocator = ctx.memory_allocator();
     if (!allocator)
         return sf::stl::make_error("memory allocator not initialized");
+    // Create render pass
+    sf::render::RenderPassDesc::AttachmentDesc depth_attachment{
+        .format = sf::render::Format::D32_FLOAT,
+        .load_op = sf::render::LoadOp::Clear,
+        .store_op = sf::render::StoreOp::Store,
+        .initial_layout = sf::render::ResourceState::Undefined,
+        .final_layout = sf::render::ResourceState::DepthWrite,
+    };
+    auto render_pass_result = device->create_render_pass({
+        .color_attachments = {sf::mem::MemTag::Temp,
+                              1,
+                              {
+                                  .format = device->get_back_buffer(0).format,
+                                  .load_op = sf::render::LoadOp::Clear,
+                                  .store_op = sf::render::StoreOp::Store,
+                                  .initial_layout = sf::render::ResourceState::Undefined,
+                                  .final_layout = sf::render::ResourceState::RenderTarget,
+                              }},
+        .depth_attachment = depth_attachment,
+        .name = "Editor Render Pass",
+    });
+    if (!render_pass_result)
+        return sf::stl::make_error("Failed to create render pass: {}", render_pass_result.error().c_str());
+    m_RenderPass = std::move(*render_pass_result);
     auto pipeline_result = device->create_graphics_pipeline({
-        .shader_module =
+        .layout = nullptr, // Using bindless layout
+        .render_pass = m_RenderPass.get(),
+        .vertex_shader =
             {
-                .vertex_shader_path = "assets/shaders/bindless_vulkan.vert.spv",
-                .vertex_entry_point = "VS",
-                .pixel_shader_path = "assets/shaders/bindless_vulkan.frag.spv",
-                .pixel_entry_point = "PS",
+                .path = "assets/shaders/bindless_vulkan.vert.spv",
+                .entry_point = "VS",
             },
-        .name = "Bindless Pipeline",
+        .pixel_shader =
+            {
+                .path = "assets/shaders/bindless_vulkan.frag.spv",
+                .entry_point = "PS",
+            },
     });
     if (!pipeline_result)
         return sf::stl::make_error("failed to create bindless pipeline");
-    m_PipelineState = std::move(*pipeline_result);
+    m_PipelineState = std::move(pipeline_result.value());
     auto cbv_result = allocator->allocate_buffer(sf::render::BufferCreationDesc{
         .usage = sf::render::BufferUsage::Constant,
         .size_in_bytes = sizeof(PassConstants),
@@ -88,10 +136,62 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     if (!depth_result)
         return sf::stl::make_error("failed to create depth texture: {}", depth_result.error().c_str());
     m_DepthTexture = std::move(*depth_result);
-    // assets::SceneWriter writer{&m_ECManager, m_AssetManager.get()};
-    // writer.deserealize("test_scene.scene", [&](sf::Entity entity, const sf::RenderComponentResourcePaths& resource_paths) {
-    //     create_render_component(entity, resource_paths);
-    // });
+    // Create framebuffers for each swapchain image
+    for (sf::u32 i = 0; i < device->get_back_buffer_count(); ++i) {
+        sf::stl::array<sf::render::Texture*, 1> color_attachments{&device->get_back_buffer(i)};
+        auto framebuffer_result = device->create_framebuffer({
+            .render_pass = m_RenderPass.get(),
+            .color_attachments = color_attachments,
+            .depth_attachment = &m_DepthTexture,
+            .width = static_cast<sf::u32>(width()),
+            .height = static_cast<sf::u32>(height()),
+            .name = "Editor Framebuffer",
+        });
+        if (!framebuffer_result)
+            return sf::stl::make_error("Failed to create framebuffer {}: {}", i, framebuffer_result.error().c_str());
+        m_Framebuffers[i] = std::move(*framebuffer_result);
+    }
+    return sf::stl::success;
+}
+
+sf::stl::result<> SceneViewWidget::rebuild_framebuffers() {
+    auto* device = EditorContext::instance().graphics_device();
+    if (!device)
+        return sf::stl::make_error("graphics device not initialized");
+    auto& ctx = EditorContext::instance();
+    auto* allocator = ctx.memory_allocator();
+    if (!allocator)
+        return sf::stl::make_error("memory allocator not initialized");
+    // Destroy old framebuffers
+    for (auto& fb : m_Framebuffers) {
+        fb.reset();
+    }
+    // Recreate depth texture with new dimensions
+    auto depth_result = allocator->allocate_texture({
+        .usage = sf::render::TextureUsage::DepthStencil,
+        .format = sf::render::Format::D32_FLOAT,
+        .width = static_cast<sf::u32>(width()),
+        .height = static_cast<sf::u32>(height()),
+        .name = "Depth Texture",
+    });
+    if (!depth_result)
+        return sf::stl::make_error("failed to create depth texture: {}", depth_result.error().c_str());
+    m_DepthTexture = std::move(*depth_result);
+    // Recreate framebuffers for each swapchain image
+    for (sf::u32 i = 0; i < device->get_back_buffer_count(); ++i) {
+        sf::stl::array<sf::render::Texture*, 1> color_attachments{&device->get_back_buffer(i)};
+        auto framebuffer_result = device->create_framebuffer({
+            .render_pass = m_RenderPass.get(),
+            .color_attachments = color_attachments,
+            .depth_attachment = &m_DepthTexture,
+            .width = static_cast<sf::u32>(width()),
+            .height = static_cast<sf::u32>(height()),
+            .name = "Editor Framebuffer",
+        });
+        if (!framebuffer_result)
+            return sf::stl::make_error("Failed to create framebuffer {}: {}", i, framebuffer_result.error().c_str());
+        m_Framebuffers[i] = std::move(*framebuffer_result);
+    }
     return sf::stl::success;
 }
 
@@ -105,15 +205,15 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
     auto* asset_mgr = editor.asset_manager();
     auto* gfx_device = editor.graphics_device();
     auto* allocator = editor.memory_allocator();
-    auto* cbv_heap = editor.cbv_srv_uav_heap();
-    auto* sampler_heap = editor.sampler_heap();
+    auto* bindless_registry = editor.bindless_registry();
     bool already_has_component = ec_mgr->has_engine_component<sf::components::RenderComponent>(entity);
     auto* mesh_asset =
         resource_paths.mesh_path.empty() ? sf::assets::MeshRegistry::default_mesh() : asset_mgr->get_mesh(resource_paths.mesh_path);
-    auto* texture_asset = resource_paths.texture_path.empty() ? sf::assets::TextureRegistry::default_texture(allocator, cbv_heap)
+    auto* texture_asset = resource_paths.texture_path.empty() ? sf::assets::TextureRegistry::default_texture(allocator, bindless_registry)
                                                               : asset_mgr->get_texture(resource_paths.texture_path);
-    auto* material_asset = resource_paths.material_path.empty() ? sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)
-                                                                : asset_mgr->get_material(resource_paths.material_path);
+    auto* material_asset = resource_paths.material_path.empty()
+        ? sf::assets::MaterialRegistry::default_material(allocator, bindless_registry)
+        : asset_mgr->get_material(resource_paths.material_path);
     if (!mesh_asset) {
         asset_mgr->import_mesh(resource_paths.mesh_path);
         mesh_asset = asset_mgr->get_mesh(resource_paths.mesh_path);
@@ -162,7 +262,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 CLIENT_ERROR("Failed to allocated index buffer: {}.", ib_res.error().c_str());
                 return;
             }
-            cbv_heap->allocate_cbv(*ib_res);
+            bindless_registry->register_constant_buffer(*ib_res);
             ib_res->update(mesh_asset->data->indices16().data(), index_buffer_size);
             m_RTIndexBuffers.push_back(std::move(*ib_res));
             auto vbp_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -170,7 +270,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_pos_buf_size,
                 .name = "Vertex Position Buffer",
             });
-            cbv_heap->allocate_cbv(*vbp_res);
+            bindless_registry->register_constant_buffer(*vbp_res);
             vbp_res->update(mesh_asset->data->positions.data(), vertex_pos_buf_size);
             m_VertexPosBuffers.push_back(std::move(*vbp_res));
             auto vbn_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -178,7 +278,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_norm_buf_size,
                 .name = "Vertex Normals Buffer",
             });
-            cbv_heap->allocate_cbv(*vbn_res);
+            bindless_registry->register_constant_buffer(*vbn_res);
             vbn_res->update(mesh_asset->data->normals.data(), vertex_norm_buf_size);
             m_VertexNormalBuffers.push_back(std::move(*vbn_res));
             if (mesh_asset->data->tangentus.size() > 0) {
@@ -188,7 +288,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                     .size_in_bytes = vertex_tan_buf_size,
                     .name = "Vertex Tan Buffer",
                 });
-                cbv_heap->allocate_cbv(*vbt_res);
+                bindless_registry->register_constant_buffer(*vbt_res);
                 vbt_res->update(mesh_asset->data->tangentus.data(), vertex_tan_buf_size);
                 m_VertexTangentBuffers.push_back(std::move(*vbt_res));
                 should_add_tangent = true;
@@ -198,7 +298,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_uv_buf_size,
                 .name = "Vertex UV Buffer",
             });
-            cbv_heap->allocate_cbv(*vbuv_res);
+            bindless_registry->register_constant_buffer(*vbuv_res);
             vbuv_res->update(mesh_asset->data->texcs.data(), vertex_uv_buf_size);
             m_VertexUVBuffers.push_back(std::move(*vbuv_res));
         }
@@ -212,18 +312,17 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
             .transform_buffer_idx = already_has_component
                 ? ec_mgr->engine_component<sf::components::RenderComponent>(entity).cpu_data().transform_buffer_idx
                 : static_cast<sf::u32>(m_TransformBuffers.size() - 1),
-
         };
         sf::u32 material_cbuffer_idx = 0;
-        if (material_asset->uuid == sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)->uuid) {
+        if (material_asset->uuid == sf::assets::MaterialRegistry::default_material(allocator, bindless_registry)->uuid) {
             material_cbuffer_idx = material_asset->material.material_cb_index;
         } else {
             material_cbuffer_idx = asset_mgr->material_resource_exists(resource_paths.material_path)
                 ? asset_mgr->get_material_resource(resource_paths.material_path).gpu_idx
-                : sf::assets::MaterialRegistry::default_material(allocator, cbv_heap)->material.material_cb_index;
+                : sf::assets::MaterialRegistry::default_material(allocator, bindless_registry)->material.material_cb_index;
         }
         sf::u32 texture_cbuffer_idx = 0;
-        if (texture_asset->uuid == sf::assets::TextureRegistry::default_texture(allocator, cbv_heap)->uuid) {
+        if (texture_asset->uuid == sf::assets::TextureRegistry::default_texture(allocator, bindless_registry)->uuid) {
             texture_cbuffer_idx = texture_asset->data.srv_index;
         } else {
             texture_cbuffer_idx = asset_mgr->texture_resource_exists(resource_paths.texture_path)
@@ -312,9 +411,16 @@ void SceneViewWidget::update_frame(sf::f32 delta_time) {
     if (m_NeedsResize) {
         auto* device = EditorContext::instance().graphics_device();
         if (device) {
-            auto resize_result = device->resize_window(width(), height());
+            auto resize_result = device->resize_swapchain(width(), height());
             if (!resize_result) {
                 CLIENT_ERROR("Failed to resize scene view: {}", resize_result.error().c_str());
+                return;
+            }
+            // After resize, we need to recreate framebuffers and depth texture
+            // since they reference the old swapchain images
+            auto rebuild_result = rebuild_framebuffers();
+            if (!rebuild_result) {
+                CLIENT_ERROR("Failed to rebuild framebuffers after resize: {}", rebuild_result.error().c_str());
                 return;
             }
         }
@@ -348,38 +454,47 @@ void SceneViewWidget::render() {
         CLIENT_ERROR("Asset Manager is not initialized, will not render.");
         return;
     }
-    auto result = device->begin_frame();
-    if (!result.has_value()) {
-        CLIENT_CRITICAL("Failed to begin frame: {}", result.error().c_str());
+    auto& fence = m_FrameResources[m_CurrentFrame].m_InFlightFence;
+    auto wait_result = fence->wait(UINT64_MAX);
+    if (!wait_result) {
+        CLIENT_ERROR("Failed to wait on fence: {}", wait_result.error().c_str());
         return;
     }
-    auto& back_buffer = device->get_current_back_buffer();
-    auto& editor_ctx = EditorContext::instance();
-    auto& ctx = *editor_ctx.graphics_context();
+    auto reset_result = fence->reset();
+    if (!reset_result) {
+        CLIENT_ERROR("Failed to reset fence: {}", reset_result.error().c_str());
+        return;
+    }
+    // In headless we're just indexing offscreen render targets
+    sf::u32 image_index = m_CurrentFrame;
+    auto& ctx = *m_FrameResources[m_CurrentFrame].m_GraphicsContext;
     auto reset_res = ctx.reset();
     if (!reset_res) {
         CLIENT_CRITICAL("Failed to reset command buffer: {}", reset_res.error().c_str());
         return;
     }
-    ctx.transition_barrier(back_buffer, sf::render::ResourceState::Present, sf::render::ResourceState::RenderTarget);
-    ctx.execute_resource_barriers();
-    ctx.begin_render_pass(back_buffer, &m_DepthTexture);
+    ctx.transition_image_layout(device->get_back_buffer(image_index), sf::render::ResourceState::Undefined,
+                                sf::render::ResourceState::RenderTarget);
+    // Begin render pass with framebuffer
+    ctx.begin_render_pass(m_RenderPass.get(), m_Framebuffers[image_index].get());
+    ctx.set_viewport({
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<sf::f32>(width()),
+        .height = static_cast<sf::f32>(height()),
+        .min_depth = 0.0f,
+        .max_depth = 1.0f,
+    });
+    // Clear operations (must be inside render pass)
     static sf::stl::array<sf::f32, 4> clear_color{0.1f, 0.1f, 0.1f, 1.0f};
-    ctx.clear_render_target_view(back_buffer, clear_color);
-    ctx.clear_depth_stencil_view(m_DepthTexture);
+    ctx.clear_render_target(0, clear_color);
+    ctx.clear_depth_stencil();
+    // Bind pipeline
     {
-        ctx.set_pipeline_state(m_PipelineState);
-        ctx.set_root_signature();
-        ctx.set_viewport({
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = static_cast<sf::f32>(width()),
-            .height = static_cast<sf::f32>(height()),
-            .min_depth = 0.0f,
-            .max_depth = 1.0f,
-        });
-        sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps{editor_ctx.cbv_srv_uav_heap(), editor_ctx.sampler_heap()};
-        ctx.set_descriptor_heaps(heaps);
+        ctx.bind_pipeline(m_PipelineState.get());
+        // TODO: With bindless, descriptor heaps are bound at descriptor set level, not per-draw
+        // sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps{editor_ctx.bindless_registry(), nullptr};
+        // ctx.set_descriptor_heaps(heaps);
         sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
         sf::math::mat4 view = m_MainCamera.view();
         sf::math::mat4 inv_view = view.inversed();
@@ -402,22 +517,40 @@ void SceneViewWidget::render() {
                 sf::components::CPUData cpu_data = comp.cpu_data();
                 if (cpu_data.index_id >= m_RTIndexBuffers.size())
                     continue;
-                ctx.set_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
+                ctx.bind_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
                 auto* per_draw = comp.per_draw_constants();
-                ctx.set_32_bit_constants(per_draw, sizeof(sf::components::PerDrawConstants) / sizeof(sf::u32));
-                ctx.draw_indexed_instanced(cpu_data.indices_size, 1);
+                ctx.push_constants(per_draw, sizeof(sf::components::PerDrawConstants));
+                ctx.draw_indexed(cpu_data.indices_size, 1);
             }
         }
     }
     ctx.end_render_pass();
-    ctx.transition_barrier(back_buffer, sf::render::ResourceState::RenderTarget, sf::render::ResourceState::Present);
-    ctx.execute_resource_barriers();
-    auto end_frame_res = device->end_frame(&ctx);
-    if (!end_frame_res) {
-        CORE_CRITICAL("Failed to end frame: {}", end_frame_res.error());
+    ctx.transition_image_layout(device->get_back_buffer(image_index), sf::render::ResourceState::RenderTarget,
+                                sf::render::ResourceState::CopySource);
+    // Close and submit the command buffer with synchronization
+    auto close_result = ctx.close();
+    if (!close_result) {
+        CLIENT_CRITICAL("Failed to close graphics context: {}", close_result.error().c_str());
         return;
     }
-    device->present(); // In headless mode, this just advances the frame index
+    // Submit to queue with fence only (no semaphores in headless mode)
+    // In headless mode:
+    // - No wait semaphores (no image acquisition)
+    // - No signal semaphores (present() doesn't wait on them)
+    // - Only use fence for CPU/GPU sync
+    sf::stl::array<sf::render::IContext*, 1> contexts{&ctx};
+    sf::render::QueueSubmitDesc submit_desc{};
+    submit_desc.wait_semaphores = {};
+    submit_desc.command_contexts = contexts;
+    submit_desc.signal_semaphores = {}; // No signal semaphores in headless mode
+    submit_desc.signal_fence = fence.get();
+    auto submit_result = EditorContext::instance().direct_queue()->submit(submit_desc);
+    if (!submit_result) {
+        CLIENT_CRITICAL("Failed to submit to queue: {}", submit_result.error().c_str());
+        return;
+    }
+    // In headless mode, present() is a no-op, so just manually advance the frame index
+    m_CurrentFrame = (m_CurrentFrame + 1) % sf::render::MAX_FRAMES_IN_FLIGHT;
     // @TODO: Implement proper texture readback using ICopyContext and staging buffer
     // The old device->read_texture_pixels() method has been removed as part of the stateless API refactor.
     // Proper implementation requires:

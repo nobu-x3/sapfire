@@ -5,32 +5,29 @@
 
 namespace sf::render::vk {
 
-    class VkGraphicsDevice;
+    class VulkanGraphicsDevice;
 
-    class VkCommandQueue final : public ICommandQueue {
+    class VulkanCommandQueue final : public ICommandQueue {
     public:
-        explicit VkCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
-        explicit VkCommandQueue(VkGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
+        explicit VulkanCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
+        explicit VulkanCommandQueue(VulkanGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type,
+                                    const char* name);
 
         void destroy_resources();
 
-        void execute_command_lists(IContext** contexts, u32 count) override;
-        void execute_command_list(IContext* context) override;
-
-        u64 signal() override;
-        void wait_for_fence_value(u64 fence_value) override;
-        void wait_for_idle() override;
-        u64 get_last_completed_fence_value() const override;
+        stl::result<> submit(const sf::render::QueueSubmitDesc& submit_desc) override;
+        stl::result<> submit_immediate(IContext* context) override;
+        stl::result<> wait_for_idle() override;
+        void* get_native_queue() override;
 
         CommandQueueType get_type() const override { return m_Type; }
-        void* get_native_handle() override { return reinterpret_cast<void*>(m_Queue); }
 
         VkQueue get_vk_queue() const { return m_Queue; }
         VkFence get_vk_fence() const { return m_Fence; }
         bool is_fence_complete(u64 fence_value) const;
 
     private:
-        VkGraphicsDevice* m_GraphicsDevice{nullptr};
+        VulkanGraphicsDevice* m_GraphicsDevice{nullptr};
         VkDevice m_Device{VK_NULL_HANDLE};
         VkQueue m_Queue{VK_NULL_HANDLE};
         VkFence m_Fence{VK_NULL_HANDLE};

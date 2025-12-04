@@ -3,10 +3,11 @@
 #include "assets/asset_manager.h"
 #include "core/string_utils.h"
 #include "nlohmann/json.hpp"
+#include "render/bindless_resource_registry.h"
 
 namespace sf::assets {
     AssetManager::AssetManager(const AssetManagerCreationDesc& desc) :
-        m_Device(desc.device), m_MemoryAllocator(desc.memory_allocator), m_CbvSrvUavHeap(desc.cbv_srv_uav_heap),
+        m_Device(desc.device), m_MemoryAllocator(desc.memory_allocator), m_BindlessRegistry(desc.bindless_registry),
         m_MeshRegistry(desc.mesh_registry_path), m_TextureRegistry(desc.texture_registry_path) {}
 
     stl::result<> AssetManager::load_runtime_texture(const stl::string& texture_path) {
@@ -26,7 +27,7 @@ namespace sf::assets {
             if (!texture_result) {
                 return stl::make_error("Failed to load runtime texture: {}", texture_result.error().data());
             }
-            texture_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*texture_result);
+            texture_result->srv_index = m_BindlessRegistry->register_texture(*texture_result);
             texture->data = std::move(*texture_result);
         }
         if (texture) {
@@ -55,7 +56,7 @@ namespace sf::assets {
             if (!texture_result) {
                 return stl::make_error("Failed to import texture: ", texture_result.error().data());
             }
-            texture_result->srv_index = m_CbvSrvUavHeap->allocate_srv(*texture_result);
+            texture_result->srv_index = m_BindlessRegistry->register_texture(*texture_result);
             texture->data = std::move(*texture_result);
         }
         if (texture) {
@@ -68,7 +69,7 @@ namespace sf::assets {
     }
 
     bool AssetManager::is_texture_loaded_for_runtime(UUID uuid) {
-        if (uuid == TextureRegistry::default_texture(m_MemoryAllocator, m_CbvSrvUavHeap)->uuid) {
+        if (uuid == TextureRegistry::default_texture(m_MemoryAllocator, m_BindlessRegistry)->uuid) {
             return true;
         }
         bool loaded = true;
@@ -98,7 +99,7 @@ namespace sf::assets {
     void AssetManager::deserialize(const stl::string& data) {
         m_MeshRegistry.deserialize(data);
         m_TextureRegistry.deserialize(m_Device, data);
-        m_MaterialRegistry.deserialize(m_MemoryAllocator, m_CbvSrvUavHeap, data);
+        m_MaterialRegistry.deserialize(m_MemoryAllocator, m_BindlessRegistry, data);
     }
 
     void AssetManager::serialize(const MaterialAsset& asset) { m_MaterialRegistry.serialize(asset); }

@@ -37,6 +37,11 @@ struct PassConstants {
     sf::render::Light Lights[sf::render::MAX_LIGHTS];
 };
 
+struct FrameResoures {
+    sf::stl::unique_ptr<sf::render::IGraphicsContext> m_GraphicsContext;
+    sf::stl::unique_ptr<sf::render::IFence> m_InFlightFence;
+};
+
 class SceneViewWidget : public QWidget {
     Q_OBJECT
 public:
@@ -55,12 +60,15 @@ protected:
 private:
     void initialize_rendering();
     sf::stl::result<> load_contents();
+    sf::stl::result<> rebuild_framebuffers();
     void shutdown_rendering();
     void render();
 
 private:
     sf::Camera m_MainCamera{};
-    sf::render::IPipelineState* m_PipelineState{nullptr};
+    sf::stl::unique_ptr<sf::render::IRenderPass> m_RenderPass;
+    sf::stl::array<sf::stl::unique_ptr<sf::render::IFramebuffer>, 3> m_Framebuffers;
+    sf::stl::unique_ptr<sf::render::IPipelineState> m_PipelineState;
     sf::render::Buffer m_MainPassCB{};
     PassConstants m_PassConstants{};
     sf::render::Texture m_DepthTexture{};
@@ -74,4 +82,12 @@ private:
     QImage m_RenderedImage;
     bool m_Initialized{false};
     bool m_NeedsResize{false};
+
+    // Synchronization objects for stateless API
+    sf::stl::array<FrameResoures, sf::render::MAX_FRAMES_IN_FLIGHT> m_FrameResources;
+    // Note: In headless mode, semaphores aren't needed:
+    // - m_ImageAvailableSemaphores: acquire_next_image doesn't signal them
+    // - m_RenderFinishedSemaphores: present() is a no-op and doesn't wait on them
+    // Only fences are needed for CPU/GPU synchronization
+    sf::u32 m_CurrentFrame = 0;
 };

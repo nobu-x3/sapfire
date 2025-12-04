@@ -1,5 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
+#include "render/i_pipeline_layout.h"
+#include "render/i_render_pass.h"
 #include "render/render_api.h"
 
 namespace sf::render::vk {
@@ -321,6 +324,8 @@ namespace sf::render::vk {
             return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         case ResourceState::Present:
             return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        case ResourceState::Undefined:
+            return VK_IMAGE_LAYOUT_UNDEFINED;
         default:
             return VK_IMAGE_LAYOUT_GENERAL;
         }
@@ -633,6 +638,72 @@ namespace sf::render::vk {
         default:
             return VK_QUEUE_GRAPHICS_BIT;
         }
+    }
+
+    // Load/Store Op Conversions (for render passes)
+
+    inline VkAttachmentLoadOp to_vk_attachment_load_op(LoadOp op) {
+        switch (op) {
+        case LoadOp::Load:
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+        case LoadOp::Clear:
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        case LoadOp::DontCare:
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        default:
+            return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        }
+    }
+
+    inline VkAttachmentStoreOp to_vk_attachment_store_op(StoreOp op) {
+        switch (op) {
+        case StoreOp::Store:
+            return VK_ATTACHMENT_STORE_OP_STORE;
+        case StoreOp::DontCare:
+            return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        default:
+            return VK_ATTACHMENT_STORE_OP_STORE;
+        }
+    }
+
+    // Descriptor Type Conversions
+
+    inline VkDescriptorType to_vk_descriptor_type(DescriptorType type) {
+        switch (type) {
+        case DescriptorType::UniformBuffer:
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        case DescriptorType::StorageBuffer:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case DescriptorType::CombinedImageSampler:
+            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        case DescriptorType::SampledImage:
+            return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        case DescriptorType::StorageImage:
+            return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        case DescriptorType::Sampler:
+            return VK_DESCRIPTOR_TYPE_SAMPLER;
+        default:
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        }
+    }
+
+    // Shader Stage Conversions
+
+    inline VkShaderStageFlags to_vk_shader_stage_flags(ShaderStage stages) {
+        VkShaderStageFlags flags = 0;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Vertex)) != 0)
+            flags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Hull)) != 0)
+            flags |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Domain)) != 0)
+            flags |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Geometry)) != 0)
+            flags |= VK_SHADER_STAGE_GEOMETRY_BIT;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Pixel)) != 0)
+            flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Compute)) != 0)
+            flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+        return flags;
     }
 
 } // namespace sf::render::vk

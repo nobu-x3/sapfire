@@ -7,7 +7,8 @@
 namespace sf {
     namespace render {
         class IGraphicsDevice;
-    }
+        class BindlessResourceRegistry;
+    } // namespace render
 } // namespace sf
 
 namespace sf::assets {
@@ -15,7 +16,7 @@ namespace sf::assets {
     struct SFAPI AssetManagerCreationDesc {
         sf::render::IGraphicsDevice* device{nullptr};
         sf::render::IMemoryAllocator* memory_allocator{nullptr};
-        sf::render::IDescriptorHeap* cbv_srv_uav_heap{nullptr};
+        sf::render::BindlessResourceRegistry* bindless_registry{nullptr};
         stl::string mesh_registry_path = stl::string(mem::MemTag::Mesh, "mesh_registry.db");
         stl::string texture_registry_path = stl::string(mem::MemTag::Texture, "texture_registry.db");
         stl::string material_registry_path = stl::string(mem::MemTag::Material, "material_registry.db");
@@ -66,7 +67,7 @@ namespace sf::assets {
             if (path.empty())
                 return;
             auto relative_path = fs::relative_path(path);
-            m_MaterialRegistry.import_material(m_MemoryAllocator, m_CbvSrvUavHeap, relative_path);
+            m_MaterialRegistry.import_material(m_MemoryAllocator, m_BindlessRegistry, relative_path);
             m_MaterialManager.add(relative_path, m_MaterialRegistry.get(relative_path)->uuid,
                                   {.gpu_idx = static_cast<u32>(m_MaterialRegistry.get(relative_path)->material.material_cb_index)});
         }
@@ -75,7 +76,7 @@ namespace sf::assets {
                 return;
             }
             auto relative_path = fs::relative_path(path);
-            m_MaterialRegistry.import_material(m_MemoryAllocator, m_CbvSrvUavHeap, std::move(material), relative_path);
+            m_MaterialRegistry.import_material(m_MemoryAllocator, m_BindlessRegistry, std::move(material), relative_path);
             m_MaterialManager.add(relative_path, m_MaterialRegistry.get(relative_path)->uuid,
                                   {.gpu_idx = static_cast<u32>(m_MaterialRegistry.get(relative_path)->material.material_cb_index)});
         }
@@ -94,7 +95,7 @@ namespace sf::assets {
         }
 
         inline bool material_resource_exists(const UUID& uuid) const {
-            if (uuid == MaterialRegistry::default_material(m_MemoryAllocator, m_CbvSrvUavHeap)->uuid)
+            if (uuid == MaterialRegistry::default_material(m_MemoryAllocator, m_BindlessRegistry)->uuid)
                 return true;
             return m_MaterialManager.uuid_to_path_map.contains(uuid);
         }
@@ -117,6 +118,6 @@ namespace sf::assets {
         MaterialManager m_MaterialManager;
         sf::render::IGraphicsDevice* m_Device;
         sf::render::IMemoryAllocator* m_MemoryAllocator;
-        sf::render::IDescriptorHeap* m_CbvSrvUavHeap;
+        sf::render::BindlessResourceRegistry* m_BindlessRegistry;
     };
 } // namespace sf::assets

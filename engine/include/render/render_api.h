@@ -104,7 +104,8 @@ namespace sf::render {
     // Resource States
 
     enum class ResourceState : u32 {
-        Common = 0,
+        Undefined = 0, // Initial undefined state
+        Common,
         VertexAndConstantBuffer,
         IndexBuffer,
         RenderTarget,
@@ -118,6 +119,8 @@ namespace sf::render {
         IndirectArgument,
         CopyDest,
         CopySource,
+        TransferDst, // Alias for CopyDest (Vulkan naming)
+        TransferSrc, // Alias for CopySource (Vulkan naming)
         ResolveDest,
         ResolveSource,
         GenericRead,
@@ -349,12 +352,6 @@ namespace sf::render {
         i32 bottom = 0;
     };
 
-    struct ResourceBarrier {
-        void* resource = nullptr; // Backend-specific handle
-        ResourceState state_before = ResourceState::Common;
-        ResourceState state_after = ResourceState::Common;
-    };
-
     struct BlendState {
         bool blend_enable = false;
         Blend src_blend = Blend::One;
@@ -408,6 +405,123 @@ namespace sf::render {
         f32 border_color[4] = {0.0f, 0.0f, 0.0f, 0.0f};
         f32 min_lod = 0.0f;
         f32 max_lod = 3.402823466e+38f; // FLT_MAX
+    };
+
+    // Pipeline Stages (for barriers)
+
+    enum class PipelineStage : u32 {
+        None = 0,
+        TopOfPipe = 1 << 0,
+        DrawIndirect = 1 << 1,
+        VertexInput = 1 << 2,
+        VertexShader = 1 << 3,
+        TessellationControl = 1 << 4,
+        TessellationEvaluation = 1 << 5,
+        GeometryShader = 1 << 6,
+        PixelShader = 1 << 7,
+        EarlyFragmentTests = 1 << 8,
+        LateFragmentTests = 1 << 9,
+        ColorAttachmentOutput = 1 << 10,
+        ComputeShader = 1 << 11,
+        Transfer = 1 << 12,
+        BottomOfPipe = 1 << 13,
+        Host = 1 << 14,
+        AllGraphics = 1 << 15,
+        AllCommands = 1 << 16,
+    };
+
+    inline PipelineStage operator|(PipelineStage a, PipelineStage b) {
+        return static_cast<PipelineStage>(static_cast<u32>(a) | static_cast<u32>(b));
+    }
+
+    inline PipelineStage operator&(PipelineStage a, PipelineStage b) {
+        return static_cast<PipelineStage>(static_cast<u32>(a) & static_cast<u32>(b));
+    }
+
+    // Memory Access Flags (for barriers)
+
+    enum class AccessFlag : u32 {
+        None = 0,
+        IndirectCommandRead = 1 << 0,
+        IndexRead = 1 << 1,
+        VertexAttributeRead = 1 << 2,
+        UniformRead = 1 << 3,
+        InputAttachmentRead = 1 << 4,
+        ShaderRead = 1 << 5,
+        ShaderWrite = 1 << 6,
+        ColorAttachmentRead = 1 << 7,
+        ColorAttachmentWrite = 1 << 8,
+        DepthStencilAttachmentRead = 1 << 9,
+        DepthStencilAttachmentWrite = 1 << 10,
+        TransferRead = 1 << 11,
+        TransferWrite = 1 << 12,
+        HostRead = 1 << 13,
+        HostWrite = 1 << 14,
+        MemoryRead = 1 << 15,
+        MemoryWrite = 1 << 16,
+    };
+
+    inline AccessFlag operator|(AccessFlag a, AccessFlag b) { return static_cast<AccessFlag>(static_cast<u32>(a) | static_cast<u32>(b)); }
+
+    inline AccessFlag operator&(AccessFlag a, AccessFlag b) { return static_cast<AccessFlag>(static_cast<u32>(a) & static_cast<u32>(b)); }
+
+    struct Buffer;
+    struct Texture;
+
+    // Pipeline Barrier
+
+    struct MemoryBarrier {
+        AccessFlag src_access = AccessFlag::None;
+        AccessFlag dst_access = AccessFlag::None;
+    };
+
+    struct BufferBarrier {
+        Buffer* buffer = nullptr;
+        AccessFlag src_access = AccessFlag::None;
+        AccessFlag dst_access = AccessFlag::None;
+        u64 offset = 0;
+        u64 size = UINT64_MAX;
+    };
+
+    struct ImageBarrier {
+        Texture* texture = nullptr;
+        AccessFlag src_access = AccessFlag::None;
+        AccessFlag dst_access = AccessFlag::None;
+        ResourceState old_layout = ResourceState::Undefined;
+        ResourceState new_layout = ResourceState::Undefined;
+        u32 base_mip_level = 0;
+        u32 mip_level_count = 1;
+        u32 base_array_layer = 0;
+        u32 array_layer_count = 1;
+    };
+
+    struct PipelineBarrier {
+        PipelineStage src_stage = PipelineStage::None;
+        PipelineStage dst_stage = PipelineStage::None;
+        stl::vector<MemoryBarrier> memory_barriers;
+        stl::vector<BufferBarrier> buffer_barriers;
+        stl::vector<ImageBarrier> image_barriers;
+    };
+
+    // Buffer-Texture Copy Region
+
+    struct BufferTextureCopy {
+        u64 buffer_offset = 0;
+        u32 buffer_row_length = 0; // 0 means tightly packed
+        u32 buffer_image_height = 0; // 0 means tightly packed
+        struct {
+            u32 x = 0;
+            u32 y = 0;
+            u32 z = 0;
+        } texture_offset;
+        struct {
+            u32 width = 1;
+            u32 height = 1;
+            u32 depth = 1;
+        } texture_extent;
+        u32 mip_level = 0;
+        u32 base_array_layer = 0;
+        u32 layer_count = 1;
     };
 
 } // namespace sf::render

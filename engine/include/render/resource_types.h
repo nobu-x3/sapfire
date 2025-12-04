@@ -19,11 +19,15 @@ namespace sf::render {
     // Buffer Types
 
     enum class BufferUsage : u8 {
-        Upload, // CPU -> GPU upload buffer
-        Download, // GPU -> CPU download buffer
+        Upload, // CPU -> GPU upload buffer (staging)
+        Download, // GPU -> CPU download buffer (readback)
+        Vertex, // Vertex buffer
         Index, // Index buffer
-        Structured, // Structured buffer (SRV/UAV)
-        Constant, // Constant buffer (CBV)
+        Uniform, // Uniform/Constant buffer (CBV)
+        Storage, // Storage buffer (SRV/UAV)
+        Structured, // Structured buffer (SRV/UAV) - alias for Storage
+        Constant, // Constant buffer (CBV) - alias for Uniform
+        Staging, // Staging buffer - alias for Upload
     };
 
     // Texture Usage
@@ -54,7 +58,7 @@ namespace sf::render {
         u32 height = 1;
         u32 depth_or_array_size = 1;
         u32 mip_levels = 1;
-        ResourceState initial_state = ResourceState::Common;
+        ResourceState initial_state = ResourceState::Undefined;
         ResourceUsage resource_usage = ResourceUsage::None;
         stl::string_view name = {};
         std::string path; // For loading from file
@@ -124,7 +128,8 @@ namespace sf::render {
 
     struct Texture {
         // Opaque backend handles (hidden from user)
-        ResourceHandle resource = nullptr;
+        ResourceHandle resource = nullptr; // VkImage / ID3D12Resource
+        ResourceHandle image_view = nullptr; // VkImageView (Vulkan only, nullptr on DX12)
         AllocationHandle allocation = nullptr;
 
         // Public data
@@ -142,49 +147,43 @@ namespace sf::render {
         u32 dsv_index = INVALID_DESCRIPTOR_INDEX;
     };
 
-    // Shader Module Description
+    // Shader Module
 
-    struct ShaderModuleDesc {
-        // For graphics shaders
-        stl::string_view vertex_shader_path = {};
-        stl::string_view vertex_entry_point = "VS";
-
-        stl::string_view pixel_shader_path = {};
-        stl::string_view pixel_entry_point = "PS";
-
-        // For compute shaders
-        stl::string_view compute_shader_path = {};
-        stl::string_view compute_entry_point = "CS";
+    struct ShaderModule {
+        stl::string_view path = {};
+        stl::string_view entry_point = "main";
     };
 
     // Pipeline State Creation
 
-    struct GraphicsPipelineStateDesc {
-        ShaderModuleDesc shader_module = {};
+    struct GraphicsPipelineDesc {
+        // Pipeline layout (must be set)
+        class IPipelineLayout* layout = nullptr;
 
-        // Render target formats
-        stl::vector<Format> rtv_formats = {mem::MemTag::Render, 1, Format::RGBA16_FLOAT};
-        u32 rtv_count = 1;
-        Format depth_format = Format::D32_FLOAT;
+        // Render pass (must be set)
+        class IRenderPass* render_pass = nullptr;
+        u32 subpass = 0;
 
-        // Rasterizer state
+        // Shader stages
+        ShaderModule vertex_shader = {};
+        ShaderModule pixel_shader = {};
+
+        // Fixed-function state
+        PrimitiveTopology topology = PrimitiveTopology::TriangleList;
         RasterizerState rasterizer = {};
-
-        // Depth-stencil state
         DepthStencilState depth_stencil = {};
-
-        // Blend state (per render target)
-        stl::vector<BlendState> blend_states = {mem::MemTag::Render, 1, BlendState{}};
-
-        // Primitive topology
-        PrimitiveTopology primitive_topology = PrimitiveTopology::TriangleList;
+        BlendState blend_state = {};
 
         stl::string_view name = {};
     };
 
-    struct ComputePipelineStateDesc {
-        stl::string_view shader_path = {};
-        stl::string_view entry_point = "CS";
+    struct ComputePipelineDesc {
+        // Pipeline layout (must be set)
+        class IPipelineLayout* layout = nullptr;
+
+        // Shader stage
+        ShaderModule compute_shader = {};
+
         stl::string_view name = {};
     };
 

@@ -2,9 +2,10 @@
 
 #include <assets/asset_manager.h>
 #include <components/ec_manager.h>
+#include <render/bindless_resource_registry.h>
 #include <render/i_command_queue.h>
 #include <render/i_context.h>
-#include <render/i_descriptor_heap.h>
+#include <render/i_descriptor_pool.h>
 #include <render/i_graphics_device.h>
 #include <render/i_memory_allocator.h>
 
@@ -36,8 +37,7 @@ public:
     ProjectManager* project_manager();
 
     // Resource accessors
-    sf::render::IDescriptorHeap* cbv_srv_uav_heap() { return m_CbvSrvUavHeap.get(); }
-    sf::render::IDescriptorHeap* sampler_heap() { return m_SamplerHeap.get(); }
+    sf::render::BindlessResourceRegistry* bindless_registry() { return m_BindlessRegistry.get(); }
     sf::render::ICommandQueue* direct_queue() { return m_DirectQueue.get(); }
     sf::render::IGraphicsContext* graphics_context() { return m_GraphicsContext.get(); }
     sf::render::IMemoryAllocator* memory_allocator() { return m_MemoryAllocator.get(); }
@@ -57,8 +57,8 @@ private:
     sf::stl::unique_ptr<sf::ECManager> m_ECManager;
 
     // Rendering resources (owned by EditorContext, created via device factories)
-    sf::stl::unique_ptr<sf::render::IDescriptorHeap> m_CbvSrvUavHeap;
-    sf::stl::unique_ptr<sf::render::IDescriptorHeap> m_SamplerHeap;
+    sf::stl::unique_ptr<sf::render::IDescriptorPool> m_DescriptorPool;
+    sf::stl::unique_ptr<sf::render::BindlessResourceRegistry> m_BindlessRegistry;
     sf::stl::unique_ptr<sf::render::ICommandQueue> m_DirectQueue;
     sf::stl::unique_ptr<sf::render::IGraphicsContext> m_GraphicsContext;
     sf::stl::unique_ptr<sf::render::IMemoryAllocator> m_MemoryAllocator;
