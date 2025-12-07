@@ -13,7 +13,7 @@ namespace sf::assets {
     };
 
     struct SFAPI MeshManager {
-        sf::stl::unordered_map<sf::stl::string, MeshResource> mesh_resources;
+        sf::stl::unordered_map<sf::stl::string, MeshResource> mesh_resources{mem::MemTag::Render};
     };
 
     struct SFAPI MeshAsset {

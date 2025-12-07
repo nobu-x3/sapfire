@@ -24,7 +24,7 @@ namespace sf::render::vk {
         VulkanGraphicsDevice* m_Device;
         PipelineLayoutDesc m_Desc;
         VkPipelineLayout m_PipelineLayout;
-        stl::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
+        stl::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts{mem::MemTag::Render};
     };
 
 } // namespace sf::render::vk

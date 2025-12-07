@@ -41,6 +41,7 @@ public:
     sf::render::ICommandQueue* direct_queue() { return m_DirectQueue.get(); }
     sf::render::IGraphicsContext* graphics_context() { return m_GraphicsContext.get(); }
     sf::render::IMemoryAllocator* memory_allocator() { return m_MemoryAllocator.get(); }
+    sf::stl::span<const sf::render::DescriptorSetLayout> bindless_descriptor_set_layouts() const { return m_BindlessLayouts; }
 
     bool is_initialized() const { return m_Initialized; }
 
@@ -58,6 +59,7 @@ private:
 
     // Rendering resources (owned by EditorContext, created via device factories)
     sf::stl::unique_ptr<sf::render::IDescriptorPool> m_DescriptorPool;
+    sf::stl::vector<sf::render::DescriptorSetLayout> m_BindlessLayouts{sf::mem::MemTag::Render};
     sf::stl::unique_ptr<sf::render::BindlessResourceRegistry> m_BindlessRegistry;
     sf::stl::unique_ptr<sf::render::ICommandQueue> m_DirectQueue;
     sf::stl::unique_ptr<sf::render::IGraphicsContext> m_GraphicsContext;

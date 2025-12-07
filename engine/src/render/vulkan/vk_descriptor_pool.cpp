@@ -1,4 +1,5 @@
 #include "render/vulkan/vk_descriptor_pool.h"
+#include <vulkan/vulkan_core.h>
 #include "core/logger.h"
 #include "render/vulkan/vk_descriptor_set.h"
 #include "render/vulkan/vk_graphics_device.h"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Sapfire.h"
+#include "render/i_pipeline_layout.h"
 
 #include <QWidget>
 
@@ -68,6 +69,7 @@ private:
     sf::Camera m_MainCamera{};
     sf::stl::unique_ptr<sf::render::IRenderPass> m_RenderPass;
     sf::stl::array<sf::stl::unique_ptr<sf::render::IFramebuffer>, 3> m_Framebuffers;
+    sf::stl::unique_ptr<sf::render::IPipelineLayout> m_PipelineLayout;
     sf::stl::unique_ptr<sf::render::IPipelineState> m_PipelineState;
     sf::render::Buffer m_MainPassCB{};
     PassConstants m_PassConstants{};

@@ -682,6 +682,10 @@ namespace sf::render::vk {
             return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         case DescriptorType::Sampler:
             return VK_DESCRIPTOR_TYPE_SAMPLER;
+        case DescriptorType::UniformBufferDynamic:
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        case DescriptorType::StorageBufferDynamic:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         default:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         }
@@ -703,6 +707,8 @@ namespace sf::render::vk {
             flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
         if ((static_cast<u8>(stages) & static_cast<u8>(ShaderStage::Compute)) != 0)
             flags |= VK_SHADER_STAGE_COMPUTE_BIT;
+        if(stages == ShaderStage::AllGraphics)
+            flags = VK_SHADER_STAGE_ALL; // TODO: this should actually be VK_SHADER_STAGE_ALL_GRAPHICS
         return flags;
     }
 

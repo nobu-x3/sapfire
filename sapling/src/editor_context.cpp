@@ -2,6 +2,8 @@
 #include <core/logger.h>
 #include <render/render_backend.h>
 #include "project_manager.h"
+#include "render/bindless_resource_registry.h"
+#include "render/i_pipeline_layout.h"
 
 #include <QApplication>
 #include <QPalette>
@@ -63,11 +65,11 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
     // Create descriptor pool for bindless resources
     auto pool_result = m_GraphicsDevice->create_descriptor_pool({
         .max_sets = 10,
-        .max_uniform_buffers = 10000,
+        .max_uniform_buffers = 100000,
         .max_storage_buffers = 100000,
         .max_sampled_images = 100000,
-        .max_storage_images = 1000,
-        .max_samplers = 1000,
+        .max_storage_images = 100000,
+        .max_samplers = 100000,
         .name = "Editor Descriptor Pool",
     });
     if (!pool_result) {
@@ -75,10 +77,10 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         return;
     }
     m_DescriptorPool = std::move(*pool_result);
-
+    m_BindlessLayouts = sf::render::BindlessResourceRegistry::default_descriptor_set_layout();
     // Create bindless resource registry
     m_BindlessRegistry =
-        sf::stl::make_unique<sf::render::BindlessResourceRegistry>(sf::mem::MemTag::Render, m_DescriptorPool.get(), 100000, 100000);
+        sf::stl::make_unique<sf::render::BindlessResourceRegistry>(sf::mem::MemTag::Render, m_DescriptorPool.get(), m_BindlessLayouts);
     auto queue_result = m_GraphicsDevice->create_direct_queue("Editor Direct Queue");
     if (!queue_result) {
         CLIENT_ERROR("Failed to create direct queue: {}", queue_result.error().c_str());

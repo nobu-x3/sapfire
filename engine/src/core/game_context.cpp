@@ -1,10 +1,11 @@
-#include "core/logger.h"
 #include "engpch.h"
 
 #include "components/render_component.h"
 #include "core/application.h"
 #include "core/game_context.h"
+#include "core/logger.h"
 #include "memory/memory.h"
+#include "render/bindless_resource_registry.h"
 
 namespace sf {
     GameContext::GameContext(const GameContextCreationDesc& desc) : m_ClientExtent(desc.client_extent), m_GraphicsDevice(nullptr) {
@@ -38,10 +39,10 @@ namespace sf {
             return;
         }
         m_DescriptorPool = std::move(*pool_result);
-
+        auto descriptor_set_layout = render::BindlessResourceRegistry::default_descriptor_set_layout();
         // Create bindless resource registry
         m_BindlessRegistry =
-            stl::make_unique<render::BindlessResourceRegistry>(mem::MemTag::Render, m_DescriptorPool.get(), 100000, 100000);
+            stl::make_unique<render::BindlessResourceRegistry>(mem::MemTag::Render, m_DescriptorPool.get(), descriptor_set_layout);
 
         auto queue_result = m_GraphicsDevice->create_direct_queue("Game Direct Queue");
         if (!queue_result) {
@@ -114,7 +115,7 @@ namespace sf {
                 if (!transform_result) {
                     return stl::make_error("Failed to create transform buffer: {}", transform_result.error().data());
                 }
-                transform_result->cbv_index = m_BindlessRegistry->register_constant_buffer(*transform_result);
+                transform_result->cbv_index = m_BindlessRegistry->register_buffer(*transform_result);
                 m_TransformBuffers.emplace_back(std::move(*transform_result));
             }
             bool should_add_tangent = false;
@@ -135,7 +136,6 @@ namespace sf {
                     return stl::make_error("Failed to create index buffer: {}", index_buffer_result.error().data());
                 }
                 m_RTIndexBuffers.push_back(std::move(*index_buffer_result));
-
                 // Create vertex position buffer with data
                 sf::render::BufferCreationDesc pos_desc{
                     .usage = sf::render::BufferUsage::Structured,

@@ -3,8 +3,6 @@
 #include "assets/material_manager.h"
 #include "core/file_system.h"
 #include "core/logger.h"
-#include "core/string_utils.h"
-#include "math/math.h"
 #include "nlohmann/json.hpp"
 #include "render/bindless_resource_registry.h"
 #include "render/i_graphics_device.h"
@@ -75,7 +73,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create buffer for material at path {}: {}", path.data(), result.error().data());
         }
         material.fresnel_r0 = sf::math::vec3(j["fresnel_r0"][0], j["fresnel_r0"][1], j["fresnel_r0"][2]);
-        result->cbv_index = registry->register_constant_buffer(*result);
+        result->cbv_index = registry->register_buffer(*result);
         material.material_buffer = std::move(*result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -124,7 +122,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
-        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
+        buffer_result->cbv_index = registry->register_buffer(*buffer_result);
         material.material_buffer = std::move(*buffer_result);
         material.material_cb_index = material.material_buffer.cbv_index;
         m_PathToMaterialAssetMap[path] = MaterialAsset{
@@ -149,7 +147,7 @@ namespace sf::assets {
             return stl::make_error("Failed to create material buffer for material at path {}: {}", path.data(),
                                    buffer_result.error().data());
         }
-        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
+        buffer_result->cbv_index = registry->register_buffer(*buffer_result);
         asset.material.name = fs::file_name(path);
         asset.material.material_buffer = std::move(*buffer_result);
         asset.material.material_cb_index = asset.material.material_buffer.cbv_index;
@@ -304,7 +302,7 @@ namespace sf::assets {
             .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
         };
         static auto buffer_result = allocator->allocate_buffer({
-            .usage = sf::render::BufferUsage::Constant,
+            .usage = sf::render::BufferUsage::Structured,
             .size_in_bytes = sizeof(sf::render::MaterialConstants),
             .name = name,
         });
@@ -312,7 +310,7 @@ namespace sf::assets {
             CORE_CRITICAL("Failed to load default material buffer.");
             return nullptr;
         }
-        buffer_result->cbv_index = registry->register_constant_buffer(*buffer_result);
+        buffer_result->cbv_index = registry->register_buffer(*buffer_result);
         static MaterialAsset default_mat{
             .uuid = DEFAULT_MATERIAL_UUID,
             .material{

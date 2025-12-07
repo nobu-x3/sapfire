@@ -7,7 +7,7 @@ namespace sf::render {
 
     // Descriptor Types
 
-    enum class DescriptorType : u8 { UniformBuffer, StorageBuffer, CombinedImageSampler, SampledImage, StorageImage, Sampler };
+    enum class DescriptorType : u8 { UniformBuffer, UniformBufferDynamic, StorageBuffer, StorageBufferDynamic, CombinedImageSampler, SampledImage, StorageImage, Sampler };
 
     // Descriptor Set Layout
 

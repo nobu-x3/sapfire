@@ -2,7 +2,6 @@
 #include "render/i_graphics_device.h"
 #include "render/vulkan/vk_command_queue.h"
 #include "render/vulkan/vk_context.h"
-#include "render/vulkan/vk_descriptor_heap.h"
 #include "render/vulkan/vk_descriptor_pool.h"
 #include "render/vulkan/vk_memory_allocator.h"
 #include "render/vulkan/vk_pipeline_state.h"

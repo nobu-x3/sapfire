@@ -16,6 +16,7 @@ namespace sf::render::vk {
                                                        VkRenderPass render_pass) {
         m_Device = device;
         m_IsCompute = false;
+        m_Layout = desc.layout;
         // Load and compile shaders
         Shader vertex_shader =
             compile(device, ShaderType::Vertex, desc.vertex_shader.path, desc.vertex_shader.entry_point);
@@ -132,6 +133,7 @@ namespace sf::render::vk {
     stl::result<> VulkanPipelineState::create_compute(VkDevice device, const ComputePipelineDesc& desc, VkPipelineLayout layout) {
         m_Device = device;
         m_IsCompute = true;
+        m_Layout = desc.layout;
         Shader compute_shader = compile(device, ShaderType::Compute, desc.compute_shader.path, desc.compute_shader.entry_point);
         if (compute_shader.module == VK_NULL_HANDLE) {
             return stl::make_error<>("Failed to load compute shader");

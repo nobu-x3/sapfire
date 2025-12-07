@@ -30,6 +30,8 @@ namespace sf::render::vk {
         VulkanGraphicsDevice* m_Device;
         VkDescriptorPool m_Pool;
         VkDescriptorSet m_DescriptorSet;
+        VkDescriptorSetLayout m_DescriptorLayout;
+        stl::vector<VkDescriptorSetLayoutBinding> m_DescriptorSetLayoutBindings {mem::MemTag::Render};
     };
 
 } // namespace sf::render::vk

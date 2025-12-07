@@ -23,7 +23,6 @@ namespace sf::render::vk {
                 bindings.push_back(vk_binding);
             }
             // Check if this layout has variable descriptor count
-            VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info{};
             stl::vector<VkDescriptorBindingFlags> binding_flags(mem::MemTag::Render);
             bool has_variable_count = false;
             for (const auto& binding : set_layout.bindings) {
@@ -35,16 +34,18 @@ namespace sf::render::vk {
                 }
                 binding_flags.push_back(flags);
             }
-            VkDescriptorSetLayoutCreateInfo layout_info{};
-            layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-            layout_info.bindingCount = static_cast<u32>(bindings.size());
-            layout_info.pBindings = bindings.data();
+            VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info{};
             if (has_variable_count) {
                 binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
                 binding_flags_info.bindingCount = static_cast<u32>(binding_flags.size());
                 binding_flags_info.pBindingFlags = binding_flags.data();
-                layout_info.pNext = &binding_flags_info;
             }
+            VkDescriptorSetLayoutCreateInfo layout_info{};
+            layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            layout_info.flags = has_variable_count ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT : 0;
+            layout_info.pNext = has_variable_count ? &binding_flags_info : nullptr;
+            layout_info.bindingCount = static_cast<u32>(bindings.size());
+            layout_info.pBindings = bindings.data();
             VkDescriptorSetLayout vk_layout;
             VkResult result = vkCreateDescriptorSetLayout(m_Device->get_vk_device(), &layout_info, nullptr, &vk_layout);
             if (result != VK_SUCCESS) {

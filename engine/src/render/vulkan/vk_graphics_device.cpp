@@ -5,7 +5,6 @@
 #include "render/resource_types.h"
 #include "render/vulkan/vk_compat.h"
 #include "render/vulkan/vk_context.h"
-#include "render/vulkan/vk_descriptor_heap.h"
 #include "render/vulkan/vk_descriptor_pool.h"
 #include "render/vulkan/vk_descriptor_set.h"
 #include "render/vulkan/vk_fence.h"

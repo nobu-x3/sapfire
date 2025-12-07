@@ -1,10 +1,8 @@
 #include "sandbox_game_context.h"
-#include "components/movement_component.h"
 #include "components/render_component.h"
-#include "components/test_custom_component.h"
 #include "core/game_context.h"
 #include "core/logger.h"
-#include "math/math.h"
+#include "render/bindless_resource_registry.h"
 
 using namespace sf;
 
@@ -92,7 +90,7 @@ void SandboxGameContext::load_contents() {
         CLIENT_CRITICAL("Failed to create main pass constant buffer: {}", cbv_result.error().c_str());
         return;
     }
-    cbv_result->cbv_index = m_BindlessRegistry->register_constant_buffer(*cbv_result);
+    cbv_result->cbv_index = m_BindlessRegistry->register_buffer(*cbv_result);
     m_MainPassCB = std::move(*cbv_result);
 
     auto depth_result = m_MemoryAllocator->allocate_texture({

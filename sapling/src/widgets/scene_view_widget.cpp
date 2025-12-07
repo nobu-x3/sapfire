@@ -8,6 +8,11 @@
 #include <core/logger.h>
 #include <stl/result.h>
 #include "editor_context.h"
+#include "memory/memory.h"
+#include "render/bindless_resource_registry.h"
+#include "render/i_graphics_device.h"
+#include "render/i_pipeline_layout.h"
+#include "render/i_render_pass.h"
 #include "render/render_api.h"
 
 SceneViewWidget::SceneViewWidget(QWidget* parent) : QWidget(parent) {
@@ -69,6 +74,24 @@ void SceneViewWidget::initialize_rendering() {
     CLIENT_INFO("SceneViewWidget initialized successfully!");
 }
 
+sf::stl::result<sf::stl::unique_ptr<sf::render::IPipelineLayout>> create_bindless_layout(sf::render::IGraphicsDevice* device, sf::stl::span<const sf::render::DescriptorSetLayout> layouts_span) {
+    sf::stl::vector<sf::render::DescriptorSetLayout> layouts {sf::mem::MemTag::Temp};
+    layouts.reserve(layouts_span.size());
+    for(auto&& l : layouts_span) {
+        layouts.push_back(l);
+    }
+    sf::render::PipelineLayoutDesc layout_desc{
+        .descriptor_set_layouts = std::move(layouts),
+        .name = "Scene View Bindless Pipeline Layout",
+    };
+    layout_desc.push_constant_ranges.push_back({
+        .stages = sf::render::ShaderStage::AllGraphics,
+        .offset = 0,
+        .size = sizeof(sf::u32) * 64, // 256 bytes
+    });
+    return device->create_pipeline_layout(layout_desc);
+}
+
 sf::stl::result<> SceneViewWidget::load_contents() {
     auto* device = EditorContext::instance().graphics_device();
     if (!device)
@@ -78,6 +101,11 @@ sf::stl::result<> SceneViewWidget::load_contents() {
     if (!allocator)
         return sf::stl::make_error("memory allocator not initialized");
     // Create render pass
+    auto pipeline_layout_res = create_bindless_layout(device, ctx.bindless_descriptor_set_layouts());
+    if (!pipeline_layout_res) {
+        return sf::stl::make_error("Failed to create bindless pipeline layout: {}.", pipeline_layout_res.error().c_str());
+    }
+    m_PipelineLayout = std::move(*pipeline_layout_res);
     sf::render::RenderPassDesc::AttachmentDesc depth_attachment{
         .format = sf::render::Format::D32_FLOAT,
         .load_op = sf::render::LoadOp::Clear,
@@ -102,7 +130,7 @@ sf::stl::result<> SceneViewWidget::load_contents() {
         return sf::stl::make_error("Failed to create render pass: {}", render_pass_result.error().c_str());
     m_RenderPass = std::move(*render_pass_result);
     auto pipeline_result = device->create_graphics_pipeline({
-        .layout = nullptr, // Using bindless layout
+        .layout = m_PipelineLayout.get(), // Using bindless layout
         .render_pass = m_RenderPass.get(),
         .vertex_shader =
             {
@@ -262,7 +290,6 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 CLIENT_ERROR("Failed to allocated index buffer: {}.", ib_res.error().c_str());
                 return;
             }
-            bindless_registry->register_constant_buffer(*ib_res);
             ib_res->update(mesh_asset->data->indices16().data(), index_buffer_size);
             m_RTIndexBuffers.push_back(std::move(*ib_res));
             auto vbp_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -270,7 +297,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_pos_buf_size,
                 .name = "Vertex Position Buffer",
             });
-            bindless_registry->register_constant_buffer(*vbp_res);
+            vbp_res->srv_index = bindless_registry->register_buffer(*vbp_res);
             vbp_res->update(mesh_asset->data->positions.data(), vertex_pos_buf_size);
             m_VertexPosBuffers.push_back(std::move(*vbp_res));
             auto vbn_res = allocator->allocate_buffer(sf::render::BufferCreationDesc{
@@ -278,7 +305,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_norm_buf_size,
                 .name = "Vertex Normals Buffer",
             });
-            bindless_registry->register_constant_buffer(*vbn_res);
+            vbn_res->srv_index = bindless_registry->register_buffer(*vbn_res);
             vbn_res->update(mesh_asset->data->normals.data(), vertex_norm_buf_size);
             m_VertexNormalBuffers.push_back(std::move(*vbn_res));
             if (mesh_asset->data->tangentus.size() > 0) {
@@ -288,7 +315,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                     .size_in_bytes = vertex_tan_buf_size,
                     .name = "Vertex Tan Buffer",
                 });
-                bindless_registry->register_constant_buffer(*vbt_res);
+                vbt_res->srv_index = bindless_registry->register_buffer(*vbt_res);
                 vbt_res->update(mesh_asset->data->tangentus.data(), vertex_tan_buf_size);
                 m_VertexTangentBuffers.push_back(std::move(*vbt_res));
                 should_add_tangent = true;
@@ -298,7 +325,7 @@ void SceneViewWidget::on_render_component_added(sf::Entity entity, const sf::Ren
                 .size_in_bytes = vertex_uv_buf_size,
                 .name = "Vertex UV Buffer",
             });
-            bindless_registry->register_constant_buffer(*vbuv_res);
+            vbuv_res->srv_index = bindless_registry->register_buffer(*vbuv_res);
             vbuv_res->update(mesh_asset->data->texcs.data(), vertex_uv_buf_size);
             m_VertexUVBuffers.push_back(std::move(*vbuv_res));
         }
@@ -485,13 +512,18 @@ void SceneViewWidget::render() {
         .min_depth = 0.0f,
         .max_depth = 1.0f,
     });
+    ctx.set_scissor({0, 0, width(), height()});
     // Clear operations (must be inside render pass)
     static sf::stl::array<sf::f32, 4> clear_color{0.1f, 0.1f, 0.1f, 1.0f};
     ctx.clear_render_target(0, clear_color);
     ctx.clear_depth_stencil();
-    // Bind pipeline
     {
         ctx.bind_pipeline(m_PipelineState.get());
+        // Bind bindless descriptor sets
+        auto* registry = EditorContext::instance().bindless_registry();
+        for (sf::u32 i = 0; i < registry->get_descriptor_set_count(); ++i) {
+            ctx.bind_descriptor_set(i, registry->get_descriptor_set(i));
+        }
         // TODO: With bindless, descriptor heaps are bound at descriptor set level, not per-draw
         // sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps{editor_ctx.bindless_registry(), nullptr};
         // ctx.set_descriptor_heaps(heaps);

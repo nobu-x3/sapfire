@@ -1,5 +1,6 @@
 #include "engpch.h"
 
+#include <vulkan/vulkan_core.h>
 #include "core/logger.h"
 #include "render/vulkan/vk_descriptor_pool.h"
 #include "render/vulkan/vk_descriptor_set.h"
@@ -11,8 +12,7 @@ namespace sf::render::vk {
 
     VulkanDescriptorSet::VulkanDescriptorSet(VulkanGraphicsDevice* device, VulkanDescriptorPool* pool, const DescriptorSetLayout& layout) :
         m_Device(device), m_Pool(pool->get_vk_pool()), m_DescriptorSet(VK_NULL_HANDLE) {
-        stl::vector<VkDescriptorSetLayoutBinding> bindings{mem::MemTag::Temp};
-        bindings.reserve(layout.bindings.size());
+        m_DescriptorSetLayoutBindings.reserve(layout.bindings.size());
         for (const auto& binding : layout.bindings) {
             VkDescriptorSetLayoutBinding vk_binding{};
             vk_binding.binding = binding.binding;
@@ -20,31 +20,61 @@ namespace sf::render::vk {
             vk_binding.descriptorCount = binding.count;
             vk_binding.stageFlags = to_vk_shader_stage_flags(binding.stages);
             vk_binding.pImmutableSamplers = nullptr;
-            bindings.push_back(vk_binding);
+            m_DescriptorSetLayoutBindings.push_back(vk_binding);
+        }
+        // Build binding flags for variable descriptor count support
+        stl::vector<VkDescriptorBindingFlags> binding_flags(mem::MemTag::Temp);
+        binding_flags.resize(layout.bindings.size());
+        bool has_variable_count = false;
+        for (size_t i = 0; i < layout.bindings.size(); ++i) {
+            if (layout.bindings[i].variable_count) {
+                binding_flags[i] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT;
+                has_variable_count = true;
+            }
+        }
+        VkDescriptorSetLayoutBindingFlagsCreateInfo binding_flags_info{};
+        u32 variable_descriptor_count = 0;
+        VkDescriptorSetVariableDescriptorCountAllocateInfo variable_count_info{};
+        if (has_variable_count) {
+            binding_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
+            binding_flags_info.bindingCount = static_cast<u32>(binding_flags.size());
+            binding_flags_info.pBindingFlags = binding_flags.data();
+            for (const auto& binding : layout.bindings) {
+                if (binding.variable_count) {
+                    variable_descriptor_count = binding.count;
+                    break;
+                }
+            }
+            // Setup variable descriptor count info
+            variable_count_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO;
+            variable_count_info.descriptorSetCount = 1;
+            variable_count_info.pDescriptorCounts = &variable_descriptor_count;
         }
         VkDescriptorSetLayoutCreateInfo layout_info{};
         layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layout_info.bindingCount = static_cast<u32>(bindings.size());
-        layout_info.pBindings = bindings.data();
-        VkDescriptorSetLayout vk_layout;
-        VkResult result = vkCreateDescriptorSetLayout(m_Device->get_vk_device(), &layout_info, nullptr, &vk_layout);
+        layout_info.flags = has_variable_count ? VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT : 0;
+        layout_info.pNext = has_variable_count ? &binding_flags_info : nullptr;
+        layout_info.bindingCount = static_cast<u32>(m_DescriptorSetLayoutBindings.size());
+        layout_info.pBindings = m_DescriptorSetLayoutBindings.data();
+        VkResult result = vkCreateDescriptorSetLayout(m_Device->get_vk_device(), &layout_info, nullptr, &m_DescriptorLayout);
         if (result != VK_SUCCESS) {
             CORE_ERROR("Failed to create Vulkan descriptor set layout: {}", static_cast<i32>(result));
         }
         VkDescriptorSetAllocateInfo alloc_info{};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.pNext = has_variable_count ? &variable_count_info : nullptr;
         alloc_info.descriptorPool = pool->get_vk_pool();
         alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &vk_layout;
+        alloc_info.pSetLayouts = &m_DescriptorLayout;
         result = vkAllocateDescriptorSets(m_Device->get_vk_device(), &alloc_info, &m_DescriptorSet);
         if (result != VK_SUCCESS) {
             CORE_ERROR("Failed to allocate Vulkan descriptor set: {}", static_cast<i32>(result));
         }
-        vkDestroyDescriptorSetLayout(m_Device->get_vk_device(), vk_layout, nullptr);
         CORE_TRACE("Created Vulkan descriptor set");
     }
 
     VulkanDescriptorSet::~VulkanDescriptorSet() {
+        vkDestroyDescriptorSetLayout(m_Device->get_vk_device(), m_DescriptorLayout, nullptr);
         // Descriptor sets are freed when pool is destroyed
         // Individual sets don't need explicit cleanup
         CORE_TRACE("Destroyed Vulkan descriptor set");
@@ -61,7 +91,7 @@ namespace sf::render::vk {
         write.dstBinding = binding;
         write.dstArrayElement = 0;
         write.descriptorCount = 1;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; // Could be storage buffer too
+        write.descriptorType = m_DescriptorSetLayoutBindings[binding].descriptorType; // Could be storage buffer too
         write.pBufferInfo = &buffer_info;
         vkUpdateDescriptorSets(m_Device->get_vk_device(), 1, &write, 0, nullptr);
     }
@@ -116,7 +146,7 @@ namespace sf::render::vk {
         write.dstBinding = binding;
         write.dstArrayElement = array_element;
         write.descriptorCount = static_cast<u32>(buffer_infos.size());
-        write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        write.descriptorType = m_DescriptorSetLayoutBindings[binding].descriptorType;
         write.pBufferInfo = buffer_infos.data();
         vkUpdateDescriptorSets(m_Device->get_vk_device(), 1, &write, 0, nullptr);
     }
