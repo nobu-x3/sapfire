@@ -12,6 +12,7 @@
 #include "render/vulkan/vk_graphics_device.h"
 #include "render/vulkan/vk_memory_allocator.h"
 #include "render/vulkan/vk_pipeline_layout.h"
+#include "render/vulkan/vk_pipeline_state.h"
 #include "render/vulkan/vk_render_pass.h"
 #include "render/vulkan/vk_sampler.h"
 #include "render/vulkan/vk_type_conversions.h"
@@ -106,11 +107,6 @@ namespace sf::render::vk {
             CORE_CRITICAL(render_pass_result.error().c_str());
             return;
         }
-        auto pipeline_layout_result = init_bindless_pipeline_layout();
-        if (!pipeline_layout_result) {
-            CORE_CRITICAL(pipeline_layout_result.error().c_str());
-            return;
-        }
         if (!m_Headless) {
             auto framebuffers_result = create_swapchain_framebuffers();
             if (!framebuffers_result) {
@@ -135,30 +131,6 @@ namespace sf::render::vk {
     VulkanGraphicsDevice::~VulkanGraphicsDevice() {
         wait_for_idle();
         cleanup_swapchain();
-        if (m_BindlessDescriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_Device, m_BindlessDescriptorSetLayout, nullptr);
-            m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-        }
-        if (m_PerFrameDescriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_Device, m_PerFrameDescriptorSetLayout, nullptr);
-            m_PerFrameDescriptorSetLayout = VK_NULL_HANDLE;
-        }
-        if (m_ResourceDescriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_Device, m_ResourceDescriptorSetLayout, nullptr);
-            m_ResourceDescriptorSetLayout = VK_NULL_HANDLE;
-        }
-        if (m_MaterialDescriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_Device, m_MaterialDescriptorSetLayout, nullptr);
-            m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
-        }
-        if (m_DummyDescriptorSetLayout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_Device, m_DummyDescriptorSetLayout, nullptr);
-            m_DummyDescriptorSetLayout = VK_NULL_HANDLE;
-        }
-        if (m_BindlessPipelineLayout != VK_NULL_HANDLE) {
-            vkDestroyPipelineLayout(m_Device, m_BindlessPipelineLayout, nullptr);
-            m_BindlessPipelineLayout = VK_NULL_HANDLE;
-        }
         if (m_MainRenderPass != VK_NULL_HANDLE) {
             vkDestroyRenderPass(m_Device, m_MainRenderPass, nullptr);
             m_MainRenderPass = VK_NULL_HANDLE;
@@ -480,119 +452,9 @@ namespace sf::render::vk {
         return stl::unique_ptr<IDescriptorPool>(pool.release());
     }
 
-
     stl::result<stl::unique_ptr<IMemoryAllocator>> VulkanGraphicsDevice::create_memory_allocator() {
         auto allocator = stl::make_unique<VulkanMemoryAllocator>(mem::MemTag::Render, m_Instance, m_PhysicalDevice, m_Device);
         return stl::unique_ptr<IMemoryAllocator>(allocator.release());
-    }
-
-    stl::result<> VulkanGraphicsDevice::init_bindless_pipeline_layout() {
-        // Create descriptor set layouts for bindless rendering
-        // Set 0: Per-frame data (Scene + Pass data)
-        stl::vector<VkDescriptorSetLayoutBinding> set0_bindings{mem::MemTag::Render, 2};
-        set0_bindings[0].binding = 0;
-        set0_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        set0_bindings[0].descriptorCount = 1;
-        set0_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        set0_bindings[0].pImmutableSamplers = nullptr;
-        set0_bindings[1].binding = 1;
-        set0_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        set0_bindings[1].descriptorCount = 1;
-        set0_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-        set0_bindings[1].pImmutableSamplers = nullptr;
-        VkDescriptorSetLayoutCreateInfo set0_info{};
-        set0_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        set0_info.bindingCount = static_cast<u32>(set0_bindings.size());
-        set0_info.pBindings = set0_bindings.data();
-        VK_RETURN_ON_ERROR(vkCreateDescriptorSetLayout(m_Device, &set0_info, nullptr, &m_PerFrameDescriptorSetLayout),
-                           "Failed to create descriptor set layout 0");
-        // Set 2: Bindless resource arrays (with descriptor indexing)
-        stl::vector<VkDescriptorSetLayoutBinding> set2_bindings{mem::MemTag::Render, 5};
-        set2_bindings[0].binding = 0;
-        set2_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        set2_bindings[0].descriptorCount = 1000000;
-        set2_bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        set2_bindings[0].pImmutableSamplers = nullptr;
-        set2_bindings[1].binding = 1;
-        set2_bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        set2_bindings[1].descriptorCount = 1000000;
-        set2_bindings[1].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        set2_bindings[1].pImmutableSamplers = nullptr;
-        set2_bindings[2].binding = 2;
-        set2_bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        set2_bindings[2].descriptorCount = 1000000;
-        set2_bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        set2_bindings[2].pImmutableSamplers = nullptr;
-        set2_bindings[3].binding = 3;
-        set2_bindings[3].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        set2_bindings[3].descriptorCount = 1000000;
-        set2_bindings[3].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        set2_bindings[3].pImmutableSamplers = nullptr;
-        set2_bindings[4].binding = 4;
-        set2_bindings[4].descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER;
-        set2_bindings[4].descriptorCount = 1000000;
-        set2_bindings[4].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        set2_bindings[4].pImmutableSamplers = nullptr;
-        VkDescriptorSetLayoutBindingFlagsCreateInfo set2_flags_info{};
-        set2_flags_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
-        // Variable descriptor count flag can only be on the last binding (binding 4)
-        stl::vector<VkDescriptorBindingFlags> binding_flags{mem::MemTag::Render, 5};
-        binding_flags[0] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Position buffers
-        binding_flags[1] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Normal buffers
-        binding_flags[2] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // UV buffers
-        binding_flags[3] = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Textures
-        binding_flags[4] =
-            VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT; // Samplers (last binding)
-        set2_flags_info.bindingCount = static_cast<u32>(binding_flags.size());
-        set2_flags_info.pBindingFlags = binding_flags.data();
-        VkDescriptorSetLayoutCreateInfo set2_info{};
-        set2_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        set2_info.bindingCount = static_cast<u32>(set2_bindings.size());
-        set2_info.pBindings = set2_bindings.data();
-        set2_info.pNext = &set2_flags_info;
-        VK_RETURN_ON_ERROR(vkCreateDescriptorSetLayout(m_Device, &set2_info, nullptr, &m_ResourceDescriptorSetLayout),
-                           "Failed to create descriptor set layout 2");
-        // Set 3: Material data
-        stl::vector<VkDescriptorSetLayoutBinding> set3_bindings{mem::MemTag::Render, 1};
-        set3_bindings[0].binding = 0;
-        set3_bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        set3_bindings[0].descriptorCount = 1;
-        set3_bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        set3_bindings[0].pImmutableSamplers = nullptr;
-        VkDescriptorSetLayoutCreateInfo set3_info{};
-        set3_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        set3_info.bindingCount = static_cast<u32>(set3_bindings.size());
-        set3_info.pBindings = set3_bindings.data();
-        VK_RETURN_ON_ERROR(vkCreateDescriptorSetLayout(m_Device, &set3_info, nullptr, &m_MaterialDescriptorSetLayout),
-                           "Failed to create descriptor set layout 3");
-        // Create pipeline layout with descriptor set layouts
-        // Note: We have sets 0, 2, 3. To handle the gap (set 1), we create an empty layout for it
-        // Or we can reorganize to use contiguous descriptor set indices
-        // For now, let's create a dummy empty layout for set 1
-        VkDescriptorSetLayoutCreateInfo empty_set_info{};
-        empty_set_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        empty_set_info.bindingCount = 0;
-        empty_set_info.pBindings = nullptr;
-        VK_RETURN_ON_ERROR(vkCreateDescriptorSetLayout(m_Device, &empty_set_info, nullptr, &m_DummyDescriptorSetLayout),
-                           "Failed to create dummy descriptor set layout");
-        stl::vector<VkDescriptorSetLayout> descriptor_layouts{mem::MemTag::Render, 4};
-        descriptor_layouts[0] = m_PerFrameDescriptorSetLayout;
-        descriptor_layouts[1] = m_DummyDescriptorSetLayout; // Empty layout for unused set 1
-        descriptor_layouts[2] = m_ResourceDescriptorSetLayout;
-        descriptor_layouts[3] = m_MaterialDescriptorSetLayout;
-        VkPushConstantRange push_constant_range{};
-        push_constant_range.stageFlags = VK_SHADER_STAGE_ALL;
-        push_constant_range.offset = 0;
-        push_constant_range.size = vk::NUMBER_32_BIT_CONSTANTS * sizeof(u32); // 256 bytes
-        VkPipelineLayoutCreateInfo layout_info{};
-        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.setLayoutCount = static_cast<u32>(descriptor_layouts.size());
-        layout_info.pSetLayouts = descriptor_layouts.data();
-        layout_info.pushConstantRangeCount = 1;
-        layout_info.pPushConstantRanges = &push_constant_range;
-        VK_RETURN_ON_ERROR(vkCreatePipelineLayout(m_Device, &layout_info, nullptr, &m_BindlessPipelineLayout),
-                           "Failed to create bindless pipeline layout");
-        return stl::success;
     }
 
     stl::result<> VulkanGraphicsDevice::init_render_pass() {
@@ -816,20 +678,19 @@ namespace sf::render::vk {
     Texture& VulkanGraphicsDevice::get_back_buffer(u32 index) { return m_BackBuffers[index]; }
 
     stl::result<stl::unique_ptr<IPipelineState>> VulkanGraphicsDevice::create_graphics_pipeline(const GraphicsPipelineDesc& desc) {
+        assert(desc.layout && "GraphicsPipelineDesc::layout cannot be null when creating graphics pipeline.");
         auto pipeline = stl::make_unique<VulkanPipelineState>(mem::MemTag::Render);
-        VkPipelineLayout vk_layout = VK_NULL_HANDLE;
+        VkPipelineLayout vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
         VkRenderPass vk_render_pass = VK_NULL_HANDLE;
-        if (desc.layout) {
-            vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
-        }
         if (desc.render_pass) {
             vk_render_pass = reinterpret_cast<VkRenderPass>(desc.render_pass->get_native_render_pass());
         } else {
             vk_render_pass = m_MainRenderPass;
         }
+        assert(vk_render_pass && "Render pass is null when creating graphics pipeline.");
+        assert(vk_layout && "Pipeline is null when creating graphics pipeline.");
         auto create_result =
-            pipeline->create_graphics(m_Device, desc, vk_layout != VK_NULL_HANDLE ? vk_layout : m_BindlessPipelineLayout,
-                                      vk_render_pass != VK_NULL_HANDLE ? vk_render_pass : m_MainRenderPass);
+            pipeline->create_graphics(m_Device, desc, vk_layout, vk_render_pass != VK_NULL_HANDLE ? vk_render_pass : m_MainRenderPass);
         if (!create_result) {
             return stl::make_error<stl::unique_ptr<IPipelineState>>(create_result.error().c_str());
         }
@@ -837,13 +698,12 @@ namespace sf::render::vk {
     }
 
     stl::result<stl::unique_ptr<IPipelineState>> VulkanGraphicsDevice::create_compute_pipeline(const ComputePipelineDesc& desc) {
+        assert(desc.layout && "GraphicsPipelineDesc::layout cannot be null when creating compute pipeline.");
         auto pipeline = stl::make_unique<VulkanPipelineState>(mem::MemTag::Render);
         VkPipelineLayout vk_layout = VK_NULL_HANDLE;
-        if (desc.layout) {
-            vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
-        }
-        auto create_result =
-            pipeline->create_compute(m_Device, desc, vk_layout != VK_NULL_HANDLE ? vk_layout : m_BindlessPipelineLayout);
+        vk_layout = reinterpret_cast<VkPipelineLayout>(desc.layout->get_native_layout());
+        assert(vk_layout && "Vk layout is null when creating compute pipeline.");
+        auto create_result = pipeline->create_compute(m_Device, desc, vk_layout);
         if (!create_result) {
             return stl::make_error<stl::unique_ptr<IPipelineState>>(create_result.error().c_str());
         }

@@ -31,7 +31,6 @@ set(RELATIVE_SAPFIRE_TRANSLATION_UNITS
         engine/src/tools/obj_loader.cpp
         engine/src/render/camera.cpp
         engine/src/render/d3d_primitives.cpp
-        engine/src/render/frame_data.cpp
         engine/src/render/render_backend.cpp
         engine/src/render/resource_types.cpp
         engine/src/physics/physics_engine.cpp
@@ -45,7 +44,6 @@ if(WIN32)
 set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
         engine/src/render/dx12/dx12_command_queue.cpp
         engine/src/render/dx12/dx12_context.cpp
-        engine/src/render/dx12/dx12_descriptor_heap.cpp
         engine/src/render/dx12/dx12_graphics_device.cpp
         engine/src/render/dx12/dx12_memory_allocator.cpp
         engine/src/render/dx12/dx12_pipeline_state.cpp
@@ -57,7 +55,6 @@ endif()
 set(RELATIVE_SAPFIRE_TRANSLATION_UNITS ${RELATIVE_SAPFIRE_TRANSLATION_UNITS}
         engine/src/render/vulkan/vk_command_queue.cpp
         engine/src/render/vulkan/vk_context.cpp
-        engine/src/render/vulkan/vk_descriptor_heap.cpp
         engine/src/render/vulkan/vk_descriptor_pool.cpp
         engine/src/render/vulkan/vk_descriptor_set.cpp
         engine/src/render/vulkan/vk_fence.cpp

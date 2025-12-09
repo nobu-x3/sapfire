@@ -4,7 +4,6 @@
 #include "render/vulkan/vk_context.h"
 #include "render/vulkan/vk_descriptor_pool.h"
 #include "render/vulkan/vk_memory_allocator.h"
-#include "render/vulkan/vk_pipeline_state.h"
 
 #include <vulkan/vulkan.h>
 
@@ -74,17 +73,10 @@ namespace sf::render::vk {
         inline VkDevice get_vk_device() const { return m_Device; }
         inline VkSwapchainKHR get_vk_swapchain() const { return m_Swapchain; }
         inline VkSurfaceKHR get_vk_surface() const { return m_Surface; }
-        inline VkPipelineLayout get_bindless_pipeline_layout() const { return m_BindlessPipelineLayout; }
         inline VkRenderPass get_main_render_pass() const { return m_MainRenderPass; }
         inline VkFramebuffer get_vk_swapchain_framebuffer(u32 index) const { return m_SwapchainFramebuffers[index]; }
 
         inline bool is_headless() const { return m_Headless; }
-
-        // Get descriptor set layouts for explicit initialization by user
-        inline VkDescriptorSetLayout get_per_frame_descriptor_set_layout() const { return m_PerFrameDescriptorSetLayout; }
-        inline VkDescriptorSetLayout get_resource_descriptor_set_layout() const { return m_ResourceDescriptorSetLayout; }
-        inline VkDescriptorSetLayout get_material_descriptor_set_layout() const { return m_MaterialDescriptorSetLayout; }
-        inline VkDescriptorSetLayout get_sampler_descriptor_set_layout() const { return m_DummyDescriptorSetLayout; }
 
         // New API - Factory methods for render pass and framebuffer
         stl::result<stl::unique_ptr<sf::render::IRenderPass>> create_render_pass(const sf::render::RenderPassDesc& desc) override;
@@ -115,7 +107,6 @@ namespace sf::render::vk {
         stl::result<> init_physical_device();
         stl::result<> init_logical_device();
         stl::result<> init_swapchain(const SwapchainCreationDesc& desc);
-        stl::result<> init_bindless_pipeline_layout();
         stl::result<> init_render_pass();
         stl::result<> create_swapchain_framebuffers();
         stl::result<> create_offscreen_render_targets(const SwapchainCreationDesc& desc);
@@ -139,12 +130,6 @@ namespace sf::render::vk {
         // Swapchain and rendering
         VkSwapchainKHR m_Swapchain = VK_NULL_HANDLE;
         VkRenderPass m_MainRenderPass = VK_NULL_HANDLE;
-        VkPipelineLayout m_BindlessPipelineLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_BindlessDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_PerFrameDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_ResourceDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_MaterialDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_DummyDescriptorSetLayout = VK_NULL_HANDLE; // Empty layout for unused set 1
 
         // Init-only data (cold)
         VkInstance m_Instance = VK_NULL_HANDLE;
