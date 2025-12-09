@@ -549,7 +549,7 @@ void SceneViewWidget::render() {
                 sf::components::CPUData cpu_data = comp.cpu_data();
                 if (cpu_data.index_id >= m_RTIndexBuffers.size())
                     continue;
-                ctx.bind_index_buffer(m_RTIndexBuffers[cpu_data.index_id]);
+                ctx.bind_index_buffer(m_RTIndexBuffers[cpu_data.index_id], sf::render::Format::R16_UINT);
                 auto* per_draw = comp.per_draw_constants();
                 ctx.push_constants(per_draw, sizeof(sf::components::PerDrawConstants));
                 ctx.draw_indexed(cpu_data.indices_size, 1);
