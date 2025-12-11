@@ -603,16 +603,103 @@ void SceneViewWidget::render() {
     }
     // In headless mode, present() is a no-op, so just manually advance the frame index
     m_CurrentFrame = (m_CurrentFrame + 1) % sf::render::MAX_FRAMES_IN_FLIGHT;
-    // @TODO: Implement proper texture readback using ICopyContext and staging buffer
-    // The old device->read_texture_pixels() method has been removed as part of the stateless API refactor.
-    // Proper implementation requires:
-    // 1. Create a staging buffer with the texture size (allocator->allocate_buffer with BufferUsage::Staging)
-    // 2. Use ICopyContext::copy_texture_to_buffer to copy back_buffer to staging buffer
-    // 3. Execute the copy command on the copy queue
-    // 4. Wait for the copy to complete (fence/synchronization)
-    // 5. Map the staging buffer and copy data to m_RenderedImage.bits()
-    // 6. Unmap the staging buffer
-    // For now, skip the readback to unblock compilation
+
+    // Readback the rendered image from GPU to CPU for Qt display
+    auto& back_buffer = device->get_back_buffer(image_index);
+    const sf::u32 image_width = back_buffer.width;
+    const sf::u32 image_height = back_buffer.height;
+    const size_t pixel_size = 4; // RGBA, 1 byte per channel (assuming BGRA8_UNORM format)
+    const size_t buffer_size = image_width * image_height * pixel_size;
+    // Create staging buffer for readback (or reuse existing one)
+    static sf::render::Buffer staging_buffer{};
+    static size_t staging_buffer_size = 0;
+    if (staging_buffer_size != buffer_size) {
+        if (staging_buffer.resource) {
+            EditorContext::instance().memory_allocator()->free_buffer(staging_buffer);
+        }
+        auto staging_result = EditorContext::instance().memory_allocator()->allocate_buffer({
+            .usage = sf::render::BufferUsage::Download,
+            .size_in_bytes = buffer_size,
+            .should_map = true,
+            .name = "Scene View Readback Buffer",
+        });
+        if (!staging_result) {
+            CLIENT_ERROR("Failed to create staging buffer: {}", staging_result.error().c_str());
+            update();
+            return;
+        }
+        staging_buffer = std::move(*staging_result);
+        staging_buffer_size = buffer_size;
+    }
+    // Create copy context for the readback operation
+    auto copy_context_result = device->create_copy_context();
+    if (!copy_context_result) {
+        CLIENT_ERROR("Failed to create copy context: {}", copy_context_result.error().c_str());
+        update();
+        return;
+    }
+    auto copy_context = std::move(*copy_context_result);
+    auto copy_reset_result = copy_context->reset();
+    if (!copy_reset_result) {
+        CLIENT_ERROR("Failed to reset copy context: {}", copy_reset_result.error().c_str());
+        update();
+        return;
+    }
+    // Copy texture to staging buffer
+    sf::render::BufferTextureCopy copy_region{};
+    copy_region.buffer_offset = 0;
+    copy_region.buffer_row_length = 0; // Tightly packed
+    copy_region.buffer_image_height = 0; // Tightly packed
+    copy_region.texture_offset = {0, 0, 0};
+    copy_region.texture_extent = {image_width, image_height, 1};
+    copy_region.mip_level = 0;
+    copy_region.base_array_layer = 0;
+    copy_region.layer_count = 1;
+    copy_context->copy_texture_to_buffer(staging_buffer, back_buffer, copy_region);
+    auto copy_close_result = copy_context->close();
+    if (!copy_close_result) {
+        CLIENT_ERROR("Failed to close copy context: {}", copy_close_result.error().c_str());
+        update();
+        return;
+    }
+    // Create a fence for copy synchronization
+    auto copy_fence_result = device->create_fence(false, "Copy Fence");
+    if (!copy_fence_result) {
+        CLIENT_ERROR("Failed to create copy fence: {}", copy_fence_result.error().c_str());
+        update();
+        return;
+    }
+    auto copy_fence = std::move(*copy_fence_result);
+    // Submit copy command to direct queue (we can use the same queue since copy can run on any queue)
+    sf::stl::array<sf::render::IContext*, 1> copy_contexts{copy_context.get()};
+    sf::render::QueueSubmitDesc copy_submit_desc{};
+    copy_submit_desc.wait_semaphores = {};
+    copy_submit_desc.command_contexts = copy_contexts;
+    copy_submit_desc.signal_semaphores = {};
+    copy_submit_desc.signal_fence = copy_fence.get();
+    auto copy_submit_result = EditorContext::instance().direct_queue()->submit(copy_submit_desc);
+    if (!copy_submit_result) {
+        CLIENT_ERROR("Failed to submit copy command: {}", copy_submit_result.error().c_str());
+        update();
+        return;
+    }
+    // Wait for copy to complete
+    auto copy_wait_result = copy_fence->wait(UINT64_MAX);
+    if (!copy_wait_result) {
+        CLIENT_ERROR("Failed to wait for copy fence: {}", copy_wait_result.error().c_str());
+        update();
+        return;
+    }
+    // Read data from staging buffer and copy to QImage
+    if (staging_buffer.mapped_data) {
+        // Create or resize QImage if needed
+        if (m_RenderedImage.width() != static_cast<int>(image_width) ||
+            m_RenderedImage.height() != static_cast<int>(image_height)) {
+            m_RenderedImage = QImage(image_width, image_height, QImage::Format_RGBA8888);
+        }
+        // Copy pixel data from staging buffer to QImage
+        memcpy(m_RenderedImage.bits(), staging_buffer.mapped_data, buffer_size);
+    }
     update(); // Trigger Qt paintEvent to display the image
 }
 

@@ -14,13 +14,11 @@ namespace sf::render::vk {
         if (result != VK_SUCCESS) {
             CORE_ERROR("Failed to create Vulkan fence: {} - {}", m_Name, static_cast<i32>(result));
         }
-        CORE_TRACE("Created Vulkan fence: {}", m_Name);
     }
 
     VulkanFence::~VulkanFence() {
         if (m_Fence != VK_NULL_HANDLE) {
             vkDestroyFence(m_Device->get_vk_device(), m_Fence, nullptr);
-            CORE_TRACE("Destroyed Vulkan fence: {}", m_Name);
         }
     }
 
