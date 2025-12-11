@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Sapfire.h"
+#include "render/camera.h"
 #include "render/i_pipeline_layout.h"
 
 #include <QWidget>
@@ -63,10 +64,11 @@ private:
     sf::stl::result<> load_contents();
     sf::stl::result<> rebuild_framebuffers();
     void shutdown_rendering();
+    void update_buffers(sf::f32 delta_time);
     void render();
 
 private:
-    sf::Camera m_MainCamera{};
+    sf::Camera m_MainCamera{sf::CAMERA_FOV, static_cast<sf::f32>(16) / 8, 0.0f, 20000.0f};
     sf::stl::unique_ptr<sf::render::IRenderPass> m_RenderPass;
     sf::stl::array<sf::stl::unique_ptr<sf::render::IFramebuffer>, 3> m_Framebuffers;
     sf::stl::unique_ptr<sf::render::IPipelineLayout> m_PipelineLayout;

@@ -74,10 +74,11 @@ void SceneViewWidget::initialize_rendering() {
     CLIENT_INFO("SceneViewWidget initialized successfully!");
 }
 
-sf::stl::result<sf::stl::unique_ptr<sf::render::IPipelineLayout>> create_bindless_layout(sf::render::IGraphicsDevice* device, sf::stl::span<const sf::render::DescriptorSetLayout> layouts_span) {
-    sf::stl::vector<sf::render::DescriptorSetLayout> layouts {sf::mem::MemTag::Temp};
+sf::stl::result<sf::stl::unique_ptr<sf::render::IPipelineLayout>>
+create_bindless_layout(sf::render::IGraphicsDevice* device, sf::stl::span<const sf::render::DescriptorSetLayout> layouts_span) {
+    sf::stl::vector<sf::render::DescriptorSetLayout> layouts{sf::mem::MemTag::Temp};
     layouts.reserve(layouts_span.size());
-    for(auto&& l : layouts_span) {
+    for (auto&& l : layouts_span) {
         layouts.push_back(l);
     }
     sf::render::PipelineLayoutDesc layout_desc{
@@ -134,12 +135,12 @@ sf::stl::result<> SceneViewWidget::load_contents() {
         .render_pass = m_RenderPass.get(),
         .vertex_shader =
             {
-                .path = "assets/shaders/bindless_vulkan.vert.spv",
+                .path = "assets/shaders/bindless-vulkan.vert.spv",
                 .entry_point = "VS",
             },
         .pixel_shader =
             {
-                .path = "assets/shaders/bindless_vulkan.frag.spv",
+                .path = "assets/shaders/bindless-vulkan.frag.spv",
                 .entry_point = "PS",
             },
     });
@@ -431,6 +432,24 @@ void SceneViewWidget::shutdown_rendering() {
     m_Initialized = false;
 }
 
+void SceneViewWidget::update_buffers(sf::f32 delta_time) {
+    m_MainCamera.update(delta_time);
+    m_PassConstants.delta_time = delta_time;
+    m_PassConstants.total_time += delta_time;
+    m_PassConstants.proj = m_MainCamera.projection;
+    m_PassConstants.view = m_MainCamera.view();
+    m_PassConstants.view_proj = m_PassConstants.view * m_PassConstants.proj;
+    sf::math::vec4 pos = m_MainCamera.transform.position();
+    m_PassConstants.EyePosW = {pos.x, pos.y, pos.z};
+    m_PassConstants.near_z = m_MainCamera.near_plane;
+    m_PassConstants.far_z = m_MainCamera.far_plane;
+    m_PassConstants.inv_proj = m_PassConstants.proj.inversed();
+    m_PassConstants.inv_view = m_PassConstants.view.inversed();
+    m_PassConstants.inv_view_proj = m_PassConstants.view_proj.inversed();
+    // TODO: add the rest of fields
+    m_MainPassCB.update(&m_PassConstants, sizeof(m_PassConstants));
+}
+
 void SceneViewWidget::update_frame(sf::f32 delta_time) {
     if (!m_Initialized) {
         return;
@@ -453,6 +472,7 @@ void SceneViewWidget::update_frame(sf::f32 delta_time) {
         }
         m_NeedsResize = false;
     }
+    update_buffers(delta_time);
     render();
 }
 
@@ -528,8 +548,8 @@ void SceneViewWidget::render() {
         // sf::stl::array<sf::render::IDescriptorHeap*, 2> heaps{editor_ctx.bindless_registry(), nullptr};
         // ctx.set_descriptor_heaps(heaps);
         sf::math::frustum camera_frustum = sf::math::frustum::create_from_matrix(m_MainCamera.projection);
-        sf::math::mat4 view = m_MainCamera.view();
-        sf::math::mat4 inv_view = view.inversed();
+        const sf::math::mat4& view = m_PassConstants.view;
+        const sf::math::mat4& inv_view = m_PassConstants.inv_view;
         auto& render_components = ec_mgr->engine_components<sf::components::RenderComponent>();
         for (auto& comp : render_components) {
             sf::components::Transform transform;
