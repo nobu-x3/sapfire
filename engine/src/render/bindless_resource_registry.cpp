@@ -1,21 +1,31 @@
 #include "engpch.h"
 
-#include "render/bindless_resource_registry.h"
+#include <cassert>
 #include "core/logger.h"
+#include "render/bindless_resource_registry.h"
 #include "render/i_pipeline_layout.h"
 #include "render/i_sampler.h"
-#include <cassert>
 
 namespace sf::render {
 
     stl::vector<DescriptorSetLayout> BindlessResourceRegistry::default_descriptor_set_layout(u32 max_textures, u32 max_buffers) {
         stl::vector<DescriptorSetLayout> layouts{mem::MemTag::Render};
-        layouts.resize(2);  // Set 0: Textures and Samplers, Set 1: Buffers
-        // Set 0: Textures and Samplers
+        layouts.resize(2);
+        // Set 0: Buffers (can have variable count since it's the only/last binding in this set)
         DescriptorSetLayout& set0 = layouts[0];
-        set0.bindings.reserve(2);
-        // Binding 0: Texture array (sampled images) - fixed size
+        set0.bindings.reserve(1);
         set0.bindings.push_back({
+            .binding = 0,
+            .type = DescriptorType::StorageBuffer,
+            .count = max_buffers,
+            .stages = static_cast<ShaderStage>(static_cast<u32>(ShaderStage::Vertex) | static_cast<u32>(ShaderStage::Pixel)),
+            .variable_count = true, // Can be variable since it's the only binding in Set 1
+        });
+        // Set 1: Textures and Samplers
+        DescriptorSetLayout& set1 = layouts[1];
+        set1.bindings.reserve(2);
+        // Binding 0: Texture array (sampled images) - fixed size
+        set1.bindings.push_back({
             .binding = 0,
             .type = DescriptorType::SampledImage,
             .count = max_textures,
@@ -23,22 +33,12 @@ namespace sf::render {
             .variable_count = false,
         });
         // Binding 1: Sampler - single sampler for now (must be last in this set)
-        set0.bindings.push_back({
+        set1.bindings.push_back({
             .binding = 1,
             .type = DescriptorType::Sampler,
             .count = 1,
             .stages = static_cast<ShaderStage>(static_cast<u32>(ShaderStage::Vertex) | static_cast<u32>(ShaderStage::Pixel)),
             .variable_count = false,
-        });
-        // Set 1: Buffers (can have variable count since it's the only/last binding in this set)
-        DescriptorSetLayout& set1 = layouts[1];
-        set1.bindings.reserve(1);
-        set1.bindings.push_back({
-            .binding = 0,
-            .type = DescriptorType::StorageBuffer,
-            .count = max_buffers,
-            .stages = static_cast<ShaderStage>(static_cast<u32>(ShaderStage::Vertex) | static_cast<u32>(ShaderStage::Pixel)),
-            .variable_count = true,  // Can be variable since it's the only binding in Set 1
         });
         return layouts;
     }
@@ -85,8 +85,8 @@ namespace sf::render {
         }
         m_FreeTextureIndices.reserve(1024);
         m_FreeBufferIndices.reserve(1024);
-        CORE_INFO("Created bindless resource registry ({} sets, max textures: {}, max buffers: {})",
-                  m_DescriptorSets.size(), m_MaxTextures, m_MaxBuffers);
+        CORE_INFO("Created bindless resource registry ({} sets, max textures: {}, max buffers: {})", m_DescriptorSets.size(), m_MaxTextures,
+                  m_MaxBuffers);
     }
 
     IDescriptorSet* BindlessResourceRegistry::get_descriptor_set(u32 set_index) const {
