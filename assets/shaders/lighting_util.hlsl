@@ -1,3 +1,6 @@
+#ifndef __LIGHTING_UTILS_HLSLI__
+#define __LIGHTING_UTILS_HLSLI__
+
 #define MaxLights 16
 
 struct Light
@@ -160,3 +163,5 @@ float4 ComputeLighting(Light gLights[MaxLights], Material mat,
 
     return float4(result, 0.0f);
 }
+
+#endif // __LIGHTING_UTILS_HLSLI__

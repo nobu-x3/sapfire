@@ -68,12 +68,13 @@ compile_shader() {
     local shader_model="$2"  # vs_6_0, ps_6_0, cs_6_0
     local entry_point="$3"   # main, VS, PS, CS
     local output_file="$4"
+    local extra_flags="$5"  # -D VULKAN
 
     echo -n "Compiling $(basename "$input_file") [$shader_model/$entry_point]... "
 
     if [ "$USE_DXC" -eq 1 ]; then
         # DXC with SPIR-V output
-        if "$COMPILER" -spirv -T "$shader_model" -E "$entry_point" \
+        if "$COMPILER" -spirv -T "$shader_model" -E "$entry_point" $extra_flags \
             -Fo "$output_file" "$input_file" 2>&1 | grep -v "^$"; then
             echo -e "${RED}FAILED${NC}"
             return 1
@@ -104,16 +105,10 @@ for shader in "${SOURCE_DIR}"/*.hlsl; do
     if [ -f "$shader" ]; then
         basename=$(basename "$shader" .hlsl)
 
-        # Skip D3D12-specific shaders (ResourceDescriptorHeap is D3D12-only)
-        if grep -q "ResourceDescriptorHeap" "$shader"; then
-            echo -e "${YELLOW}Skipping D3D12-specific shader: $(basename "$shader")${NC}"
-            continue
-        fi
-
         # Check if shader has vertex shader entry point
         if grep -q "VS\s*(" "$shader" || grep -q "main.*VS_OUTPUT" "$shader"; then
             TOTAL=$((TOTAL + 1))
-            if compile_shader "$shader" "vs_6_0" "VS" "${OUTPUT_DIR}/${basename}.vert.spv"; then
+            if compile_shader "$shader" "vs_6_0" "VS" "${OUTPUT_DIR}/${basename}-vulkan.vert.spv" "-D VULKAN -fspv-extension=SPV_EXT_descriptor_indexing  -fspv-target-env=vulkan1.2"; then
                 SUCCESS=$((SUCCESS + 1))
             else
                 FAILED=$((FAILED + 1))
@@ -123,7 +118,7 @@ for shader in "${SOURCE_DIR}"/*.hlsl; do
         # Check if shader has pixel/fragment shader entry point
         if grep -q "PS\s*(" "$shader" || grep -q "float4.*main.*:" "$shader"; then
             TOTAL=$((TOTAL + 1))
-            if compile_shader "$shader" "ps_6_0" "PS" "${OUTPUT_DIR}/${basename}.frag.spv"; then
+            if compile_shader "$shader" "ps_6_0" "PS" "${OUTPUT_DIR}/${basename}-vulkan.frag.spv" "-D VULKAN -fspv-extension=SPV_EXT_descriptor_indexing  -fspv-target-env=vulkan1.2"; then
                 SUCCESS=$((SUCCESS + 1))
             else
                 FAILED=$((FAILED + 1))
@@ -133,7 +128,7 @@ for shader in "${SOURCE_DIR}"/*.hlsl; do
         # Check if shader has compute shader entry point
         if grep -q "CS\s*(" "$shader" || grep -q "\[numthreads" "$shader"; then
             TOTAL=$((TOTAL + 1))
-            if compile_shader "$shader" "cs_6_0" "CS" "${OUTPUT_DIR}/${basename}.comp.spv"; then
+            if compile_shader "$shader" "cs_6_0" "CS" "${OUTPUT_DIR}/${basename}-vulkan.comp.spv" "-D VULKAN -fspv-extension=SPV_EXT_descriptor_indexing  -fspv-target-env=vulkan1.2"; then
                 SUCCESS=$((SUCCESS + 1))
             else
                 FAILED=$((FAILED + 1))

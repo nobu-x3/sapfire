@@ -87,7 +87,7 @@ add_custom_target(compile_shaders
     VERBATIM
 )
 add_custom_target(compile_shaders_editor
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/compile_shaders.sh $<TARGET_FILE_DIR:Sapling>/assets/shaders
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/compile_shaders_editor.sh $<TARGET_FILE_DIR:Sapling>/assets/shaders
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     COMMENT "Compiling HLSL shaders to SPIR-V..."
     VERBATIM
