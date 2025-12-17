@@ -62,14 +62,15 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         CLIENT_ERROR("Failed to create graphics device!");
         return;
     }
-    // Create descriptor pool for bindless resources
+    // Get GPU descriptor limits and create descriptor pool for bindless resources
+    const auto& limits = m_GraphicsDevice->get_descriptor_limits();
     auto pool_result = m_GraphicsDevice->create_descriptor_pool({
         .max_sets = 10,
-        .max_uniform_buffers = 100000,
-        .max_storage_buffers = 100000,
-        .max_sampled_images = 100000,
-        .max_storage_images = 100000,
-        .max_samplers = 100000,
+        .max_uniform_buffers = limits.max_uniform_buffers,
+        .max_storage_buffers = limits.max_storage_buffers,
+        .max_sampled_images = limits.max_sampled_images,
+        .max_storage_images = limits.max_storage_images,
+        .max_samplers = limits.max_samplers,
         .name = "Editor Descriptor Pool",
     });
     if (!pool_result) {
@@ -77,7 +78,7 @@ void EditorContext::initialize(SDL_Window* sdl_window, sf::u32 width, sf::u32 he
         return;
     }
     m_DescriptorPool = std::move(*pool_result);
-    m_BindlessLayouts = sf::render::BindlessResourceRegistry::default_descriptor_set_layout();
+    m_BindlessLayouts = sf::render::BindlessResourceRegistry::default_descriptor_set_layout(limits);
     // Create bindless resource registry
     m_BindlessRegistry =
         sf::stl::make_unique<sf::render::BindlessResourceRegistry>(sf::mem::MemTag::Render, m_DescriptorPool.get(), m_BindlessLayouts);

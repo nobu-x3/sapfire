@@ -78,6 +78,9 @@ namespace sf::render::vk {
 
         inline bool is_headless() const { return m_Headless; }
 
+        // GPU Limits
+        inline const GPUDescriptorLimits& get_descriptor_limits() const override { return m_DescriptorLimits; }
+
         // New API - Factory methods for render pass and framebuffer
         stl::result<stl::unique_ptr<sf::render::IRenderPass>> create_render_pass(const sf::render::RenderPassDesc& desc) override;
         stl::result<stl::unique_ptr<sf::render::IFramebuffer>> create_framebuffer(const sf::render::FramebufferDesc& desc) override;
@@ -151,6 +154,9 @@ namespace sf::render::vk {
         u32 m_GraphicsQueueFamily = UINT32_MAX;
         u32 m_ComputeQueueFamily = UINT32_MAX;
         u32 m_TransferQueueFamily = UINT32_MAX;
+
+        // GPU descriptor limits
+        GPUDescriptorLimits m_DescriptorLimits;
     };
 
 } // namespace sf::render::vk

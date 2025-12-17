@@ -8,7 +8,7 @@
 
 namespace sf::render {
 
-    stl::vector<DescriptorSetLayout> BindlessResourceRegistry::default_descriptor_set_layout(u32 max_textures, u32 max_buffers) {
+    stl::vector<DescriptorSetLayout> BindlessResourceRegistry::default_descriptor_set_layout(const GPUDescriptorLimits& limits) {
         stl::vector<DescriptorSetLayout> layouts{mem::MemTag::Render};
         layouts.resize(2);
         // Set 0: Buffers (can have variable count since it's the only/last binding in this set)
@@ -17,7 +17,7 @@ namespace sf::render {
         set0.bindings.push_back({
             .binding = 0,
             .type = DescriptorType::StorageBuffer,
-            .count = max_buffers,
+            .count = limits.max_storage_buffers,
             .stages = static_cast<ShaderStage>(static_cast<u32>(ShaderStage::Vertex) | static_cast<u32>(ShaderStage::Pixel)),
             .variable_count = true, // Can be variable since it's the only binding in Set 1
         });
@@ -28,7 +28,7 @@ namespace sf::render {
         set1.bindings.push_back({
             .binding = 0,
             .type = DescriptorType::SampledImage,
-            .count = max_textures,
+            .count = limits.max_sampled_images,
             .stages = static_cast<ShaderStage>(static_cast<u32>(ShaderStage::Vertex) | static_cast<u32>(ShaderStage::Pixel)),
             .variable_count = false,
         });

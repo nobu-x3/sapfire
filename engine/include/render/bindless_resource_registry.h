@@ -21,8 +21,9 @@ namespace sf::render {
         ~BindlessResourceRegistry() = default;
 
         // Create a default descriptor set layout for bindless rendering
-        // Returns a vector containing one layout with texture and buffer bindings
-        static stl::vector<DescriptorSetLayout> default_descriptor_set_layout(u32 max_textures = 100000, u32 max_buffers = 100000);
+        // Returns a vector containing two layouts with texture and buffer bindings
+        // Uses GPU descriptor limits to determine appropriate sizes
+        static stl::vector<DescriptorSetLayout> default_descriptor_set_layout(const GPUDescriptorLimits& limits);
 
         // Register resources and get their bindless indices
         u32 register_texture(Texture& texture, ISampler* sampler = nullptr);

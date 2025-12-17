@@ -248,9 +248,38 @@ namespace sf::render::vk {
         stl::vector<VkPhysicalDevice> devices{mem::MemTag::Temp, device_count};
         vkEnumeratePhysicalDevices(m_Instance, &device_count, devices.data());
         m_PhysicalDevice = devices[0];
-        VkPhysicalDeviceProperties properties;
-        vkGetPhysicalDeviceProperties(m_PhysicalDevice, &properties);
+        // Query basic device properties and descriptor indexing limits
+        VkPhysicalDeviceDescriptorIndexingProperties indexing_props{};
+        indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
+        indexing_props.pNext = nullptr;
+        VkPhysicalDeviceProperties2 props2{};
+        props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+        props2.pNext = &indexing_props;
+        vkGetPhysicalDeviceProperties2(m_PhysicalDevice, &props2);
+        const auto& properties = props2.properties;
         CORE_INFO("Selected GPU: {}", properties.deviceName);
+        // Populate limits with conservative caps to avoid edge cases
+        m_DescriptorLimits.max_bound_descriptor_sets = properties.limits.maxBoundDescriptorSets;
+        // Use descriptor indexing limits if available, otherwise fall back to regular limits
+        if (indexing_props.maxDescriptorSetUpdateAfterBindSampledImages > 0) {
+            m_DescriptorLimits.max_sampled_images = std::min(indexing_props.maxDescriptorSetUpdateAfterBindSampledImages, 500000u);
+            m_DescriptorLimits.max_storage_buffers = std::min(indexing_props.maxDescriptorSetUpdateAfterBindStorageBuffers, 500000u);
+            m_DescriptorLimits.max_storage_images = std::min(indexing_props.maxDescriptorSetUpdateAfterBindStorageImages, 100000u);
+        } else {
+            // Fallback to regular descriptor set limits
+            m_DescriptorLimits.max_sampled_images = std::min(properties.limits.maxDescriptorSetSampledImages, 8000u);
+            m_DescriptorLimits.max_storage_buffers = std::min(properties.limits.maxDescriptorSetStorageBuffers, 10000u);
+            m_DescriptorLimits.max_storage_images = std::min(properties.limits.maxDescriptorSetStorageImages, 8000u);
+        }
+        m_DescriptorLimits.max_uniform_buffers = properties.limits.maxBoundDescriptorSets;
+        m_DescriptorLimits.max_samplers = properties.limits.maxSamplerAllocationCount;
+        CORE_INFO("GPU Descriptor Limits:");
+        CORE_INFO("  Max bound descriptor sets: {}", m_DescriptorLimits.max_bound_descriptor_sets);
+        CORE_INFO("  Max sampled images: {}", m_DescriptorLimits.max_sampled_images);
+        CORE_INFO("  Max storage buffers: {}", m_DescriptorLimits.max_storage_buffers);
+        CORE_INFO("  Max uniform buffers: {}", m_DescriptorLimits.max_uniform_buffers);
+        CORE_INFO("  Max samplers: {}", m_DescriptorLimits.max_samplers);
+        CORE_INFO("  Max storage images: {}", m_DescriptorLimits.max_storage_images);
         return stl::success;
     }
 

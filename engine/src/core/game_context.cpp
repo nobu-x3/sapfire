@@ -24,14 +24,15 @@ namespace sf {
                                                                                        .format = sf::render::Format::RGBA16_FLOAT,
                                                                                        .refresh_rate = 120});
 
-        // Create descriptor pool for bindless resources
+        // Get GPU descriptor limits and create descriptor pool for bindless resources
+        const auto& limits = m_GraphicsDevice->get_descriptor_limits();
         auto pool_result = m_GraphicsDevice->create_descriptor_pool({
             .max_sets = 10,
-            .max_uniform_buffers = 10000,
-            .max_storage_buffers = 100000,
-            .max_sampled_images = 100000,
-            .max_storage_images = 1000,
-            .max_samplers = 1000,
+            .max_uniform_buffers = limits.max_uniform_buffers,
+            .max_storage_buffers = limits.max_storage_buffers,
+            .max_sampled_images = limits.max_sampled_images,
+            .max_storage_images = limits.max_storage_images,
+            .max_samplers = limits.max_samplers,
             .name = "Game Descriptor Pool",
         });
         if (!pool_result) {
@@ -39,32 +40,28 @@ namespace sf {
             return;
         }
         m_DescriptorPool = std::move(*pool_result);
-        auto descriptor_set_layout = render::BindlessResourceRegistry::default_descriptor_set_layout();
+        auto descriptor_set_layout = render::BindlessResourceRegistry::default_descriptor_set_layout(limits);
         // Create bindless resource registry
         m_BindlessRegistry =
             stl::make_unique<render::BindlessResourceRegistry>(mem::MemTag::Render, m_DescriptorPool.get(), descriptor_set_layout);
-
         auto queue_result = m_GraphicsDevice->create_direct_queue("Game Direct Queue");
         if (!queue_result) {
             CORE_ERROR("Failed to create direct queue: {}", queue_result.error().c_str());
             return;
         }
         m_DirectQueue = std::move(*queue_result);
-
         auto context_result = m_GraphicsDevice->create_graphics_context();
         if (!context_result) {
             CORE_ERROR("Failed to create graphics context: {}", context_result.error().c_str());
             return;
         }
         m_GraphicsContext = std::move(*context_result);
-
         auto allocator_result = m_GraphicsDevice->create_memory_allocator();
         if (!allocator_result) {
             CORE_ERROR("Failed to create memory allocator: {}", allocator_result.error().c_str());
             return;
         }
         m_MemoryAllocator = std::move(*allocator_result);
-
         m_AssetManager = stl::make_unique<assets::AssetManager>(mem::MemTag::Logic,
                                                                 assets::AssetManagerCreationDesc{
                                                                     .device = m_GraphicsDevice.get(),
@@ -124,7 +121,6 @@ namespace sf {
                 const std::string name = mesh_asset->uuid == assets::MeshRegistry::default_mesh()->uuid
                     ? "Default Mesh"
                     : std::string(resource_paths.mesh_path.begin(), resource_paths.mesh_path.end());
-
                 // Create index buffer with data
                 sf::render::BufferCreationDesc index_desc{
                     .usage = sf::render::BufferUsage::Index,
@@ -148,7 +144,6 @@ namespace sf {
                 }
                 vertex_pos_buffer_result->srv_index = m_BindlessRegistry->register_buffer(*vertex_pos_buffer_result);
                 m_VertexPosBuffers.push_back(std::move(*vertex_pos_buffer_result));
-
                 // Create vertex normal buffer with data
                 sf::render::BufferCreationDesc norm_desc{
                     .usage = sf::render::BufferUsage::Structured,
@@ -161,7 +156,6 @@ namespace sf {
                 }
                 vertex_normal_buffer_result->srv_index = m_BindlessRegistry->register_buffer(*vertex_normal_buffer_result);
                 m_VertexNormalBuffers.push_back(std::move(*vertex_normal_buffer_result));
-
                 if (mesh_asset->data->tangentus.size() > 0) {
                     sf::render::BufferCreationDesc tang_desc{
                         .usage = sf::render::BufferUsage::Structured,
@@ -176,7 +170,6 @@ namespace sf {
                     m_VertexTangentBuffers.push_back(std::move(*tangentus_buffer_result));
                     should_add_tangent = true;
                 }
-
                 sf::render::BufferCreationDesc uv_desc{
                     .usage = sf::render::BufferUsage::Structured,
                     .size_in_bytes = mesh_asset->data->texcs.size() * sizeof(sf::math::vec2),

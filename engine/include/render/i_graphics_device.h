@@ -72,6 +72,7 @@ namespace sf::render {
         virtual RenderAPI get_api() const = 0;
         virtual const char* get_api_name() const = 0;
         virtual void* get_native_device() = 0;
+        virtual const GPUDescriptorLimits& get_descriptor_limits() const = 0;
     };
 
 } // namespace sf::render

@@ -12,6 +12,18 @@ namespace sf::render {
 
     constexpr u32 MAX_FRAMES_IN_FLIGHT = 3;
 
+    // GPU Descriptor Limits
+    // Backend-agnostic structure exposing GPU descriptor capabilities
+
+    struct GPUDescriptorLimits {
+        u32 max_bound_descriptor_sets = 4;
+        u32 max_sampled_images = 100000;
+        u32 max_storage_buffers = 100000;
+        u32 max_uniform_buffers = 72;
+        u32 max_samplers = 2048;
+        u32 max_storage_images = 100000;
+    };
+
     // Resource Formats
 
     enum class Format : u32 {
