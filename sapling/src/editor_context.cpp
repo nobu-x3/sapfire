@@ -123,6 +123,7 @@ void EditorContext::shutdown() {
     m_GraphicsContext.reset();
     m_DirectQueue.reset();
     m_BindlessRegistry.reset();
+    m_BindlessLayouts.clear();
     m_DescriptorPool.reset();
     m_GraphicsDevice.reset();
     m_ECManager.reset();
