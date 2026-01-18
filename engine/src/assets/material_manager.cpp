@@ -295,22 +295,6 @@ namespace sf::assets {
 
     MaterialAsset* MaterialRegistry::default_material(sf::render::IMemoryAllocator* allocator,
                                                       sf::render::BindlessResourceRegistry* registry) {
-        const static std::string name = DEFAULT_MATERIAL_NAME;
-        static sf::render::MaterialConstants default_material_constants{
-            .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
-            .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
-            .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
-        };
-        static auto buffer_result = allocator->allocate_buffer({
-            .usage = sf::render::BufferUsage::Structured,
-            .size_in_bytes = sizeof(sf::render::MaterialConstants),
-            .name = name,
-        });
-        if (!buffer_result) {
-            CORE_CRITICAL("Failed to load default material buffer.");
-            return nullptr;
-        }
-        buffer_result->cbv_index = registry->register_buffer(*buffer_result);
         static MaterialAsset default_mat{
             .uuid = DEFAULT_MATERIAL_UUID,
             .material{
@@ -318,11 +302,31 @@ namespace sf::assets {
                 .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
                 .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
                 .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
-                .material_buffer = *buffer_result,
-                .material_cb_index = static_cast<i32>(buffer_result->cbv_index),
+                .material_buffer = {},
+                .material_cb_index = -1,
             },
         };
+        // Only allocate once
+        if (default_mat.material.material_buffer.resource == nullptr && allocator != nullptr && registry != nullptr) {
+            static sf::render::MaterialConstants default_material_constants{
+                .diffuse_albedo = DEFAULT_MATERIAL_ALBEDO,
+                .fresnel_r0 = DEFAULT_MATERIAL_FRESNEL,
+                .roughness = DEFAULT_MATERIAL_ROUGHTNESS,
+            };
+            auto buffer_result = allocator->allocate_buffer({
+                .usage = sf::render::BufferUsage::Structured,
+                .size_in_bytes = sizeof(sf::render::MaterialConstants),
+                .name = DEFAULT_MATERIAL_NAME,
+            });
+            if (!buffer_result) {
+                CORE_CRITICAL("Failed to load default material buffer.");
+                return nullptr;
+            }
+            buffer_result->cbv_index = registry->register_buffer(*buffer_result);
         buffer_result->update(&default_material_constants, sizeof(sf::render::MaterialConstants));
+            default_mat.material.material_buffer = std::move(*buffer_result);
+            default_mat.material.material_cb_index = static_cast<i32>(default_mat.material.material_buffer.cbv_index);
+        }
         return &default_mat;
     }
 } // namespace sf::assets

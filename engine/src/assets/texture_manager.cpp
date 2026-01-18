@@ -262,18 +262,21 @@ namespace sf::assets {
     TextureAsset* TextureRegistry::default_texture(sf::render::IMemoryAllocator* allocator,
                                                    sf::render::BindlessResourceRegistry* registry) {
         const static UUID default_texture_uuid = UUID{5596545107579832553};
-        static auto data = default_texture_data();
+        static TextureAsset asset = {
+            .uuid = default_texture_uuid,
+            .description = DEFAULT_TEXTURE_CREATION_INFO,
+            .data = {},
+        };
+        // Only allocate once
+        if (asset.data.resource == nullptr && allocator != nullptr && registry != nullptr) {
         auto result = allocator->allocate_texture(DEFAULT_TEXTURE_CREATION_INFO);
         if (!result) {
             CORE_CRITICAL("Failed to create default texture.");
             return nullptr;
         }
         result->srv_index = registry->register_texture(*result);
-        static TextureAsset asset = {
-            .uuid = default_texture_uuid,
-            .description = DEFAULT_TEXTURE_CREATION_INFO,
-            .data = std::move(*result),
-        };
+            asset.data = std::move(*result);
+        }
         return &asset;
     }
 } // namespace sf::assets
