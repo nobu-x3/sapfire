@@ -20,6 +20,8 @@ namespace sf::render::vk {
         init(device, family_index, pool_ci_flags);
     }
 
+    VulkanContext::~VulkanContext() { destroy_resources(); }
+
     void VulkanContext::destroy_resources() {
         if (m_Device == VK_NULL_HANDLE)
             return;

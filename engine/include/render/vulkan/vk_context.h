@@ -14,6 +14,7 @@ namespace sf::render::vk {
     class VulkanContext : public IContext {
     public:
         VulkanContext(VulkanGraphicsDevice* device, u32 family_index, VkCommandPoolCreateFlags pool_ci_flags = 0);
+        ~VulkanContext() override;
 
         void destroy_resources();
 
