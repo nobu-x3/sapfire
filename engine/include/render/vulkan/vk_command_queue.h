@@ -12,6 +12,7 @@ namespace sf::render::vk {
         explicit VulkanCommandQueue(VkDevice device, VkQueue queue, CommandQueueType type, const char* name);
         explicit VulkanCommandQueue(VulkanGraphicsDevice* graphics_device, VkDevice device, VkQueue queue, CommandQueueType type,
                                     const char* name);
+        ~VulkanCommandQueue() override;
 
         void destroy_resources();
 
