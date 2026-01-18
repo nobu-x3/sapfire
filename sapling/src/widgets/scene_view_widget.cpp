@@ -424,6 +424,62 @@ void SceneViewWidget::shutdown_rendering() {
         return;
     }
     CLIENT_INFO("Shutting down SceneViewWidget...");
+    for (auto& frame : m_FrameResources) {
+        frame.m_GraphicsContext.reset();
+        frame.m_InFlightFence.reset();
+    }
+    for (auto& fb : m_Framebuffers) {
+        fb.reset();
+    }
+    m_PipelineState.reset();
+    m_PipelineLayout.reset();
+    m_RenderPass.reset();
+    // Free GPU buffers and textures via allocator
+    auto* allocator = EditorContext::instance().memory_allocator();
+    if (allocator) {
+        if (m_MainPassCB.resource) {
+            allocator->free_buffer(m_MainPassCB);
+            m_MainPassCB = {};
+        }
+        if (m_DepthTexture.resource) {
+            allocator->free_texture(m_DepthTexture);
+            m_DepthTexture = {};
+        }
+        if (m_StagingBuffer.resource) {
+            allocator->free_buffer(m_StagingBuffer);
+            m_StagingBuffer = {};
+        }
+        for (auto& buf : m_RTIndexBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_RTIndexBuffers.clear();
+        for (auto& buf : m_VertexPosBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_VertexPosBuffers.clear();
+        for (auto& buf : m_VertexNormalBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_VertexNormalBuffers.clear();
+        for (auto& buf : m_VertexTangentBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_VertexTangentBuffers.clear();
+        for (auto& buf : m_VertexUVBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_VertexUVBuffers.clear();
+        for (auto& buf : m_TransformBuffers) {
+            if (buf.resource)
+                allocator->free_buffer(buf);
+        }
+        m_TransformBuffers.clear();
+    }
     EditorContext::instance().shutdown();
     if (m_SDLWindow) {
         SDL_DestroyWindow(m_SDLWindow);
