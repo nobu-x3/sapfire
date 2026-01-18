@@ -57,6 +57,7 @@ namespace sf::assets {
 
         static MaterialAsset* default_material(sf::render::IMemoryAllocator* allocator = nullptr,
                                                sf::render::BindlessResourceRegistry* heap = nullptr);
+        static void shutdown_default_material(sf::render::IMemoryAllocator* allocator);
 
         static void create_default(const stl::string& registry_file_path);
 

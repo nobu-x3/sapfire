@@ -56,6 +56,7 @@ namespace sf::assets {
         static void create_default(const stl::string& registry_file_path);
         static TextureAsset* default_texture(sf::render::IMemoryAllocator* allocator = nullptr,
                                              sf::render::BindlessResourceRegistry* registry = nullptr);
+        static void shutdown_default_texture(sf::render::IMemoryAllocator* allocator);
 
     private:
         stl::string m_RegistryFilePath;

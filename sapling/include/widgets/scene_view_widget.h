@@ -84,6 +84,7 @@ private:
     sf::stl::vector<sf::render::Buffer> m_TransformBuffers{sf::mem::MemTag::Render};
     SDL_Window* m_SDLWindow{nullptr};
     QImage m_RenderedImage;
+    sf::render::Buffer m_StagingBuffer{};
     bool m_Initialized{false};
     bool m_NeedsResize{false};
 

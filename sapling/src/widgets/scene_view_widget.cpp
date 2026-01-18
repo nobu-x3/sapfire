@@ -5,6 +5,8 @@
 #include <QVBoxLayout>
 #include <QWindow>
 #include <SDL3/SDL.h>
+#include <assets/material_manager.h>
+#include <assets/texture_manager.h>
 #include <core/logger.h>
 #include <stl/result.h>
 #include "editor_context.h"
@@ -480,6 +482,8 @@ void SceneViewWidget::shutdown_rendering() {
         }
         m_TransformBuffers.clear();
     }
+    sf::assets::TextureRegistry::shutdown_default_texture(allocator);
+    sf::assets::MaterialRegistry::shutdown_default_material(allocator);
     EditorContext::instance().shutdown();
     if (m_SDLWindow) {
         SDL_DestroyWindow(m_SDLWindow);
@@ -667,11 +671,9 @@ void SceneViewWidget::render() {
     const size_t pixel_size = 4; // RGBA, 1 byte per channel (assuming BGRA8_UNORM format)
     const size_t buffer_size = image_width * image_height * pixel_size;
     // Create staging buffer for readback (or reuse existing one)
-    static sf::render::Buffer staging_buffer{};
-    static size_t staging_buffer_size = 0;
-    if (staging_buffer_size != buffer_size) {
-        if (staging_buffer.resource) {
-            EditorContext::instance().memory_allocator()->free_buffer(staging_buffer);
+    if (m_StagingBuffer.size_in_bytes != buffer_size) {
+        if (m_StagingBuffer.resource) {
+            EditorContext::instance().memory_allocator()->free_buffer(m_StagingBuffer);
         }
         auto staging_result = EditorContext::instance().memory_allocator()->allocate_buffer({
             .usage = sf::render::BufferUsage::Download,
@@ -684,8 +686,7 @@ void SceneViewWidget::render() {
             update();
             return;
         }
-        staging_buffer = std::move(*staging_result);
-        staging_buffer_size = buffer_size;
+        m_StagingBuffer = std::move(*staging_result);
     }
     // Create copy context for the readback operation
     auto copy_context_result = device->create_copy_context();
@@ -711,7 +712,7 @@ void SceneViewWidget::render() {
     copy_region.mip_level = 0;
     copy_region.base_array_layer = 0;
     copy_region.layer_count = 1;
-    copy_context->copy_texture_to_buffer(staging_buffer, back_buffer, copy_region);
+    copy_context->copy_texture_to_buffer(m_StagingBuffer, back_buffer, copy_region);
     auto copy_close_result = copy_context->close();
     if (!copy_close_result) {
         CLIENT_ERROR("Failed to close copy context: {}", copy_close_result.error().c_str());
@@ -747,14 +748,13 @@ void SceneViewWidget::render() {
         return;
     }
     // Read data from staging buffer and copy to QImage
-    if (staging_buffer.mapped_data) {
+    if (m_StagingBuffer.mapped_data) {
         // Create or resize QImage if needed
-        if (m_RenderedImage.width() != static_cast<int>(image_width) ||
-            m_RenderedImage.height() != static_cast<int>(image_height)) {
+        if (m_RenderedImage.width() != static_cast<int>(image_width) || m_RenderedImage.height() != static_cast<int>(image_height)) {
             m_RenderedImage = QImage(image_width, image_height, QImage::Format_RGBA8888);
         }
         // Copy pixel data from staging buffer to QImage
-        memcpy(m_RenderedImage.bits(), staging_buffer.mapped_data, buffer_size);
+        memcpy(m_RenderedImage.bits(), m_StagingBuffer.mapped_data, buffer_size);
     }
     update(); // Trigger Qt paintEvent to display the image
 }

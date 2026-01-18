@@ -323,10 +323,19 @@ namespace sf::assets {
                 return nullptr;
             }
             buffer_result->cbv_index = registry->register_buffer(*buffer_result);
-        buffer_result->update(&default_material_constants, sizeof(sf::render::MaterialConstants));
+            buffer_result->update(&default_material_constants, sizeof(sf::render::MaterialConstants));
             default_mat.material.material_buffer = std::move(*buffer_result);
             default_mat.material.material_cb_index = static_cast<i32>(default_mat.material.material_buffer.cbv_index);
         }
         return &default_mat;
+    }
+
+    void MaterialRegistry::shutdown_default_material(sf::render::IMemoryAllocator* allocator) {
+        auto* asset = default_material();
+        if (asset && asset->material.material_buffer.resource && allocator) {
+            allocator->free_buffer(asset->material.material_buffer);
+            asset->material.material_buffer = {};
+            asset->material.material_cb_index = -1;
+        }
     }
 } // namespace sf::assets

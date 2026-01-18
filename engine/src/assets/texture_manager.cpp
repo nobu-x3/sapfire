@@ -269,14 +269,22 @@ namespace sf::assets {
         };
         // Only allocate once
         if (asset.data.resource == nullptr && allocator != nullptr && registry != nullptr) {
-        auto result = allocator->allocate_texture(DEFAULT_TEXTURE_CREATION_INFO);
-        if (!result) {
-            CORE_CRITICAL("Failed to create default texture.");
-            return nullptr;
-        }
-        result->srv_index = registry->register_texture(*result);
+            auto result = allocator->allocate_texture(DEFAULT_TEXTURE_CREATION_INFO);
+            if (!result) {
+                CORE_CRITICAL("Failed to create default texture.");
+                return nullptr;
+            }
+            result->srv_index = registry->register_texture(*result);
             asset.data = std::move(*result);
         }
         return &asset;
+    }
+
+    void TextureRegistry::shutdown_default_texture(sf::render::IMemoryAllocator* allocator) {
+        auto* asset = default_texture();
+        if (asset && asset->data.resource && allocator) {
+            allocator->free_texture(asset->data);
+            asset->data = {};
+        }
     }
 } // namespace sf::assets
